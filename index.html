@@ -5,19 +5,22 @@
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>HRT Log Dashboard — 2024–2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-zoom/2.0.1/chartjs-plugin-zoom.min.js"></script>
 <style>
   :root {
-    /* testosterone.tools inspired: pure black, amber gold accent */
-    --bg:#000000;--bg2:#0d0d0d;--bg3:#141414;--border:#222222;
-    --text:#ffffff;--muted:#666666;--accent:#f59e0b;--accent2:#ef4444;
-    --accent3:#10b981;--accent4:#f59e0b;--accent5:#8b5cf6;--accent6:#06b6d4;
+    /* testosterone.tools design language */
+    --bg:#17171d;--bg2:#202028;--bg3:#252530;--border:#2d2d38;
+    --text:#fafafa;--muted:#9b9ba8;--accent:#fcd34d;--accent2:#ef4444;
+    --accent3:#10b981;--accent4:#fcd34d;--accent5:#8b5cf6;--accent6:#06b6d4;
     --warn:#f97316;--danger:#ef4444;--ok:#10b981;--radius:10px;
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh}
+  body{background:var(--bg);color:var(--text);font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh}
 
   /* ── Header ── */
   .header{padding:22px 32px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
