@@ -3095,6 +3095,7 @@ async function openLogPanel() {
         try {
           if(parseMDY(d.date) < cutoff) return;
           Object.keys(d.injectables||{}).forEach(k => recentActive.add(k.toLowerCase()));
+          Object.keys(d.peptides||{}).forEach(k => recentActive.add(k.toLowerCase()));
           Object.keys(d.orals||{}).forEach(k => recentActive.add(k.toLowerCase()));
         } catch(e) {}
       });
@@ -3103,6 +3104,7 @@ async function openLogPanel() {
       const lastValues = {};
       [...ALL_DATA].reverse().forEach(d => {
         Object.entries(d.injectables||{}).forEach(([k,v]) => { if(!(k.toLowerCase() in lastValues) && v) lastValues[k.toLowerCase()] = v; });
+        Object.entries(d.peptides||{}).forEach(([k,v]) => { if(!(k.toLowerCase() in lastValues) && v) lastValues[k.toLowerCase()] = v; });
         Object.entries(d.orals||{}).forEach(([k,v]) => { if(!(k.toLowerCase() in lastValues) && v) lastValues[k.toLowerCase()] = v; });
       });
 
@@ -3163,14 +3165,11 @@ function _applyToggleStyles() {
   document.querySelectorAll('.log-compound-input[data-oral]').forEach(chk => {
     const tog = document.getElementById('tog-' + chk.dataset.header);
     if(!tog) return;
-    const update = () => {
-      tog.style.background = chk.checked ? 'var(--accent)' : 'var(--border)';
-      if(!tog._listenerAdded) {
-        tog.addEventListener('click', () => { chk.checked = !chk.checked; tog.style.background = chk.checked ? 'var(--accent)' : 'var(--border)'; });
-        tog._listenerAdded = true;
-      }
-    };
+    const update = () => { tog.style.background = chk.checked ? 'var(--accent)' : 'var(--border)'; };
     update();
+    // The span lives inside a <label> — the label already toggles the checkbox on click.
+    // Only the change event is needed to update the visual; a separate click listener
+    // would double-flip the checkbox and cancel the toggle.
     chk.addEventListener('change', update);
   });
 }
