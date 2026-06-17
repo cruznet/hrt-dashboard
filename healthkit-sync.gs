@@ -13,8 +13,20 @@ const HK_FOLDER_ID = '1jFc2yMCsqOoZ8GboS37O2oXht-Cqu6AN';
 const HK_SHEET_ID  = '1-1zGJo-1SudZ37LZKzqgs-7pCcvLU2haSNjOYUuF19Q';
 const HK_TAB_NAME  = 'HealthKit';
 
+// ── Debug: list all 125 column names in the HealthKit tab ────────────────
+// Run this and paste the log output back to Claude
+function listHeaders() {
+  const ss = SpreadsheetApp.openById(HK_SHEET_ID);
+  const sheet = ss.getSheetByName(HK_TAB_NAME);
+  if (!sheet) { Logger.log('HealthKit tab not found — run syncHealthKit() first'); return; }
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  headers.forEach(function(h, i) {
+    Logger.log((i + 1) + ': ' + h);
+  });
+  Logger.log('Total: ' + headers.length + ' columns');
+}
+
 // ── Debug: peek at the structure of one daily file ───────────────────────
-// Run this, then paste the log output back to Claude
 function peekFile() {
   const EXAMPLE_ID = '1XppbPRwe75g9QwIRQf6o7KvtXnGsdQxKcMh7obgxKtg';
   const ss = SpreadsheetApp.openById(EXAMPLE_ID);
@@ -22,7 +34,7 @@ function peekFile() {
     Logger.log('=== Sheet: ' + sheet.getName() + ' ===');
     const data = sheet.getDataRange().getValues();
     Logger.log('Dimensions: ' + data.length + ' rows x ' + (data[0] ? data[0].length : 0) + ' cols');
-    data.slice(0, 5).forEach(function(row, i) {
+    data.slice(0, 3).forEach(function(row, i) {
       Logger.log('Row ' + i + ': ' + JSON.stringify(row));
     });
   });
