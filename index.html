@@ -3169,7 +3169,10 @@ function _parseCompoundHeader(h) {
     compName = hm2 ? hm2[1].trim() : hClean;
     unit = hm2 ? hm2[2].toLowerCase() : '';
   }
-  const isOral = ORAL_KEYWORDS.some(k => compName.toLowerCase().includes(k));
+  // GH/HGH/insulin variants are always injectable — force numeric input and default unit to iu
+  const _ghPattern = /\b(gh|hgh|somatropin|growth\s*hormone)\b/i;
+  if(_ghPattern.test(compName) && !unit) unit = 'iu';
+  const isOral = ORAL_KEYWORDS.some(k => compName.toLowerCase().includes(k)) && !_ghPattern.test(compName);
   return { h, compName, unit, isOral };
 }
 
@@ -3743,9 +3746,10 @@ function parseSheetRow(headers, row, sheetYear) {
 
     // Is this a direct-dosed compound (IU, mcg) or oral?
     const nameLower  = compoundName.toLowerCase();
-    const isOral     = ORAL_KEYWORDS.some(k => nameLower.includes(k));
+    const _isGH      = /\b(gh|hgh|somatropin|growth\s*hormone)\b/i.test(compoundName);
+    const isOral     = ORAL_KEYWORDS.some(k => nameLower.includes(k)) && !_isGH;
     const isPeptide  = PEPTIDE_KEYWORDS.some(k => nameLower.includes(k));
-    const isDirectIU = /^(iu|mcg|ug)$/i.test(unit);
+    const isDirectIU = /^(iu|mcg|ug)$/i.test(unit) || _isGH;
     const isAccutane = nameLower.includes('accutane');
 
     const isBool = /^(true|false)$/i.test(raw);
