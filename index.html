@@ -2826,9 +2826,16 @@ function saveToken(token, expiresIn) {
 }
 
 function clearToken() {
-  try { localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(TOKEN_EXP_KEY); } catch(e) {}
+  _idleTimerStop();
+  try {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(TOKEN_EXP_KEY);
+    sessionStorage.removeItem('hrt_landing_dismissed');
+  } catch(e) {}
   sheetsToken = null;
   updateLogAuthUI();
+  const lp = document.getElementById('landing-page');
+  if(lp) lp.style.display = '';
 }
 
 let _gisClient = null;
@@ -2874,6 +2881,7 @@ function updateLogAuthUI() {
     const lp = document.getElementById('landing-page');
     if(lp) lp.style.display = 'none';
     try { localStorage.setItem('hrt_landing_dismissed', '1'); } catch(e) {}
+    _idleTimerReset();
   }
 }
 
@@ -3645,14 +3653,14 @@ async function bootWithSheets() {
 // ── Landing page ─────────────────────────────────────────────
 function showLandingIfNeeded() {
   const hasToken = !!getSavedToken();
-  const dismissed = (() => { try { return localStorage.getItem('hrt_landing_dismissed'); } catch(e) { return null; } })();
-  if(!hasToken && !dismissed) {
+  const sessionDismissed = (() => { try { return sessionStorage.getItem('hrt_landing_dismissed'); } catch(e) { return null; } })();
+  if(!hasToken && !sessionDismissed) {
     document.getElementById('landing-page').style.display = '';
   }
 }
 
 function dismissLanding() {
-  try { localStorage.setItem('hrt_landing_dismissed', '1'); } catch(e) {}
+  try { sessionStorage.setItem('hrt_landing_dismissed', '1'); } catch(e) {}
   document.getElementById('landing-page').style.display = 'none';
 }
 
@@ -3660,6 +3668,67 @@ function landingSignIn() {
   dismissLanding();
   oauthSignIn();
 }
+
+// ── Idle sign-out timer ───────────────────────────────────────
+const _IDLE_MS = 30 * 60 * 1000;  // 30 min idle → show warning
+const _WARN_SECS = 60;             // 60 s countdown before sign-out
+let _idleTO = null;
+let _warnIV = null;
+
+function _idleTimerReset() {
+  clearTimeout(_idleTO);
+  _warnStop();
+  const w = document.getElementById('session-warn');
+  if(w) w.style.display = 'none';
+  _idleTO = setTimeout(_warnStart, _IDLE_MS);
+}
+
+function _idleTimerStop() {
+  clearTimeout(_idleTO);
+  _warnStop();
+  const w = document.getElementById('session-warn');
+  if(w) w.style.display = 'none';
+}
+
+function resetIdleTimer() {
+  if(!sheetsToken && !getSavedToken()) return;
+  _idleTimerReset();
+}
+
+function _warnStart() {
+  if(!sheetsToken && !getSavedToken()) return;
+  const w = document.getElementById('session-warn');
+  if(!w) { clearToken(); return; }
+  let secs = _WARN_SECS;
+  const cd = document.getElementById('session-countdown');
+  if(cd) cd.textContent = secs;
+  w.style.display = 'flex';
+  _warnIV = setInterval(function() {
+    secs--;
+    if(cd) cd.textContent = secs;
+    if(secs <= 0) { _warnStop(); clearToken(); }
+  }, 1000);
+}
+
+function _warnStop() {
+  if(_warnIV) { clearInterval(_warnIV); _warnIV = null; }
+}
+
+['mousemove','mousedown','keypress','scroll','touchstart'].forEach(function(e) {
+  document.addEventListener(e, resetIdleTimer, {passive:true});
+});
+
+// Session timeout warning toast
+(function() {
+  const el = document.createElement('div');
+  el.id = 'session-warn';
+  el.style.cssText = 'display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;background:#1a1a22;border:1px solid rgba(255,164,7,0.4);border-radius:10px;padding:16px 20px;align-items:center;gap:16px;box-shadow:0 8px 32px rgba(0,0,0,0.6);font-family:Inter,sans-serif;white-space:nowrap';
+  el.innerHTML = '<div style="font-size:20px">⏱</div>'
+    + '<div><div style="color:#f4f4f4;font-size:14px;font-weight:600">Session expiring</div>'
+    + '<div style="color:#9b9ba8;font-size:12px;margin-top:2px">Signing out in <span id="session-countdown">60</span>s of inactivity</div></div>'
+    + '<button onclick="resetIdleTimer()" style="background:rgba(255,164,7,0.15);border:1px solid rgba(255,164,7,0.4);color:#ffa407;padding:6px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;margin-left:8px">Stay signed in</button>';
+  document.body.appendChild(el);
+})();
 
 // ── Mobile menu ───────────────────────────────────────────────
 function toggleMobMenu() {
