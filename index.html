@@ -281,7 +281,9 @@
 
     <!-- Log form (shown when signed in) -->
     <div id="log-form-body" style="display:none">
-      <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <!-- Quick log button -->
+        <button onclick="quickLogSameAsLast()" style="padding:7px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;font-weight:700;cursor:pointer" title="Pre-fill everything from your last logged entry">⚡ Same as Last Time</button>
         <button id="log-signout-btn" onclick="clearToken()" style="font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer;text-decoration:underline">Sign out</button>
       </div>
 
@@ -315,10 +317,9 @@
         </select>
       </div>
 
-      <!-- Dynamic compound inputs built from last entry -->
+      <!-- Dynamic compound inputs -->
       <div id="log-compounds-section" style="margin-bottom:16px">
-        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:8px">COMPOUNDS (enter syringe units 0–100, or dose for orals)</label>
-        <div id="log-compounds-grid" style="display:flex;flex-direction:column;gap:8px"></div>
+        <div id="log-compounds-grid" style="display:flex;flex-direction:column;gap:4px"></div>
       </div>
 
       <!-- Notes -->
@@ -2392,13 +2393,17 @@ async function submitLogEntry() {
     setCol(/injection\s*site\s*test/i, siteVal || '');
     setCol(/^comments$/i, notesVal || '');
 
-    // Compound doses from form
+    // Compound doses from form — handle both checkboxes (orals) and number inputs
     document.querySelectorAll('.log-compound-input').forEach(inp => {
       const header = inp.dataset.header;
-      const val = inp.value.trim();
-      if(header && val) {
-        const i = headers.findIndex(h => h.trim() === header);
-        if(i>=0) row[i] = val;
+      if(!header) return;
+      const i = headers.findIndex(h => h.trim() === header);
+      if(i < 0) return;
+      if(inp.type === 'checkbox') {
+        row[i] = inp.checked ? 'TRUE' : '';
+      } else {
+        const val = inp.value.trim();
+        if(val) row[i] = val;
       }
     });
 
@@ -2413,23 +2418,86 @@ async function submitLogEntry() {
   }
 }
 
+// Shared state for the log form
+let _logAllItems = [];
+let _logLastEntry = null;
+
+function _parseCompoundHeader(h) {
+  const hClean = h.replace(/\s+units?\s*$/i,'').trim();
+  const hm = hClean.match(/^(.+?)\s*\(([\d.]+)\s*(mg|iu|ml|mcg|IU)\)/i);
+  const compName = hm ? hm[1].trim() : hClean;
+  const unit = hm ? `${hm[2]}${hm[3].toLowerCase()}` : '';
+  const isOral = ORAL_KEYWORDS.some(k => compName.toLowerCase().includes(k));
+  return { h, compName, unit, isOral };
+}
+
+function _renderCompoundRow(item, prefillVal) {
+  const {h, compName, unit, isOral} = item;
+  const safeH = h.replace(/"/g, '&quot;');
+
+  if(isOral) {
+    const checked = prefillVal ? 'checked' : '';
+    return `<div class="log-comp-row" style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:var(--bg3);border-radius:8px;margin-bottom:4px">
+      <label style="font-size:13px;color:var(--text);font-weight:600;cursor:pointer" for="chk-${safeH}">
+        ${compName}${unit ? `<span style="color:var(--muted);font-weight:400;font-size:11px"> · ${unit}</span>` : ''}
+      </label>
+      <label style="position:relative;display:inline-block;width:42px;height:24px;flex-shrink:0">
+        <input id="chk-${safeH}" class="log-compound-input" data-header="${safeH}" data-oral="1"
+          type="checkbox" ${checked} style="opacity:0;width:0;height:0">
+        <span onclick="" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:var(--border);border-radius:24px;transition:.3s"
+          id="tog-${safeH}"></span>
+      </label>
+    </div>`;
+  } else {
+    const val = prefillVal !== undefined && prefillVal !== '' ? String(prefillVal) : '';
+    return `<div class="log-comp-row" style="display:flex;align-items:center;gap:8px;padding:4px 0;margin-bottom:4px">
+      <label style="font-size:13px;color:var(--text);flex:1;font-weight:600">
+        ${compName}${unit ? `<span style="color:var(--muted);font-weight:400;font-size:11px"> · ${unit}</span>` : ''}
+      </label>
+      <button onclick="logStepDown('${safeH}')" style="width:28px;height:28px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:16px;cursor:pointer;line-height:1;flex-shrink:0">−</button>
+      <input class="log-compound-input" data-header="${safeH}" id="inp-${safeH}"
+        type="number" step="0.05" min="0" value="${val}" placeholder="units"
+        style="width:70px;padding:5px 6px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;text-align:center;flex-shrink:0">
+      <button onclick="logStepUp('${safeH}')" style="width:28px;height:28px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:16px;cursor:pointer;line-height:1;flex-shrink:0">+</button>
+    </div>`;
+  }
+}
+
+function logStepUp(h) {
+  const inp = document.getElementById('inp-' + h);
+  if(!inp) return;
+  const v = parseFloat(inp.value) || 0;
+  inp.value = Math.round((v + 0.05) * 100) / 100;
+}
+function logStepDown(h) {
+  const inp = document.getElementById('inp-' + h);
+  if(!inp) return;
+  const v = parseFloat(inp.value) || 0;
+  inp.value = Math.max(0, Math.round((v - 0.05) * 100) / 100);
+}
+
 async function openLogPanel() {
   sheetsToken = getSavedToken() || sheetsToken;
   updateLogAuthUI();
 
   // Pre-fill date with today
-  const today = new Date();
-  const todayStr = today.toISOString().slice(0,10);
+  const todayStr = new Date().toISOString().slice(0,10);
   const dateEl = document.getElementById('log-date');
   if(dateEl) dateEl.value = todayStr;
 
-  // Pre-fill weight from most recent entry
-  const last = [...ALL_DATA].reverse().find(d => d.weight);
-  if(last && document.getElementById('log-weight')) {
-    document.getElementById('log-weight').value = last.weight;
+  // Pre-fill weight + site from most recent entry
+  _logLastEntry = [...ALL_DATA].reverse().find(d => d.weight || Object.keys(d.injectables||{}).length);
+  if(_logLastEntry) {
+    if(_logLastEntry.weight) document.getElementById('log-weight').value = _logLastEntry.weight;
+    if(_logLastEntry.site) {
+      const siteEl = document.getElementById('log-site');
+      if(siteEl) {
+        for(let o of siteEl.options) { if(o.value.toLowerCase() === _logLastEntry.site.toLowerCase()) { siteEl.value = o.value; break; } }
+      }
+    }
   }
 
-  // Build compound inputs — smart mode: only recent + expandable
+  // Build compound grid
   const grid = document.getElementById('log-compounds-grid');
   if(grid && grid.children.length === 0) {
     try {
@@ -2437,10 +2505,9 @@ async function openLogPanel() {
       const hdRes = await fetch(hdUrl);
       const hdData = await hdRes.json();
       const headers = (hdData.values||[[]])[0].map(h=>String(h).trim());
-
       const META = /^(date|week|weight|injection site|comments|weekday)/i;
 
-      // Deduplicate headers (keep first occurrence)
+      // Deduplicate
       const seenHdrs = new Set();
       const uniqueHeaders = headers.filter(h => {
         if(META.test(h) || !h.length) return false;
@@ -2450,104 +2517,119 @@ async function openLogPanel() {
         return true;
       });
 
-      // Figure out which compounds were used in last 30 days
+      // Which were used in last 30 days
       const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 30);
       const recentActive = new Set();
       ALL_DATA.forEach(d => {
         try {
-          const dt = parseMDY(d.date);
-          if(dt < cutoff) return;
+          if(parseMDY(d.date) < cutoff) return;
           Object.keys(d.injectables||{}).forEach(k => recentActive.add(k.toLowerCase()));
           Object.keys(d.orals||{}).forEach(k => recentActive.add(k.toLowerCase()));
-          // Also check raw syringe keys
-          if(d.syringes) Object.keys(d.syringes).forEach(k => recentActive.add(k.toLowerCase()));
         } catch(e) {}
       });
 
-      // Get last logged values per compound for pre-fill
+      // Last value per compound
       const lastValues = {};
       [...ALL_DATA].reverse().forEach(d => {
-        Object.entries(d.injectables||{}).forEach(([k,v]) => {
-          if(!lastValues[k.toLowerCase()] && v) lastValues[k.toLowerCase()] = v;
-        });
-        Object.entries(d.orals||{}).forEach(([k,v]) => {
-          if(!lastValues[k.toLowerCase()] && v) lastValues[k.toLowerCase()] = v;
-        });
+        Object.entries(d.injectables||{}).forEach(([k,v]) => { if(!(k.toLowerCase() in lastValues) && v) lastValues[k.toLowerCase()] = v; });
+        Object.entries(d.orals||{}).forEach(([k,v]) => { if(!(k.toLowerCase() in lastValues) && v) lastValues[k.toLowerCase()] = v; });
       });
 
-      // Parse each header into a structured item
-      function parseHeader(h) {
-        const hClean = h.replace(/\s+units?\s*$/i,'').trim();
-        const hm = hClean.match(/^(.+?)\s*\(([\d.]+)\s*(mg|iu|ml|mcg|IU)\)/i);
-        const compName = hm ? hm[1].trim() : hClean;
-        const unit = hm ? `${hm[2]}${hm[3].toLowerCase()}` : '';
-        const isOral = ORAL_KEYWORDS.some(k => compName.toLowerCase().includes(k));
-        const nameKey = compName.toLowerCase();
-        const isRecent = recentActive.has(nameKey) || recentActive.has(h.toLowerCase());
-        const lastVal = lastValues[nameKey] || '';
-        return { h, compName, unit, isOral, isRecent, lastVal };
-      }
+      _logAllItems = uniqueHeaders.map(h => {
+        const item = _parseCompoundHeader(h);
+        const nameKey = item.compName.toLowerCase();
+        item.isRecent = recentActive.has(nameKey) || recentActive.has(h.toLowerCase());
+        item.lastVal = lastValues[nameKey];
+        return item;
+      });
 
-      const allItems = uniqueHeaders.map(parseHeader);
-      const activeItems = allItems.filter(i => i.isRecent);
-      const inactiveItems = allItems.filter(i => !i.isRecent);
-
-      // Render a single compound row
-      function compoundRow(item, extra='') {
-        const {h, compName, unit, isOral, lastVal} = item;
-        const placeholder = isOral ? 'TRUE / blank' : unit ? `syringes` : 'amount';
-        const prefill = isOral
-          ? (lastVal ? 'TRUE' : '')
-          : (lastVal !== undefined && lastVal !== '' ? String(lastVal) : '');
-        return `<div class="log-comp-row" style="display:flex;align-items:center;gap:8px;margin-bottom:6px" ${extra}>
-          <label style="font-size:12px;color:var(--text);flex:1;font-weight:600">${compName}${unit ? `<span style="color:var(--muted);font-weight:400;font-size:11px"> · ${unit}</span>` : ''}</label>
-          <input class="log-compound-input" data-header="${h}"
-            type="text" placeholder="${placeholder}" value="${prefill}"
-            style="width:90px;padding:6px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;flex-shrink:0;text-align:right">
-        </div>`;
-      }
-
-      // Group active items
-      const activeInj = activeItems.filter(i => !i.isOral);
-      const activeOral = activeItems.filter(i => i.isOral);
-
-      function renderSection(label, items) {
-        if(!items.length) return '';
-        return `<div style="margin-bottom:10px">
-          <div style="font-size:10px;font-weight:800;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid var(--border)">${label}</div>
-          ${items.map(i => compoundRow(i)).join('')}
-        </div>`;
-      }
-
-      // Build "add compound" dropdown options
-      const addOptions = inactiveItems.map(i =>
-        `<option value="${i.h}">${i.compName}${i.unit ? ' · '+i.unit : ''}</option>`
-      ).join('');
-
-      grid.innerHTML =
-        renderSection('💉 Injectables & Peptides', activeInj) +
-        renderSection('💊 Orals & Support', activeOral) +
-        (inactiveItems.length ? `
-          <div id="log-add-compound-wrap" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
-            <div style="font-size:10px;font-weight:800;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;margin-bottom:6px">➕ Add Compound</div>
-            <select id="log-add-select" style="width:100%;padding:7px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer" onchange="logAddCompound(this)">
-              <option value="">— select to add —</option>
-              ${addOptions}
-            </select>
-          </div>` : '');
-
+      _buildLogGrid(lastValues);
     } catch(e) {
       grid.innerHTML = `<p style="font-size:12px;color:var(--muted)">Could not load sheet headers. Sync first.</p>`;
     }
   }
 
-  // Show panel
   document.getElementById('log-panel').style.display = '';
+
+  // Apply toggle styles after render
+  setTimeout(_applyToggleStyles, 50);
+}
+
+function _buildLogGrid(prefillMap) {
+  const grid = document.getElementById('log-compounds-grid');
+  const activeItems = _logAllItems.filter(i => i.isRecent);
+  const inactiveItems = _logAllItems.filter(i => !i.isRecent);
+  const activeInj = activeItems.filter(i => !i.isOral);
+  const activeOral = activeItems.filter(i => i.isOral);
+
+  function section(label, items) {
+    if(!items.length) return '';
+    return `<div style="margin-bottom:12px">
+      <div style="font-size:10px;font-weight:800;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid var(--border)">${label}</div>
+      ${items.map(i => _renderCompoundRow(i, i.lastVal)).join('')}
+    </div>`;
+  }
+
+  const addOptions = inactiveItems.map(i =>
+    `<option value="${i.h.replace(/"/g,'&quot;')}">${i.compName}${i.unit?' · '+i.unit:''}</option>`
+  ).join('');
+
+  grid.innerHTML =
+    section('💉 Injectables & Peptides', activeInj) +
+    section('💊 Orals & Support', activeOral) +
+    (inactiveItems.length ? `
+      <div id="log-add-compound-wrap" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+        <div style="font-size:10px;font-weight:800;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;margin-bottom:6px">➕ Add Compound</div>
+        <select id="log-add-select" style="width:100%;padding:7px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer" onchange="logAddCompound(this)">
+          <option value="">— select to add —</option>
+          ${addOptions}
+        </select>
+      </div>` : '');
+}
+
+function _applyToggleStyles() {
+  document.querySelectorAll('.log-compound-input[data-oral]').forEach(chk => {
+    const tog = document.getElementById('tog-' + chk.dataset.header);
+    if(!tog) return;
+    const update = () => {
+      tog.style.background = chk.checked ? 'var(--accent)' : 'var(--border)';
+      if(!tog._listenerAdded) {
+        tog.addEventListener('click', () => { chk.checked = !chk.checked; tog.style.background = chk.checked ? 'var(--accent)' : 'var(--border)'; });
+        tog._listenerAdded = true;
+      }
+    };
+    update();
+    chk.addEventListener('change', update);
+  });
+}
+
+function quickLogSameAsLast() {
+  if(!_logLastEntry) return;
+  // Fill weight
+  if(_logLastEntry.weight) document.getElementById('log-weight').value = _logLastEntry.weight;
+  // Fill site
+  if(_logLastEntry.site) {
+    const siteEl = document.getElementById('log-site');
+    for(let o of siteEl.options) { if(o.value.toLowerCase() === _logLastEntry.site.toLowerCase()) { siteEl.value = o.value; break; } }
+  }
+  // Fill compounds
+  document.querySelectorAll('.log-compound-input').forEach(inp => {
+    const header = inp.dataset.header;
+    if(!header) return;
+    const item = _logAllItems.find(i => i.h === header);
+    if(!item) return;
+    if(item.isOral) {
+      inp.checked = !!(item.lastVal);
+      const tog = document.getElementById('tog-' + header);
+      if(tog) tog.style.background = inp.checked ? 'var(--accent)' : 'var(--border)';
+    } else {
+      if(item.lastVal !== undefined && item.lastVal !== '') inp.value = item.lastVal;
+    }
+  });
 }
 
 function closeLogPanel() {
   document.getElementById('log-panel').style.display = 'none';
-  // Reset grid so it rebuilds fresh next open
   const grid = document.getElementById('log-compounds-grid');
   if(grid) grid.innerHTML = '';
 }
@@ -2555,42 +2637,24 @@ function closeLogPanel() {
 function logAddCompound(sel) {
   const h = sel.value;
   if(!h) return;
-  // Remove from dropdown
-  const opt = sel.querySelector(`option[value="${CSS.escape(h)}"]`);
+  const opt = Array.from(sel.options).find(o => o.value === h);
   if(opt) opt.remove();
-  // Reset to placeholder
   sel.value = '';
 
-  // Parse the header
-  const hClean = h.replace(/\s+units?\s*$/i,'').trim();
-  const hm = hClean.match(/^(.+?)\s*\(([\d.]+)\s*(mg|iu|ml|mcg|IU)\)/i);
-  const compName = hm ? hm[1].trim() : hClean;
-  const unit = hm ? `${hm[2]}${hm[3].toLowerCase()}` : '';
-  const isOral = ORAL_KEYWORDS.some(k => compName.toLowerCase().includes(k));
-  const placeholder = isOral ? 'TRUE / blank' : 'syringes';
+  const item = _logAllItems.find(i => i.h === h);
+  if(!item) return;
 
   const row = document.createElement('div');
-  row.className = 'log-comp-row';
-  row.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:6px';
-  row.innerHTML = `
-    <label style="font-size:12px;color:var(--text);flex:1;font-weight:600">${compName}${unit ? `<span style="color:var(--muted);font-weight:400;font-size:11px"> · ${unit}</span>` : ''}</label>
-    <input class="log-compound-input" data-header="${h}"
-      type="text" placeholder="${placeholder}"
-      style="width:90px;padding:6px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;flex-shrink:0;text-align:right">
-  `;
-
-  // Insert before the add-compound section
+  row.innerHTML = _renderCompoundRow(item, item.lastVal);
   const addWrap = document.getElementById('log-add-compound-wrap');
   const grid = document.getElementById('log-compounds-grid');
-  grid.insertBefore(row, addWrap);
+  grid.insertBefore(row.firstElementChild, addWrap);
 
-  // Hide dropdown if no options left
-  if(sel.options.length <= 1) {
-    addWrap.style.display = 'none';
-  }
+  if(sel.options.length <= 1) addWrap.style.display = 'none';
 
-  // Focus the new input
-  row.querySelector('input').focus();
+  setTimeout(_applyToggleStyles, 50);
+  const inp = document.getElementById('inp-' + h);
+  if(inp) inp.focus();
 }
 
 function setSheetsStatus(msg, color='var(--muted)') {
