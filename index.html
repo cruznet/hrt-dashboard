@@ -247,6 +247,57 @@
 </head>
 <body>
 
+<!-- ── Landing Page ───────────────────────────────────────────── -->
+<div id="landing-page" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:2000;overflow-y:auto">
+  <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px">
+
+    <!-- Logo / Title -->
+    <div style="text-align:center;margin-bottom:48px">
+      <div style="font-size:48px;margin-bottom:16px">💉</div>
+      <h1 style="font-size:42px;font-weight:900;color:var(--text);margin:0 0 8px">HRT <span style="color:var(--accent)">Log</span></h1>
+      <p style="font-size:16px;color:var(--muted);margin:0">Your personal hormone & health tracking dashboard</p>
+    </div>
+
+    <!-- Feature highlights -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;max-width:700px;width:100%;margin-bottom:48px">
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px;text-align:center">
+        <div style="font-size:28px;margin-bottom:8px">📋</div>
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">Daily Log</div>
+        <div style="font-size:12px;color:var(--muted)">Track injections, orals & weight every day</div>
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px;text-align:center">
+        <div style="font-size:28px;margin-bottom:8px">🔬</div>
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">Blood Labs</div>
+        <div style="font-size:12px;color:var(--muted)">Visualize your lab results over time</div>
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px;text-align:center">
+        <div style="font-size:28px;margin-bottom:8px">💉</div>
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">Compounds</div>
+        <div style="font-size:12px;color:var(--muted)">Timeline of every compound you've run</div>
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px;text-align:center">
+        <div style="font-size:28px;margin-bottom:8px">🏋️</div>
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">Fitness</div>
+        <div style="font-size:12px;color:var(--muted)">Hevy workout data & progress tracking</div>
+      </div>
+    </div>
+
+    <!-- Sign in -->
+    <div style="text-align:center;margin-bottom:24px">
+      <button onclick="landingSignIn()" style="padding:14px 40px;background:var(--accent);border:none;border-radius:10px;color:#000;font-weight:800;font-size:16px;cursor:pointer;margin-bottom:16px;display:block;width:100%;max-width:300px;margin:0 auto 12px">
+        🔑 Sign in with Google
+      </button>
+      <p style="font-size:11px;color:var(--muted);margin:8px 0 0">Required to log entries. Read-only view available without signing in.</p>
+    </div>
+
+    <!-- Skip -->
+    <button onclick="dismissLanding()" style="background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;text-decoration:underline;margin-top:16px">
+      Continue without signing in →
+    </button>
+
+  </div>
+</div>
+
 <div class="header">
   <h1>HRT <span>Log</span></h1>
   <div class="header-right">
@@ -2330,6 +2381,12 @@ function updateLogAuthUI() {
   const hSignOut = document.getElementById('header-signout-btn');
   if(hSignIn) hSignIn.style.display = signedIn ? 'none' : '';
   if(hSignOut) hSignOut.style.display = signedIn ? '' : 'none';
+  // Dismiss landing if just signed in
+  if(signedIn) {
+    const lp = document.getElementById('landing-page');
+    if(lp) lp.style.display = 'none';
+    try { localStorage.setItem('hrt_landing_dismissed', '1'); } catch(e) {}
+  }
 }
 
 async function appendRowToSheet(rowData) {
@@ -2999,8 +3056,28 @@ async function bootWithSheets() {
   switchPage(_savedPage || activePage);
 }
 
+// ── Landing page ─────────────────────────────────────────────
+function showLandingIfNeeded() {
+  const hasToken = !!getSavedToken();
+  const dismissed = (() => { try { return localStorage.getItem('hrt_landing_dismissed'); } catch(e) { return null; } })();
+  if(!hasToken && !dismissed) {
+    document.getElementById('landing-page').style.display = '';
+  }
+}
+
+function dismissLanding() {
+  try { localStorage.setItem('hrt_landing_dismissed', '1'); } catch(e) {}
+  document.getElementById('landing-page').style.display = 'none';
+}
+
+function landingSignIn() {
+  dismissLanding();
+  oauthSignIn();
+}
+
 // ── Init ──────────────────────────────────────────────────────
 bootWithSheets();
+showLandingIfNeeded();
 </script>
 </body>
 </html>
