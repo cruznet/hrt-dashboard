@@ -2956,9 +2956,18 @@ let _logLastEntry = null;
 
 function _parseCompoundHeader(h) {
   const hClean = h.replace(/\s+units?\s*$/i,'').trim();
-  const hm = hClean.match(/^(.+?)\s*\(([\d.]+)\s*(mg|iu|ml|mcg|IU)\)/i);
-  const compName = hm ? hm[1].trim() : hClean;
-  const unit = hm ? `${hm[2]}${hm[3].toLowerCase()}` : '';
+  // "(100mg)" or "(1ml)" — name + concentration number
+  const hm = hClean.match(/^(.+?)\s*\(([\d.]+)\s*(mg|iu|ml|mcg|IU|g)\)/i);
+  let compName, unit;
+  if(hm) {
+    compName = hm[1].trim();
+    unit = `${hm[2]}${hm[3].toLowerCase()}`;
+  } else {
+    // "(IU)" or "(mg)" — unit-only notation with no number (e.g. "Novalin R (IU)")
+    const hm2 = hClean.match(/^(.+?)\s*\((mg|iu|ml|mcg|g)\)/i);
+    compName = hm2 ? hm2[1].trim() : hClean;
+    unit = hm2 ? hm2[2].toLowerCase() : '';
+  }
   const isOral = ORAL_KEYWORDS.some(k => compName.toLowerCase().includes(k));
   return { h, compName, unit, isOral };
 }
