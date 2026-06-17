@@ -940,17 +940,28 @@
 <div id="page-healthkit" class="page">
 <div style="padding:20px 32px 32px;width:100%">
 
-  <!-- Stats strip -->
-  <div id="hk-stats" style="display:grid;grid-template-columns:repeat(6,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:20px">
-    <div style="padding:16px;background:var(--bg2);text-align:center;color:var(--muted);font-size:12px">Loading…</div>
+  <!-- Period selector + Stats strip -->
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap">
+    <div style="font-size:11px;color:var(--muted);font-weight:600">Show:</div>
+    <div style="display:flex;gap:4px">
+      <button class="hk-period-btn" data-days="30"  onclick="setHkPeriod(30)"  style="padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-size:11px;font-weight:600;cursor:pointer">30d</button>
+      <button class="hk-period-btn" data-days="90"  onclick="setHkPeriod(90)"  style="padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-size:11px;font-weight:600;cursor:pointer">90d</button>
+      <button class="hk-period-btn" data-days="180" onclick="setHkPeriod(180)" style="padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--accent);font-size:11px;font-weight:600;cursor:pointer">180d</button>
+      <button class="hk-period-btn" data-days="365" onclick="setHkPeriod(365)" style="padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-size:11px;font-weight:600;cursor:pointer">1Y</button>
+      <button class="hk-period-btn" data-days="0"   onclick="setHkPeriod(0)"   style="padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-size:11px;font-weight:600;cursor:pointer">All</button>
+    </div>
+  </div>
+  <div id="hk-stats" style="display:grid;grid-template-columns:repeat(8,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:20px">
+    <div style="padding:16px;background:var(--bg2);text-align:center;color:var(--muted);font-size:12px;grid-column:1/-1">Loading…</div>
   </div>
 
   <!-- Body Composition -->
   <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Body Composition</div>
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:20px">
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:16px;margin-bottom:20px">
     <div class="card"><h2>Weight (lbs)</h2><canvas id="hk-weight-chart" height="110"></canvas></div>
     <div class="card"><h2>Body Fat %</h2><canvas id="hk-bodyfat-chart" height="110"></canvas></div>
     <div class="card"><h2>Lean Body Mass (lbs)</h2><canvas id="hk-lean-chart" height="110"></canvas></div>
+    <div class="card"><h2>BMI</h2><canvas id="hk-bmi-chart" height="110"></canvas></div>
   </div>
 
   <!-- Heart & Recovery -->
@@ -966,7 +977,12 @@
       <canvas id="hk-hr-chart" height="110"></canvas>
     </div>
   </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+    <div class="card"><h2>Blood Pressure (mmHg)</h2><canvas id="hk-bp-chart" height="100"></canvas></div>
+    <div class="card"><h2>VO2 Max (ml/kg/min)</h2><canvas id="hk-vo2-chart" height="100"></canvas></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:20px">
+    <div class="card"><h2>Cardio Recovery (bpm drop)</h2><canvas id="hk-cardio-chart" height="100"></canvas></div>
     <div class="card"><h2>Blood Oxygen Saturation (SpO2 %)</h2><canvas id="hk-spo2-chart" height="100"></canvas></div>
     <div class="card"><h2>Respiratory Rate (count/min)</h2><canvas id="hk-resp-chart" height="100"></canvas></div>
   </div>
@@ -3734,9 +3750,10 @@ function landingSignIn() {
 // ── HealthKit ─────────────────────────────────────────────────
 let hkInitialized = false;
 let _hkCharts = {};
+let _hkRows = null;      // cache all rows
+let _hkPeriod = 180;     // days to show in charts (0 = all)
 
 async function loadHealthKit() {
-  // Read from HealthKit sheet tab via Sheets API (populated daily by Apps Script)
   const url = `${SHEETS_BASE}/${SHEET_ID}/values/HealthKit!A:ZZ?key=${SHEETS_API_KEY}`;
   const resp = await fetch(url);
   if(!resp.ok) throw new Error('HTTP ' + resp.status);
@@ -3758,8 +3775,7 @@ function _hkNum(row, col) {
 }
 
 function _hkLabel(dateStr) {
-  // Handles both "2026-05-18 00:00:00" and "2026-05-18" formats
-  const d = new Date(dateStr.replace(' ', 'T').split('T')[0] + 'T00:00:00');
+  const d = new Date(dateStr.replace(' ','T').split('T')[0] + 'T00:00:00');
   return d.toLocaleDateString('en-US', {month:'short', day:'numeric'});
 }
 
@@ -3804,10 +3820,17 @@ function _hkBar(id, col, rows, labels, bg, border) {
   });
 }
 
+function setHkPeriod(days) {
+  _hkPeriod = days;
+  document.querySelectorAll('.hk-period-btn').forEach(b => {
+    b.style.color = parseInt(b.dataset.days) === days ? 'var(--accent)' : 'var(--muted)';
+  });
+  if(_hkRows) _hkRender(_hkRows);
+}
+
 async function renderHealthKit() {
   hkInitialized = true;
   _hkDestroyAll();
-
   const statsEl = document.getElementById('hk-stats');
   if(statsEl) statsEl.innerHTML =
     '<div style="padding:16px;background:var(--bg2);text-align:center;color:var(--muted);font-size:12px;grid-column:1/-1">Loading from Google Sheets…</div>';
@@ -3819,52 +3842,71 @@ async function renderHealthKit() {
     if(statsEl) statsEl.innerHTML =
       `<div style="padding:20px;color:#ef4444;grid-column:1/-1">` +
       (e.message.includes('Unable to parse range') || e.message.includes('404')
-        ? '⚠️ HealthKit sheet tab not found. Run the Apps Script (healthkit-sync.gs) first to populate it.'
-        : '⚠️ Failed to load HealthKit data: ' + e.message) +
-      `</div>`;
+        ? '⚠️ HealthKit sheet tab not found. Run the Apps Script (healthkit-sync.gs) first.'
+        : '⚠️ Failed to load HealthKit data: ' + e.message) + '</div>';
     return;
   }
-
   if(!rows.length) {
     if(statsEl) statsEl.innerHTML =
       '<div style="padding:16px;color:var(--muted);grid-column:1/-1">No data yet — run the Apps Script to sync from Drive.</div>';
     return;
   }
+  _hkRows = rows;
+  _hkRender(rows);
+}
 
-  const labels = rows.map(r => _hkLabel(r['Date/Time'] || r['date'] || ''));
+function _hkRender(allRows) {
+  _hkDestroyAll();
 
-  // ── Stat strip ────────────────────────────────────────────────
-  const lastRow = k => [...rows].reverse().find(r => r[k] && r[k] !== '');
+  // Filter for charts (stat strip always uses latest from all time)
+  const cutoff = _hkPeriod > 0 ? new Date(Date.now() - _hkPeriod * 86400000) : null;
+  const rows = cutoff
+    ? allRows.filter(r => { try { return new Date(r['Date/Time'].split(' ')[0]) >= cutoff; } catch(e) { return true; } })
+    : allRows;
+  const labels = rows.map(r => _hkLabel(r['Date/Time'] || ''));
+
+  // ── Stat strip (always latest from all time) ──────────────────
+  const lastRow = k => [...allRows].reverse().find(r => r[k] && r[k] !== '');
   const fmt = (r, k, dec, suf) => r ? (parseFloat(r[k]).toFixed(dec) + suf) : '—';
   const lW = lastRow('Weight (lbs)');
   const lH = lastRow('Heart Rate Variability (ms)');
-  const lR = lastRow('Resting Heart Rate (bpm)');
+  const lBPs = lastRow('Blood Pressure [Systolic] (mmHg)');
+  const lBPd = lastRow('Blood Pressure [Diastolic] (mmHg)');
+  const lV = lastRow('VO2 Max (ml/(kg\xb7min))');
+  const lC = lastRow('Cardio Recovery (count/min)');
   const lO = lastRow('Blood Oxygen Saturation (%)');
   const lS = lastRow('Sleep Analysis [Total] (hr)');
   const lT = lastRow('Step Count (steps)');
+  const bpVal = (lBPs && lBPd)
+    ? Math.round(parseFloat(lBPs['Blood Pressure [Systolic] (mmHg)'])) + '/' + Math.round(parseFloat(lBPd['Blood Pressure [Diastolic] (mmHg)'])) + ' mmHg'
+    : '—';
   const statCards = [
-    { label:'Weight',     val:fmt(lW,'Weight (lbs)',1,' lbs'),              color:'#fafafa' },
-    { label:'HRV',        val:fmt(lH,'Heart Rate Variability (ms)',0,' ms'), color:'#fcd34d' },
-    { label:'Resting HR', val:fmt(lR,'Resting Heart Rate (bpm)',0,' bpm'),   color:'#ef4444' },
-    { label:'SpO2',       val:fmt(lO,'Blood Oxygen Saturation (%)',1,'%'),   color:'#06b6d4' },
-    { label:'Sleep',      val:fmt(lS,'Sleep Analysis [Total] (hr)',1,'h'),   color:'#8b5cf6' },
-    { label:'Steps',      val:lT ? Math.round(parseFloat(lT['Step Count (steps)'])).toLocaleString() : '—', color:'#10b981' },
+    { label:'Weight',   val:fmt(lW,'Weight (lbs)',1,' lbs'),                      color:'#fafafa' },
+    { label:'HRV',      val:fmt(lH,'Heart Rate Variability (ms)',0,' ms'),         color:'#fcd34d' },
+    { label:'BP',       val:bpVal,                                                  color:'#ef4444' },
+    { label:'VO2 Max',  val:fmt(lV,'VO2 Max (ml/(kg\xb7min))',1,''),              color:'#10b981' },
+    { label:'Recovery', val:fmt(lC,'Cardio Recovery (count/min)',0,' bpm'),        color:'#8b5cf6' },
+    { label:'SpO2',     val:fmt(lO,'Blood Oxygen Saturation (%)',1,'%'),           color:'#06b6d4' },
+    { label:'Sleep',    val:fmt(lS,'Sleep Analysis [Total] (hr)',1,'h'),           color:'#8b5cf6' },
+    { label:'Steps',    val:lT ? Math.round(parseFloat(lT['Step Count (steps)'])).toLocaleString() : '—', color:'#10b981' },
   ];
+  const statsEl = document.getElementById('hk-stats');
   if(statsEl) statsEl.innerHTML = statCards.map(s =>
-    `<div style="padding:16px 20px;background:var(--bg2);text-align:center">` +
-    `<div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">${s.label}</div>` +
-    `<div style="font-size:20px;font-weight:700;color:${s.color}">${s.val}</div></div>`
+    `<div style="padding:14px 10px;background:var(--bg2);text-align:center">` +
+    `<div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">${s.label}</div>` +
+    `<div style="font-size:15px;font-weight:700;color:${s.color};white-space:nowrap">${s.val}</div></div>`
   ).join('');
 
   // ── Body Composition ──────────────────────────────────────────
   _hkCharts.weight  = _hkLine('hk-weight-chart',  'Weight (lbs)',            rows, labels, '#fcd34d', 'rgba(252,211,77,0.07)');
   _hkCharts.bodyfat = _hkLine('hk-bodyfat-chart', 'Body Fat Percentage (%)', rows, labels, '#10b981', 'rgba(16,185,129,0.07)');
   _hkCharts.lean    = _hkLine('hk-lean-chart',    'Lean Body Mass (lbs)',    rows, labels, '#8b5cf6', 'rgba(139,92,246,0.07)');
+  _hkCharts.bmi     = _hkLine('hk-bmi-chart',     'Body Mass Index (count)', rows, labels, '#f97316', 'rgba(249,115,22,0.07)');
 
   // ── HRV ───────────────────────────────────────────────────────
   _hkCharts.hrv = _hkLine('hk-hrv-chart', 'Heart Rate Variability (ms)', rows, labels, '#fcd34d', 'rgba(252,211,77,0.06)');
 
-  // ── Heart Rate Min / Avg / Max ────────────────────────────────
+  // ── HR Min / Avg / Max ────────────────────────────────────────
   const hrEl = document.getElementById('hk-hr-chart');
   if(hrEl) _hkCharts.hr = new Chart(hrEl, {
     type: 'line',
@@ -3877,6 +3919,23 @@ async function renderHealthKit() {
       plugins:{ legend:{ display:true, labels:{color:'#9b9ba8',font:{size:10},boxWidth:10,padding:10} }, tooltip:_HK_TOOLTIP },
       scales:_HK_SCALES }
   });
+
+  // ── Blood Pressure ────────────────────────────────────────────
+  const bpEl = document.getElementById('hk-bp-chart');
+  if(bpEl) _hkCharts.bp = new Chart(bpEl, {
+    type: 'line',
+    data: { labels, datasets: [
+      { label:'Systolic',  data:rows.map(r=>_hkNum(r,'Blood Pressure [Systolic] (mmHg)')),  borderColor:'#ef4444', borderWidth:2, pointRadius:2, tension:0.3, spanGaps:true, fill:false },
+      { label:'Diastolic', data:rows.map(r=>_hkNum(r,'Blood Pressure [Diastolic] (mmHg)')), borderColor:'#f97316', borderWidth:2, pointRadius:2, tension:0.3, spanGaps:true, fill:false },
+    ]},
+    options: { animation:false, responsive:true, maintainAspectRatio:true,
+      plugins:{ legend:{ display:true, labels:{color:'#9b9ba8',font:{size:10},boxWidth:10,padding:10} }, tooltip:_HK_TOOLTIP },
+      scales:_HK_SCALES }
+  });
+
+  // ── VO2 Max + Cardio Recovery ─────────────────────────────────
+  _hkCharts.vo2    = _hkLine('hk-vo2-chart',    'VO2 Max (ml/(kg\xb7min))',      rows, labels, '#10b981', 'rgba(16,185,129,0.07)');
+  _hkCharts.cardio = _hkLine('hk-cardio-chart', 'Cardio Recovery (count/min)',   rows, labels, '#8b5cf6', 'rgba(139,92,246,0.07)');
 
   // ── SpO2 + Respiratory Rate ───────────────────────────────────
   _hkCharts.spo2 = _hkLine('hk-spo2-chart', 'Blood Oxygen Saturation (%)',  rows, labels, '#06b6d4', 'rgba(6,182,212,0.07)');
