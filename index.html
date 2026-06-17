@@ -3980,21 +3980,50 @@ let hkInitialized = false;
 let _hkCharts = {};
 let _hkRows = null;      // cache all rows
 let _hkPeriod = 180;     // days to show in charts (0 = all)
+let _hkSource = 'sheets'; // 'sheets' or 'csv'
 
 async function loadHealthKit() {
-  const url = `${SHEETS_BASE}/${SHEET_ID}/values/HealthKit!A:ZZ?key=${SHEETS_API_KEY}`;
-  const resp = await fetch(url);
-  if(!resp.ok) throw new Error('HTTP ' + resp.status);
-  const data = await resp.json();
-  if(data.error) throw new Error(data.error.message || 'Sheets API error');
-  const rows = data.values || [];
-  if(rows.length < 2) return [];
-  const headers = rows[0].map(h => String(h).trim());
-  return rows.slice(1).map(row => {
-    const obj = {};
-    headers.forEach((h, i) => { obj[h] = (row[i] !== undefined ? String(row[i]) : '').trim(); });
-    return obj;
-  });
+  // 1. Try Google Sheets (HealthKit tab)
+  try {
+    const url = `${SHEETS_BASE}/${SHEET_ID}/values/HealthKit!A:ZZ?key=${SHEETS_API_KEY}`;
+    const resp = await fetch(url);
+    if(resp.ok) {
+      const data = await resp.json();
+      if(!data.error) {
+        const sheetRows = data.values || [];
+        if(sheetRows.length >= 2) {
+          const headers = sheetRows[0].map(h => String(h).trim());
+          _hkSource = 'sheets';
+          return sheetRows.slice(1).map(row => {
+            const obj = {};
+            headers.forEach((h, i) => { obj[h] = (row[i] !== undefined ? String(row[i]) : '').trim(); });
+            return obj;
+          });
+        }
+      }
+    }
+  } catch(e) {}
+
+  // 2. Fall back to bundled CSV
+  try {
+    const resp = await fetch('healthkit-data.csv');
+    if(resp.ok) {
+      const text = await resp.text();
+      const lines = text.trim().split('\n');
+      if(lines.length >= 2) {
+        const headers = lines[0].split(',').map(h => h.trim());
+        _hkSource = 'csv';
+        return lines.slice(1).map(line => {
+          const vals = line.split(',');
+          const obj = {};
+          headers.forEach((h, i) => { obj[h] = (vals[i] || '').trim(); });
+          return obj;
+        });
+      }
+    }
+  } catch(e) {}
+
+  throw new Error('No HealthKit data available');
 }
 
 function _hkNum(row, col) {
@@ -4070,22 +4099,19 @@ async function renderHealthKit() {
   _hkDestroyAll();
   const statsEl = document.getElementById('hk-stats');
   if(statsEl) statsEl.innerHTML =
-    '<div style="padding:16px;background:var(--bg2);text-align:center;color:var(--muted);font-size:12px;grid-column:1/-1">Loading from Google Sheets…</div>';
+    '<div style="padding:16px;background:var(--bg2);text-align:center;color:var(--muted);font-size:12px;grid-column:1/-1">Loading…</div>';
 
   let rows;
   try {
     rows = await loadHealthKit();
   } catch(e) {
     if(statsEl) statsEl.innerHTML =
-      `<div style="padding:20px;color:#ef4444;grid-column:1/-1">` +
-      (e.message.includes('Unable to parse range') || e.message.includes('404')
-        ? '⚠️ HealthKit sheet tab not found. Run the Apps Script (healthkit-sync.gs) first.'
-        : '⚠️ Failed to load HealthKit data: ' + e.message) + '</div>';
+      `<div style="padding:20px;color:#ef4444;grid-column:1/-1">⚠️ Failed to load HealthKit data: ${e.message}</div>`;
     return;
   }
   if(!rows.length) {
     if(statsEl) statsEl.innerHTML =
-      '<div style="padding:16px;color:var(--muted);grid-column:1/-1">No data yet — run the Apps Script to sync from Drive.</div>';
+      '<div style="padding:16px;color:var(--muted);grid-column:1/-1">No data available.</div>';
     return;
   }
   _hkRows = rows;
@@ -4114,8 +4140,10 @@ function _hkRender(allRows) {
     const daysAgo = Math.floor((Date.now() - lastDate) / 86400000);
     const label = daysAgo === 0 ? 'today' : daysAgo === 1 ? 'yesterday' : daysAgo + ' days ago';
     const dot = daysAgo <= 1 ? '#22c55e' : daysAgo <= 3 ? '#f59e0b' : '#ef4444';
-    el.innerHTML = `<span style="width:7px;height:7px;border-radius:50%;background:${dot};display:inline-block"></span>Synced ${label}`;
-    el.title = 'Last data: ' + lastDate.toLocaleDateString('en-US', {month:'long', day:'numeric', year:'numeric'}) + ' · Auto-sync runs daily at 3 AM';
+    const src = _hkSource === 'csv' ? ' · from CSV' : '';
+    el.innerHTML = `<span style="width:7px;height:7px;border-radius:50%;background:${dot};display:inline-block"></span>Last data ${label}${src}`;
+    el.title = 'Last data: ' + lastDate.toLocaleDateString('en-US', {month:'long', day:'numeric', year:'numeric'})
+      + (_hkSource === 'csv' ? ' · Using bundled CSV (HealthKit sheet tab not yet synced)' : ' · Auto-sync runs daily at 3 AM');
   })();
 
 
