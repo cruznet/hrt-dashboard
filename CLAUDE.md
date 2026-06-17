@@ -122,3 +122,52 @@ No zip uploads. No Cloudflare UI. Just push.
 - Do not change the OAuth method — `initTokenClient` + `requestAccessToken` is the correct pattern
 - Do not send numeric values to oral compound columns in the sheet (they validate TRUE/FALSE only)
 - Do not add `redirect_uri` to the GIS token client config — it doesn't use redirects
+
+---
+
+## Skill: Extract Design Language (`/extract-design`)
+
+Extract the full design system (colors, fonts, spacing, tokens) from any website URL.
+
+### How to run
+
+```bash
+# In VS Code terminal
+npx designlang <url> --screenshots
+```
+
+Examples:
+```bash
+npx designlang https://testosterone.tools --screenshots
+npx designlang https://health.cruznetllc.com --screenshots --dark
+npx designlang https://example.com --depth 3 --screenshots
+```
+
+### Output files (saved to `./design-extract-output/`)
+
+| File | Use for |
+|---|---|
+| `*-design-language.md` | Paste into Claude as context for styling work |
+| `*-preview.html` | Open in browser — visual swatches, type scale, a11y score |
+| `*-tailwind.config.js` | Drop into any Tailwind project |
+| `*-variables.css` | Copy CSS vars into `index.html` |
+| `*-shadcn-theme.css` | shadcn/ui globals.css |
+| `*-figma-variables.json` | Import into Figma |
+| `*-theme.js` | React/CSS-in-JS theme |
+| `*-design-tokens.json` | W3C Design Tokens format |
+
+### Useful flags
+
+| Flag | What it does |
+|---|---|
+| `--dark` | Also extract dark mode palette |
+| `--depth 3` | Crawl 3 pages deep for site-wide tokens |
+| `--out ./my-folder` | Custom output directory |
+| `--wait 2000` | Wait 2s after load (for SPAs) |
+
+### Typical workflow
+
+1. Run `npx designlang <url> --screenshots`
+2. Open `*-preview.html` in browser to review
+3. Copy `*-variables.css` vars into `index.html` to match a site's style
+4. Paste `*-design-language.md` into Claude chat as design context
