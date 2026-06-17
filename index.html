@@ -857,7 +857,8 @@
 <div class="page" id="page-fitness">
 <div style="padding:20px 32px 32px;width:100%">
 
-  <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
+  <div style="display:flex;justify-content:flex-end;align-items:center;gap:16px;margin-bottom:8px">
+    <div id="fitness-sync-status" style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)"></div>
     <button onclick="refreshFitness()" style="font-size:12px;padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--muted);cursor:pointer">↻ Refresh Fitness</button>
   </div>
 
@@ -2324,6 +2325,23 @@ function epley1RM(weight, reps) {
 function _renderFitnessAll() {
   document.getElementById('fitness-loading').style.display = 'none';
   document.getElementById('fitness-content').style.display = 'block';
+
+  // Sync status badge
+  (function() {
+    const el = document.getElementById('fitness-sync-status');
+    if(!el || !allWorkouts.length) return;
+    const last = allWorkouts.reduce((best, w) => {
+      const d = new Date(w.start_time);
+      return (!best || d > best) ? d : best;
+    }, null);
+    if(!last) return;
+    const daysAgo = Math.floor((Date.now() - last) / 86400000);
+    const label = daysAgo === 0 ? 'today' : daysAgo === 1 ? 'yesterday' : daysAgo + ' days ago';
+    const dot = daysAgo <= 1 ? '#22c55e' : daysAgo <= 3 ? '#f59e0b' : '#ef4444';
+    el.innerHTML = `<span style="width:7px;height:7px;border-radius:50%;background:${dot};display:inline-block"></span>Last workout ${label}`;
+    el.title = 'Last workout: ' + last.toLocaleDateString('en-US', {month:'long', day:'numeric', year:'numeric'});
+  })();
+
   renderFitnessStats();
   renderFitnessCalendar();
   renderFitnessWeeklyFreq();
