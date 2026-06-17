@@ -13,6 +13,21 @@ const HK_FOLDER_ID = '1jFc2yMCsqOoZ8GboS37O2oXht-Cqu6AN';
 const HK_SHEET_ID  = '1-1zGJo-1SudZ37LZKzqgs-7pCcvLU2haSNjOYUuF19Q';
 const HK_TAB_NAME  = 'HealthKit';
 
+// ── Debug: peek at the structure of one daily file ───────────────────────
+// Run this, then paste the log output back to Claude
+function peekFile() {
+  const EXAMPLE_ID = '1XppbPRwe75g9QwIRQf6o7KvtXnGsdQxKcMh7obgxKtg';
+  const ss = SpreadsheetApp.openById(EXAMPLE_ID);
+  ss.getSheets().forEach(function(sheet) {
+    Logger.log('=== Sheet: ' + sheet.getName() + ' ===');
+    const data = sheet.getDataRange().getValues();
+    Logger.log('Dimensions: ' + data.length + ' rows x ' + (data[0] ? data[0].length : 0) + ' cols');
+    data.slice(0, 5).forEach(function(row, i) {
+      Logger.log('Row ' + i + ': ' + JSON.stringify(row));
+    });
+  });
+}
+
 // ── Debug: confirms what files are in the folder ──────────────────────────
 function inspectFolder() {
   const folder = DriveApp.getFolderById(HK_FOLDER_ID);
