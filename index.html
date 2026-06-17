@@ -940,34 +940,57 @@
 <div id="page-healthkit" class="page">
 <div style="padding:20px 32px 32px;width:100%">
 
-  <!-- Stats strip: latest values -->
+  <!-- Stats strip -->
   <div id="hk-stats" style="display:grid;grid-template-columns:repeat(6,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:20px">
-    <div style="padding:16px 20px;background:var(--bg2);text-align:center;color:var(--muted);font-size:13px">Loading…</div>
+    <div style="padding:16px;background:var(--bg2);text-align:center;color:var(--muted);font-size:12px">Loading…</div>
   </div>
 
-  <!-- Row 1: Weight + HRV -->
+  <!-- Body Composition -->
+  <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Body Composition</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:20px">
+    <div class="card"><h2>Weight (lbs)</h2><canvas id="hk-weight-chart" height="110"></canvas></div>
+    <div class="card"><h2>Body Fat %</h2><canvas id="hk-bodyfat-chart" height="110"></canvas></div>
+    <div class="card"><h2>Lean Body Mass (lbs)</h2><canvas id="hk-lean-chart" height="110"></canvas></div>
+  </div>
+
+  <!-- Heart & Recovery -->
+  <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Heart &amp; Recovery</div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
-    <div class="card">
-      <h2>Weight (lbs)</h2>
-      <canvas id="hk-weight-chart" height="120"></canvas>
-    </div>
     <div class="card">
       <h2>Heart Rate Variability (ms)</h2>
       <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Low HRV may indicate protocol or recovery stress</p>
-      <canvas id="hk-hrv-chart" height="120"></canvas>
+      <canvas id="hk-hrv-chart" height="110"></canvas>
+    </div>
+    <div class="card">
+      <h2>Heart Rate — Min / Avg / Max (bpm)</h2>
+      <canvas id="hk-hr-chart" height="110"></canvas>
     </div>
   </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+    <div class="card"><h2>Blood Oxygen Saturation (SpO2 %)</h2><canvas id="hk-spo2-chart" height="100"></canvas></div>
+    <div class="card"><h2>Respiratory Rate (count/min)</h2><canvas id="hk-resp-chart" height="100"></canvas></div>
+  </div>
 
-  <!-- Row 2: Sleep + Steps -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-    <div class="card">
-      <h2>Sleep Breakdown (hrs)</h2>
-      <canvas id="hk-sleep-chart" height="140"></canvas>
-    </div>
-    <div class="card">
-      <h2>Daily Steps</h2>
-      <canvas id="hk-steps-chart" height="140"></canvas>
-    </div>
+  <!-- Activity -->
+  <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Activity</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+    <div class="card"><h2>Step Count</h2><canvas id="hk-steps-chart" height="110"></canvas></div>
+    <div class="card"><h2>Walking + Running Distance (mi)</h2><canvas id="hk-distance-chart" height="110"></canvas></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+    <div class="card"><h2>Active Energy (kcal)</h2><canvas id="hk-active-chart" height="110"></canvas></div>
+    <div class="card"><h2>Resting Energy (kcal)</h2><canvas id="hk-resting-chart" height="110"></canvas></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+    <div class="card"><h2>Apple Exercise Time (min)</h2><canvas id="hk-exercise-chart" height="110"></canvas></div>
+    <div class="card"><h2>Stand Hours</h2><canvas id="hk-stand-chart" height="110"></canvas></div>
+  </div>
+
+  <!-- Sleep -->
+  <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Sleep Analysis</div>
+  <div class="card">
+    <h2>Sleep Breakdown (hrs) — Deep · REM · Core · Awake</h2>
+    <canvas id="hk-sleep-chart" height="120"></canvas>
   </div>
 
 </div>
@@ -3713,15 +3736,18 @@ let hkInitialized = false;
 let _hkCharts = {};
 
 async function loadHealthKit() {
-  const resp = await fetch('healthkit-data.csv');
+  // Read from HealthKit sheet tab via Sheets API (populated daily by Apps Script)
+  const url = `${SHEETS_BASE}/${SHEET_ID}/values/HealthKit!A:ZZ?key=${SHEETS_API_KEY}`;
+  const resp = await fetch(url);
   if(!resp.ok) throw new Error('HTTP ' + resp.status);
-  const text = await resp.text();
-  const lines = text.trim().split('\n');
-  const headers = lines[0].split(',').map(h => h.trim());
-  return lines.slice(1).map(line => {
-    const vals = line.split(',');
+  const data = await resp.json();
+  if(data.error) throw new Error(data.error.message || 'Sheets API error');
+  const rows = data.values || [];
+  if(rows.length < 2) return [];
+  const headers = rows[0].map(h => String(h).trim());
+  return rows.slice(1).map(row => {
     const obj = {};
-    headers.forEach((h, i) => { obj[h] = (vals[i] || '').trim(); });
+    headers.forEach((h, i) => { obj[h] = (row[i] !== undefined ? String(row[i]) : '').trim(); });
     return obj;
   });
 }
@@ -3732,7 +3758,8 @@ function _hkNum(row, col) {
 }
 
 function _hkLabel(dateStr) {
-  const d = new Date(dateStr);
+  // Handles both "2026-05-18 00:00:00" and "2026-05-18" formats
+  const d = new Date(dateStr.replace(' ', 'T').split('T')[0] + 'T00:00:00');
   return d.toLocaleDateString('en-US', {month:'short', day:'numeric'});
 }
 
@@ -3742,99 +3769,141 @@ function _hkDestroyAll() {
 }
 
 const _HK_SCALES = {
-  x: { grid:{color:'rgba(255,255,255,0.04)'}, ticks:{color:'#9b9ba8',font:{size:11},maxTicksLimit:10} },
-  y: { grid:{color:'rgba(255,255,255,0.04)'}, ticks:{color:'#9b9ba8',font:{size:11}} }
+  x: { grid:{color:'rgba(255,255,255,0.04)'}, ticks:{color:'#9b9ba8',font:{size:10},maxTicksLimit:8} },
+  y: { grid:{color:'rgba(255,255,255,0.04)'}, ticks:{color:'#9b9ba8',font:{size:10}} }
 };
 const _HK_TOOLTIP = { backgroundColor:'#1e1e2e', titleColor:'#fafafa', bodyColor:'#9b9ba8', borderColor:'#2d2d38', borderWidth:1 };
+
+function _hkLine(id, col, rows, labels, color, fill) {
+  const el = document.getElementById(id);
+  if(!el) return null;
+  return new Chart(el, {
+    type: 'line',
+    data: { labels, datasets: [{
+      data: rows.map(r => _hkNum(r, col)),
+      borderColor: color, backgroundColor: fill || 'transparent',
+      borderWidth: 2, pointRadius: 2, pointBackgroundColor: color,
+      tension: 0.3, fill: !!fill, spanGaps: true,
+    }]},
+    options: { animation:false, responsive:true, maintainAspectRatio:true,
+      plugins:{ legend:{display:false}, tooltip:_HK_TOOLTIP }, scales:_HK_SCALES }
+  });
+}
+
+function _hkBar(id, col, rows, labels, bg, border) {
+  const el = document.getElementById(id);
+  if(!el) return null;
+  return new Chart(el, {
+    type: 'bar',
+    data: { labels, datasets: [{
+      data: rows.map(r => _hkNum(r, col)),
+      backgroundColor: bg, borderColor: border || bg, borderWidth:1, borderRadius:3,
+    }]},
+    options: { animation:false, responsive:true, maintainAspectRatio:true,
+      plugins:{ legend:{display:false}, tooltip:_HK_TOOLTIP }, scales:_HK_SCALES }
+  });
+}
 
 async function renderHealthKit() {
   hkInitialized = true;
   _hkDestroyAll();
 
+  const statsEl = document.getElementById('hk-stats');
+  if(statsEl) statsEl.innerHTML =
+    '<div style="padding:16px;background:var(--bg2);text-align:center;color:var(--muted);font-size:12px;grid-column:1/-1">Loading from Google Sheets…</div>';
+
   let rows;
   try {
     rows = await loadHealthKit();
   } catch(e) {
-    document.getElementById('hk-stats').innerHTML =
-      `<div style="padding:20px;color:#ef4444;grid-column:1/-1">Failed to load healthkit-data.csv: ${e.message}</div>`;
+    if(statsEl) statsEl.innerHTML =
+      `<div style="padding:20px;color:#ef4444;grid-column:1/-1">` +
+      (e.message.includes('Unable to parse range') || e.message.includes('404')
+        ? '⚠️ HealthKit sheet tab not found. Run the Apps Script (healthkit-sync.gs) first to populate it.'
+        : '⚠️ Failed to load HealthKit data: ' + e.message) +
+      `</div>`;
     return;
   }
 
-  const labels = rows.map(r => _hkLabel(r['Date/Time']));
+  if(!rows.length) {
+    if(statsEl) statsEl.innerHTML =
+      '<div style="padding:16px;color:var(--muted);grid-column:1/-1">No data yet — run the Apps Script to sync from Drive.</div>';
+    return;
+  }
 
-  // ── Latest-value stat cards ──────────────────────────────────
-  const last = k => [...rows].reverse().find(r => r[k] && r[k] !== '');
-  const fmtN = (r, k, dec, suf) => r ? (parseFloat(r[k]).toFixed(dec) + suf) : '—';
+  const labels = rows.map(r => _hkLabel(r['Date/Time'] || r['date'] || ''));
 
+  // ── Stat strip ────────────────────────────────────────────────
+  const lastRow = k => [...rows].reverse().find(r => r[k] && r[k] !== '');
+  const fmt = (r, k, dec, suf) => r ? (parseFloat(r[k]).toFixed(dec) + suf) : '—';
+  const lW = lastRow('Weight (lbs)');
+  const lH = lastRow('Heart Rate Variability (ms)');
+  const lR = lastRow('Resting Heart Rate (bpm)');
+  const lO = lastRow('Blood Oxygen Saturation (%)');
+  const lS = lastRow('Sleep Analysis [Total] (hr)');
+  const lT = lastRow('Step Count (steps)');
   const statCards = [
-    { label:'Weight',     val: fmtN(last('Weight (lbs)'), 'Weight (lbs)', 1, ' lbs'), color:'#fafafa' },
-    { label:'Body Fat',   val: fmtN(last('Body Fat Percentage (%)'), 'Body Fat Percentage (%)', 1, '%'), color:'#10b981' },
-    { label:'HRV',        val: fmtN(last('Heart Rate Variability (ms)'), 'Heart Rate Variability (ms)', 0, ' ms'), color:'#fcd34d' },
-    { label:'Resting HR', val: fmtN(last('Resting Heart Rate (bpm)'), 'Resting Heart Rate (bpm)', 0, ' bpm'), color:'#ef4444' },
-    { label:'Sleep',      val: fmtN(last('Sleep Analysis [Total] (hr)'), 'Sleep Analysis [Total] (hr)', 1, 'h'), color:'#8b5cf6' },
-    { label:'Steps',      val: last('Step Count (steps)') ? Math.round(parseFloat(last('Step Count (steps)')['Step Count (steps)'])).toLocaleString() : '—', color:'#06b6d4' },
+    { label:'Weight',     val:fmt(lW,'Weight (lbs)',1,' lbs'),              color:'#fafafa' },
+    { label:'HRV',        val:fmt(lH,'Heart Rate Variability (ms)',0,' ms'), color:'#fcd34d' },
+    { label:'Resting HR', val:fmt(lR,'Resting Heart Rate (bpm)',0,' bpm'),   color:'#ef4444' },
+    { label:'SpO2',       val:fmt(lO,'Blood Oxygen Saturation (%)',1,'%'),   color:'#06b6d4' },
+    { label:'Sleep',      val:fmt(lS,'Sleep Analysis [Total] (hr)',1,'h'),   color:'#8b5cf6' },
+    { label:'Steps',      val:lT ? Math.round(parseFloat(lT['Step Count (steps)'])).toLocaleString() : '—', color:'#10b981' },
   ];
-  document.getElementById('hk-stats').innerHTML = statCards.map(s =>
-    `<div style="padding:16px 20px;background:var(--bg2);text-align:center">
-      <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">${s.label}</div>
-      <div style="font-size:22px;font-weight:700;color:${s.color}">${s.val}</div>
-    </div>`
+  if(statsEl) statsEl.innerHTML = statCards.map(s =>
+    `<div style="padding:16px 20px;background:var(--bg2);text-align:center">` +
+    `<div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">${s.label}</div>` +
+    `<div style="font-size:20px;font-weight:700;color:${s.color}">${s.val}</div></div>`
   ).join('');
 
-  // ── Weight chart ──────────────────────────────────────────────
-  _hkCharts.weight = new Chart(document.getElementById('hk-weight-chart'), {
+  // ── Body Composition ──────────────────────────────────────────
+  _hkCharts.weight  = _hkLine('hk-weight-chart',  'Weight (lbs)',            rows, labels, '#fcd34d', 'rgba(252,211,77,0.07)');
+  _hkCharts.bodyfat = _hkLine('hk-bodyfat-chart', 'Body Fat Percentage (%)', rows, labels, '#10b981', 'rgba(16,185,129,0.07)');
+  _hkCharts.lean    = _hkLine('hk-lean-chart',    'Lean Body Mass (lbs)',    rows, labels, '#8b5cf6', 'rgba(139,92,246,0.07)');
+
+  // ── HRV ───────────────────────────────────────────────────────
+  _hkCharts.hrv = _hkLine('hk-hrv-chart', 'Heart Rate Variability (ms)', rows, labels, '#fcd34d', 'rgba(252,211,77,0.06)');
+
+  // ── Heart Rate Min / Avg / Max ────────────────────────────────
+  const hrEl = document.getElementById('hk-hr-chart');
+  if(hrEl) _hkCharts.hr = new Chart(hrEl, {
     type: 'line',
-    data: { labels, datasets: [{
-      data: rows.map(r => _hkNum(r,'Weight (lbs)')),
-      borderColor:'#fcd34d', backgroundColor:'rgba(252,211,77,0.08)',
-      borderWidth:2, pointRadius:3, pointBackgroundColor:'#fcd34d',
-      tension:0.3, fill:true, spanGaps:true,
-    }]},
+    data: { labels, datasets: [
+      { label:'Min', data:rows.map(r=>_hkNum(r,'Heart Rate [Min] (bpm)')), borderColor:'rgba(155,155,168,0.6)', borderDash:[4,3], borderWidth:1.5, pointRadius:0, tension:0.3, spanGaps:true, fill:false },
+      { label:'Avg', data:rows.map(r=>_hkNum(r,'Heart Rate [Avg] (bpm)')), borderColor:'#fafafa', borderWidth:2, pointRadius:2, tension:0.3, spanGaps:true, fill:false },
+      { label:'Max', data:rows.map(r=>_hkNum(r,'Heart Rate [Max] (bpm)')), borderColor:'#ef4444', borderDash:[4,3], borderWidth:1.5, pointRadius:0, tension:0.3, spanGaps:true, fill:false },
+    ]},
     options: { animation:false, responsive:true, maintainAspectRatio:true,
-      plugins:{ legend:{display:false}, tooltip:_HK_TOOLTIP }, scales:_HK_SCALES }
+      plugins:{ legend:{ display:true, labels:{color:'#9b9ba8',font:{size:10},boxWidth:10,padding:10} }, tooltip:_HK_TOOLTIP },
+      scales:_HK_SCALES }
   });
 
-  // ── HRV chart ──────────────────────────────────────────────────
-  _hkCharts.hrv = new Chart(document.getElementById('hk-hrv-chart'), {
-    type: 'line',
-    data: { labels, datasets: [{
-      data: rows.map(r => _hkNum(r,'Heart Rate Variability (ms)')),
-      borderColor:'#fcd34d', backgroundColor:'rgba(252,211,77,0.06)',
-      borderWidth:2, pointRadius:3, pointBackgroundColor:'#fcd34d',
-      tension:0.3, fill:true, spanGaps:true,
-    }]},
-    options: { animation:false, responsive:true, maintainAspectRatio:true,
-      plugins:{ legend:{display:false}, tooltip:_HK_TOOLTIP }, scales:_HK_SCALES }
-  });
+  // ── SpO2 + Respiratory Rate ───────────────────────────────────
+  _hkCharts.spo2 = _hkLine('hk-spo2-chart', 'Blood Oxygen Saturation (%)',  rows, labels, '#06b6d4', 'rgba(6,182,212,0.07)');
+  _hkCharts.resp = _hkLine('hk-resp-chart', 'Respiratory Rate (count/min)', rows, labels, '#9b9ba8');
+
+  // ── Activity ──────────────────────────────────────────────────
+  _hkCharts.steps    = _hkBar('hk-steps-chart',    'Step Count (steps)',              rows, labels, 'rgba(16,185,129,0.5)',  '#10b981');
+  _hkCharts.distance = _hkBar('hk-distance-chart', 'Walking + Running Distance (mi)', rows, labels, 'rgba(59,130,246,0.5)',  '#3b82f6');
+  _hkCharts.active   = _hkBar('hk-active-chart',   'Active Energy (kcal)',            rows, labels, 'rgba(249,115,22,0.5)',  '#f97316');
+  _hkCharts.resting  = _hkBar('hk-resting-chart',  'Resting Energy (kcal)',           rows, labels, 'rgba(155,155,168,0.4)', '#9b9ba8');
+  _hkCharts.exercise = _hkBar('hk-exercise-chart', 'Apple Exercise Time (min)',       rows, labels, 'rgba(16,185,129,0.5)',  '#10b981');
+  _hkCharts.stand    = _hkBar('hk-stand-chart',    'Apple Stand Hour (hr)',           rows, labels, 'rgba(252,211,77,0.5)',  '#fcd34d');
 
   // ── Sleep stacked bar ─────────────────────────────────────────
-  _hkCharts.sleep = new Chart(document.getElementById('hk-sleep-chart'), {
+  const sleepEl = document.getElementById('hk-sleep-chart');
+  if(sleepEl) _hkCharts.sleep = new Chart(sleepEl, {
     type: 'bar',
     data: { labels, datasets: [
       { label:'Deep',  data:rows.map(r=>_hkNum(r,'Sleep Analysis [Deep] (hr)')),  backgroundColor:'#8b5cf6', stack:'s' },
       { label:'REM',   data:rows.map(r=>_hkNum(r,'Sleep Analysis [REM] (hr)')),   backgroundColor:'#06b6d4', stack:'s' },
       { label:'Core',  data:rows.map(r=>_hkNum(r,'Sleep Analysis [Core] (hr)')),  backgroundColor:'#3b82f6', stack:'s' },
-      { label:'Awake', data:rows.map(r=>_hkNum(r,'Sleep Analysis [Awake] (hr)')), backgroundColor:'rgba(255,255,255,0.08)', stack:'s' },
+      { label:'Awake', data:rows.map(r=>_hkNum(r,'Sleep Analysis [Awake] (hr)')), backgroundColor:'rgba(255,255,255,0.1)', stack:'s' },
     ]},
     options: { animation:false, responsive:true, maintainAspectRatio:true,
       plugins:{ legend:{ display:true, labels:{color:'#9b9ba8',font:{size:11},boxWidth:10,padding:12} }, tooltip:_HK_TOOLTIP },
-      scales:{
-        x:{ ..._HK_SCALES.x, stacked:true },
-        y:{ ..._HK_SCALES.y, stacked:true },
-      }
+      scales:{ x:{..._HK_SCALES.x, stacked:true}, y:{..._HK_SCALES.y, stacked:true} }
     }
-  });
-
-  // ── Steps bar chart ───────────────────────────────────────────
-  _hkCharts.steps = new Chart(document.getElementById('hk-steps-chart'), {
-    type: 'bar',
-    data: { labels, datasets: [{
-      data: rows.map(r => _hkNum(r,'Step Count (steps)')),
-      backgroundColor:'rgba(6,182,212,0.5)', borderColor:'#06b6d4',
-      borderWidth:1, borderRadius:3,
-    }]},
-    options: { animation:false, responsive:true, maintainAspectRatio:true,
-      plugins:{ legend:{display:false}, tooltip:_HK_TOOLTIP }, scales:_HK_SCALES }
   });
 }
 
