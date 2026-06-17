@@ -3774,8 +3774,17 @@ function _hkNum(row, col) {
   return isNaN(v) ? null : v;
 }
 
+function _hkParseDate(dateStr) {
+  if(!dateStr) return null;
+  const m = dateStr.match(/(\d{4}-\d{2}-\d{2})/);
+  if(m) return new Date(m[1] + 'T00:00:00');
+  const d = new Date(dateStr);
+  return isNaN(d) ? null : d;
+}
+
 function _hkLabel(dateStr) {
-  const d = new Date(dateStr.replace(' ','T').split('T')[0] + 'T00:00:00');
+  const d = _hkParseDate(dateStr);
+  if(!d) return dateStr || '';
   return d.toLocaleDateString('en-US', {month:'short', day:'numeric'});
 }
 
@@ -3861,7 +3870,7 @@ function _hkRender(allRows) {
   // Filter for charts (stat strip always uses latest from all time)
   const cutoff = _hkPeriod > 0 ? new Date(Date.now() - _hkPeriod * 86400000) : null;
   const rows = cutoff
-    ? allRows.filter(r => { try { return new Date(r['Date/Time'].split(' ')[0]) >= cutoff; } catch(e) { return true; } })
+    ? allRows.filter(r => { const d = _hkParseDate(r['Date/Time'] || ''); return d && d >= cutoff; })
     : allRows;
   const labels = rows.map(r => _hkLabel(r['Date/Time'] || ''));
 

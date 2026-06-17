@@ -104,7 +104,13 @@ function syncHealthKit() {
 
     // Collect rows keyed by the first column (date)
     for (var i = 1; i < data.length; i++) {
-      var row = data[i].map(function(v) { return v === null || v === undefined ? '' : String(v); });
+      var row = data[i].map(function(v) {
+        if (v instanceof Date) {
+          // Format as ISO so the dashboard can parse it reliably
+          return Utilities.formatDate(v, Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
+        }
+        return v === null || v === undefined ? '' : String(v);
+      });
       var dateKey = row[0].trim();
       if (!dateKey) continue;
 
