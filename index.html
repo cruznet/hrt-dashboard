@@ -259,6 +259,8 @@
     <span id="header-range">Loading...</span>
     <span id="sheets-status" style="font-size:11px;color:var(--muted);margin-left:16px"></span>
     <button onclick="syncFromSheets()" style="margin-left:10px;padding:4px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--muted);font-size:11px;cursor:pointer;font-weight:600" title="Sync from Google Sheets">↻ Sync</button>
+    <button id="header-signin-btn" onclick="oauthSignIn()" style="margin-left:8px;padding:4px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:11px;cursor:pointer;font-weight:600">🔑 Sign In</button>
+    <button id="header-signout-btn" onclick="clearToken()" style="display:none;margin-left:8px;padding:4px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--muted);font-size:11px;cursor:pointer;font-weight:600">Sign Out</button>
   <button onclick="openLogPanel()" style="margin-left:8px;padding:4px 12px;background:var(--accent);border:1px solid var(--accent);border-radius:6px;color:#000;font-size:11px;cursor:pointer;font-weight:700">+ Log Today</button>
   </div>
 </div>
@@ -2289,45 +2291,44 @@ function clearToken() {
   updateLogAuthUI();
 }
 
+let _gisClient = null;
 function oauthSignIn() {
-  // Implicit grant flow — opens popup, polls for token in URL hash
-  const params = new URLSearchParams({
-    client_id: SHEETS_CLIENT_ID,
-    redirect_uri: window.location.origin + window.location.pathname,
-    response_type: 'token',
-    scope: 'https://www.googleapis.com/auth/spreadsheets',
-    prompt: 'select_account',
-  });
-  const authUrl = 'https://accounts.google.com/o/oauth2/auth?' + params.toString();
-  const popup = window.open(authUrl, 'oauth', 'width=500,height=620,left=200,top=100');
-  if(!popup) { alert('Please allow popups for this page, then try again.'); return; }
-  const poll = setInterval(() => {
-    try {
-      if(popup.closed) { clearInterval(poll); return; }
-      const hash = popup.location.hash;
-      if(hash && hash.includes('access_token')) {
-        clearInterval(poll);
-        popup.close();
-        const p = new URLSearchParams(hash.slice(1));
-        sheetsToken = p.get('access_token');
-        const exp = parseInt(p.get('expires_in') || '3600');
+  if(!window.google || !window.google.accounts || !window.google.accounts.oauth2) {
+    alert('Google Identity Services not loaded. Please refresh and try again.');
+    return;
+  }
+  if(!_gisClient) {
+    _gisClient = window.google.accounts.oauth2.initTokenClient({
+      client_id: SHEETS_CLIENT_ID,
+      scope: 'https://www.googleapis.com/auth/spreadsheets',
+      callback: function(resp) {
+        if(resp.error) { alert('Sign-in failed: ' + resp.error); return; }
+        sheetsToken = resp.access_token;
+        var exp = parseInt(resp.expires_in || '3600');
         saveToken(sheetsToken, exp);
         updateLogAuthUI();
-      }
-    } catch(e) { /* cross-origin while redirecting, keep polling */ }
-  }, 300);
+      },
+    });
+  }
+  _gisClient.requestAccessToken();
 }
 
 function updateLogAuthUI() {
   const saved = getSavedToken();
   sheetsToken = saved || sheetsToken;
   const signedIn = !!sheetsToken;
+  // Modal sign-in prompt
   const btn = document.getElementById('log-signin-btn');
   const form = document.getElementById('log-form-body');
   const signout = document.getElementById('log-signout-btn');
   if(btn) btn.style.display = signedIn ? 'none' : '';
   if(form) form.style.display = signedIn ? '' : 'none';
   if(signout) signout.style.display = signedIn ? '' : 'none';
+  // Header buttons
+  const hSignIn = document.getElementById('header-signin-btn');
+  const hSignOut = document.getElementById('header-signout-btn');
+  if(hSignIn) hSignIn.style.display = signedIn ? 'none' : '';
+  if(hSignOut) hSignOut.style.display = signedIn ? '' : 'none';
 }
 
 async function appendRowToSheet(rowData) {
@@ -2428,7 +2429,7 @@ async function openLogPanel() {
     document.getElementById('log-weight').value = last.weight;
   }
 
-  // Build compound inputs from 2026 sheet headers
+  // Build compound inputs — smart mode: only recent + expandable
   const grid = document.getElementById('log-compounds-grid');
   if(grid && grid.children.length === 0) {
     try {
@@ -2438,28 +2439,103 @@ async function openLogPanel() {
       const headers = (hdData.values||[[]])[0].map(h=>String(h).trim());
 
       const META = /^(date|week|weight|injection site|comments|weekday)/i;
-      const compoundHeaders = headers.filter(h => !META.test(h) && h.length > 0);
 
-      // Get last logged values to pre-fill
-      const lastEntry = [...ALL_DATA].reverse().find(d =>
-        Object.keys(d.injectables||{}).length || Object.keys(d.orals||{}).length
-      );
+      // Deduplicate headers (keep first occurrence)
+      const seenHdrs = new Set();
+      const uniqueHeaders = headers.filter(h => {
+        if(META.test(h) || !h.length) return false;
+        const key = h.toLowerCase().trim();
+        if(seenHdrs.has(key)) return false;
+        seenHdrs.add(key);
+        return true;
+      });
 
-      grid.innerHTML = compoundHeaders.map(h => {
-        // Try to find a matching last dose
-        const hClean = h.replace(/\s+units?\s*$/i,'').replace(/\s+$/, '').trim();
-        const hm = hClean.match(/^(.+?)\s*\(([\d.]+)\s*(mg|iu|ml|mcg)\)/i);
+      // Figure out which compounds were used in last 30 days
+      const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 30);
+      const recentActive = new Set();
+      ALL_DATA.forEach(d => {
+        try {
+          const dt = parseMDY(d.date);
+          if(dt < cutoff) return;
+          Object.keys(d.injectables||{}).forEach(k => recentActive.add(k.toLowerCase()));
+          Object.keys(d.orals||{}).forEach(k => recentActive.add(k.toLowerCase()));
+          // Also check raw syringe keys
+          if(d.syringes) Object.keys(d.syringes).forEach(k => recentActive.add(k.toLowerCase()));
+        } catch(e) {}
+      });
+
+      // Get last logged values per compound for pre-fill
+      const lastValues = {};
+      [...ALL_DATA].reverse().forEach(d => {
+        Object.entries(d.injectables||{}).forEach(([k,v]) => {
+          if(!lastValues[k.toLowerCase()] && v) lastValues[k.toLowerCase()] = v;
+        });
+        Object.entries(d.orals||{}).forEach(([k,v]) => {
+          if(!lastValues[k.toLowerCase()] && v) lastValues[k.toLowerCase()] = v;
+        });
+      });
+
+      // Parse each header into a structured item
+      function parseHeader(h) {
+        const hClean = h.replace(/\s+units?\s*$/i,'').trim();
+        const hm = hClean.match(/^(.+?)\s*\(([\d.]+)\s*(mg|iu|ml|mcg|IU)\)/i);
         const compName = hm ? hm[1].trim() : hClean;
+        const unit = hm ? `${hm[2]}${hm[3].toLowerCase()}` : '';
         const isOral = ORAL_KEYWORDS.some(k => compName.toLowerCase().includes(k));
-        const placeholder = isOral ? 'e.g. TRUE or 1' : 'units (0–100)';
+        const nameKey = compName.toLowerCase();
+        const isRecent = recentActive.has(nameKey) || recentActive.has(h.toLowerCase());
+        const lastVal = lastValues[nameKey] || '';
+        return { h, compName, unit, isOral, isRecent, lastVal };
+      }
 
-        return `<div style="display:flex;align-items:center;gap:8px">
-          <label style="font-size:12px;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${h}">${compName}</label>
+      const allItems = uniqueHeaders.map(parseHeader);
+      const activeItems = allItems.filter(i => i.isRecent);
+      const inactiveItems = allItems.filter(i => !i.isRecent);
+
+      // Render a single compound row
+      function compoundRow(item, extra='') {
+        const {h, compName, unit, isOral, lastVal} = item;
+        const placeholder = isOral ? 'TRUE / blank' : unit ? `syringes` : 'amount';
+        const prefill = isOral
+          ? (lastVal ? 'TRUE' : '')
+          : (lastVal !== undefined && lastVal !== '' ? String(lastVal) : '');
+        return `<div class="log-comp-row" style="display:flex;align-items:center;gap:8px;margin-bottom:6px" ${extra}>
+          <label style="font-size:12px;color:var(--text);flex:1;font-weight:600">${compName}${unit ? `<span style="color:var(--muted);font-weight:400;font-size:11px"> · ${unit}</span>` : ''}</label>
           <input class="log-compound-input" data-header="${h}"
-            type="text" placeholder="${placeholder}"
-            style="width:100px;padding:6px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;flex-shrink:0">
+            type="text" placeholder="${placeholder}" value="${prefill}"
+            style="width:90px;padding:6px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;flex-shrink:0;text-align:right">
         </div>`;
-      }).join('');
+      }
+
+      // Group active items
+      const activeInj = activeItems.filter(i => !i.isOral);
+      const activeOral = activeItems.filter(i => i.isOral);
+
+      function renderSection(label, items) {
+        if(!items.length) return '';
+        return `<div style="margin-bottom:10px">
+          <div style="font-size:10px;font-weight:800;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid var(--border)">${label}</div>
+          ${items.map(i => compoundRow(i)).join('')}
+        </div>`;
+      }
+
+      // Build "add compound" dropdown options
+      const addOptions = inactiveItems.map(i =>
+        `<option value="${i.h}">${i.compName}${i.unit ? ' · '+i.unit : ''}</option>`
+      ).join('');
+
+      grid.innerHTML =
+        renderSection('💉 Injectables & Peptides', activeInj) +
+        renderSection('💊 Orals & Support', activeOral) +
+        (inactiveItems.length ? `
+          <div id="log-add-compound-wrap" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+            <div style="font-size:10px;font-weight:800;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;margin-bottom:6px">➕ Add Compound</div>
+            <select id="log-add-select" style="width:100%;padding:7px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer" onchange="logAddCompound(this)">
+              <option value="">— select to add —</option>
+              ${addOptions}
+            </select>
+          </div>` : '');
+
     } catch(e) {
       grid.innerHTML = `<p style="font-size:12px;color:var(--muted)">Could not load sheet headers. Sync first.</p>`;
     }
@@ -2471,6 +2547,50 @@ async function openLogPanel() {
 
 function closeLogPanel() {
   document.getElementById('log-panel').style.display = 'none';
+  // Reset grid so it rebuilds fresh next open
+  const grid = document.getElementById('log-compounds-grid');
+  if(grid) grid.innerHTML = '';
+}
+
+function logAddCompound(sel) {
+  const h = sel.value;
+  if(!h) return;
+  // Remove from dropdown
+  const opt = sel.querySelector(`option[value="${CSS.escape(h)}"]`);
+  if(opt) opt.remove();
+  // Reset to placeholder
+  sel.value = '';
+
+  // Parse the header
+  const hClean = h.replace(/\s+units?\s*$/i,'').trim();
+  const hm = hClean.match(/^(.+?)\s*\(([\d.]+)\s*(mg|iu|ml|mcg|IU)\)/i);
+  const compName = hm ? hm[1].trim() : hClean;
+  const unit = hm ? `${hm[2]}${hm[3].toLowerCase()}` : '';
+  const isOral = ORAL_KEYWORDS.some(k => compName.toLowerCase().includes(k));
+  const placeholder = isOral ? 'TRUE / blank' : 'syringes';
+
+  const row = document.createElement('div');
+  row.className = 'log-comp-row';
+  row.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:6px';
+  row.innerHTML = `
+    <label style="font-size:12px;color:var(--text);flex:1;font-weight:600">${compName}${unit ? `<span style="color:var(--muted);font-weight:400;font-size:11px"> · ${unit}</span>` : ''}</label>
+    <input class="log-compound-input" data-header="${h}"
+      type="text" placeholder="${placeholder}"
+      style="width:90px;padding:6px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;flex-shrink:0;text-align:right">
+  `;
+
+  // Insert before the add-compound section
+  const addWrap = document.getElementById('log-add-compound-wrap');
+  const grid = document.getElementById('log-compounds-grid');
+  grid.insertBefore(row, addWrap);
+
+  // Hide dropdown if no options left
+  if(sel.options.length <= 1) {
+    addWrap.style.display = 'none';
+  }
+
+  // Focus the new input
+  row.querySelector('input').focus();
 }
 
 function setSheetsStatus(msg, color='var(--muted)') {
