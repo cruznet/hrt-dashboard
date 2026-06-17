@@ -628,6 +628,7 @@
     <div class="mob-nav-item" data-page="labs" onclick="switchPage('labs');closeMobMenu()"><span class="mob-nav-icon">🔬</span> Blood Labs</div>
     <div class="mob-nav-item" data-page="intel" onclick="switchPage('intel');closeMobMenu()"><span class="mob-nav-icon">🧠</span> Protocol Intelligence</div>
     <div class="mob-nav-item" data-page="fitness" onclick="switchPage('fitness');closeMobMenu()"><span class="mob-nav-icon">🏋️</span> Fitness</div>
+    <div class="mob-nav-item" data-page="healthkit" onclick="switchPage('healthkit');closeMobMenu()"><span class="mob-nav-icon">❤️</span> HealthKit</div>
   </nav>
   <div class="mob-drawer-foot">
     <button id="mob-signin-btn" onclick="oauthSignIn();closeMobMenu()" style="padding:12px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;font-weight:700;cursor:pointer;flex:1">🔑 Sign In</button>
@@ -757,6 +758,7 @@
   <button class="nav-tab" onclick="switchPage('labs',event)">🔬 Blood Labs</button>
   <button class="nav-tab" onclick="switchPage('intel',event)">🧠 Protocol Intelligence</button>
   <button class="nav-tab" onclick="switchPage('fitness',event)">🏋️ Fitness</button>
+  <button class="nav-tab" onclick="switchPage('healthkit',event)">❤️ HealthKit</button>
 </div>
 
 <div class="page active" id="page-log">
@@ -934,6 +936,42 @@
 </div>
 </div>
 
+
+<div id="page-healthkit" class="page">
+<div style="padding:20px 32px 32px;width:100%">
+
+  <!-- Stats strip: latest values -->
+  <div id="hk-stats" style="display:grid;grid-template-columns:repeat(6,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:20px">
+    <div style="padding:16px 20px;background:var(--bg2);text-align:center;color:var(--muted);font-size:13px">Loading…</div>
+  </div>
+
+  <!-- Row 1: Weight + HRV -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+    <div class="card">
+      <h2>Weight (lbs)</h2>
+      <canvas id="hk-weight-chart" height="120"></canvas>
+    </div>
+    <div class="card">
+      <h2>Heart Rate Variability (ms)</h2>
+      <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Low HRV may indicate protocol or recovery stress</p>
+      <canvas id="hk-hrv-chart" height="120"></canvas>
+    </div>
+  </div>
+
+  <!-- Row 2: Sleep + Steps -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div class="card">
+      <h2>Sleep Breakdown (hrs)</h2>
+      <canvas id="hk-sleep-chart" height="140"></canvas>
+    </div>
+    <div class="card">
+      <h2>Daily Steps</h2>
+      <canvas id="hk-steps-chart" height="140"></canvas>
+    </div>
+  </div>
+
+</div>
+</div>
 
 <div class="tooltip" id="tooltip"></div>
 
@@ -1166,6 +1204,7 @@ function switchPage(name, evt) {
   if(name === 'intel') { renderIntelligence(); }
   if(name === 'fitness' && !fitnessInitialized) { initFitness(); }
   if(name === 'labs' && !labsInitialized) { renderLabs(); labsInitialized = true; }
+  if(name === 'healthkit' && !hkInitialized) { renderHealthKit(); }
   document.querySelectorAll('.mob-nav-item').forEach(item => {
     item.classList.toggle('active', item.dataset.page === name);
   });
@@ -3667,6 +3706,136 @@ function dismissLanding() {
 function landingSignIn() {
   dismissLanding();
   oauthSignIn();
+}
+
+// ── HealthKit ─────────────────────────────────────────────────
+let hkInitialized = false;
+let _hkCharts = {};
+
+async function loadHealthKit() {
+  const resp = await fetch('healthkit-data.csv');
+  if(!resp.ok) throw new Error('HTTP ' + resp.status);
+  const text = await resp.text();
+  const lines = text.trim().split('\n');
+  const headers = lines[0].split(',').map(h => h.trim());
+  return lines.slice(1).map(line => {
+    const vals = line.split(',');
+    const obj = {};
+    headers.forEach((h, i) => { obj[h] = (vals[i] || '').trim(); });
+    return obj;
+  });
+}
+
+function _hkNum(row, col) {
+  const v = parseFloat(row[col]);
+  return isNaN(v) ? null : v;
+}
+
+function _hkLabel(dateStr) {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('en-US', {month:'short', day:'numeric'});
+}
+
+function _hkDestroyAll() {
+  Object.values(_hkCharts).forEach(c => { try { c.destroy(); } catch(e) {} });
+  _hkCharts = {};
+}
+
+const _HK_SCALES = {
+  x: { grid:{color:'rgba(255,255,255,0.04)'}, ticks:{color:'#9b9ba8',font:{size:11},maxTicksLimit:10} },
+  y: { grid:{color:'rgba(255,255,255,0.04)'}, ticks:{color:'#9b9ba8',font:{size:11}} }
+};
+const _HK_TOOLTIP = { backgroundColor:'#1e1e2e', titleColor:'#fafafa', bodyColor:'#9b9ba8', borderColor:'#2d2d38', borderWidth:1 };
+
+async function renderHealthKit() {
+  hkInitialized = true;
+  _hkDestroyAll();
+
+  let rows;
+  try {
+    rows = await loadHealthKit();
+  } catch(e) {
+    document.getElementById('hk-stats').innerHTML =
+      `<div style="padding:20px;color:#ef4444;grid-column:1/-1">Failed to load healthkit-data.csv: ${e.message}</div>`;
+    return;
+  }
+
+  const labels = rows.map(r => _hkLabel(r['Date/Time']));
+
+  // ── Latest-value stat cards ──────────────────────────────────
+  const last = k => [...rows].reverse().find(r => r[k] && r[k] !== '');
+  const fmtN = (r, k, dec, suf) => r ? (parseFloat(r[k]).toFixed(dec) + suf) : '—';
+
+  const statCards = [
+    { label:'Weight',     val: fmtN(last('Weight (lbs)'), 'Weight (lbs)', 1, ' lbs'), color:'#fafafa' },
+    { label:'Body Fat',   val: fmtN(last('Body Fat Percentage (%)'), 'Body Fat Percentage (%)', 1, '%'), color:'#10b981' },
+    { label:'HRV',        val: fmtN(last('Heart Rate Variability (ms)'), 'Heart Rate Variability (ms)', 0, ' ms'), color:'#fcd34d' },
+    { label:'Resting HR', val: fmtN(last('Resting Heart Rate (bpm)'), 'Resting Heart Rate (bpm)', 0, ' bpm'), color:'#ef4444' },
+    { label:'Sleep',      val: fmtN(last('Sleep Analysis [Total] (hr)'), 'Sleep Analysis [Total] (hr)', 1, 'h'), color:'#8b5cf6' },
+    { label:'Steps',      val: last('Step Count (steps)') ? Math.round(parseFloat(last('Step Count (steps)')['Step Count (steps)'])).toLocaleString() : '—', color:'#06b6d4' },
+  ];
+  document.getElementById('hk-stats').innerHTML = statCards.map(s =>
+    `<div style="padding:16px 20px;background:var(--bg2);text-align:center">
+      <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">${s.label}</div>
+      <div style="font-size:22px;font-weight:700;color:${s.color}">${s.val}</div>
+    </div>`
+  ).join('');
+
+  // ── Weight chart ──────────────────────────────────────────────
+  _hkCharts.weight = new Chart(document.getElementById('hk-weight-chart'), {
+    type: 'line',
+    data: { labels, datasets: [{
+      data: rows.map(r => _hkNum(r,'Weight (lbs)')),
+      borderColor:'#fcd34d', backgroundColor:'rgba(252,211,77,0.08)',
+      borderWidth:2, pointRadius:3, pointBackgroundColor:'#fcd34d',
+      tension:0.3, fill:true, spanGaps:true,
+    }]},
+    options: { animation:false, responsive:true, maintainAspectRatio:true,
+      plugins:{ legend:{display:false}, tooltip:_HK_TOOLTIP }, scales:_HK_SCALES }
+  });
+
+  // ── HRV chart ──────────────────────────────────────────────────
+  _hkCharts.hrv = new Chart(document.getElementById('hk-hrv-chart'), {
+    type: 'line',
+    data: { labels, datasets: [{
+      data: rows.map(r => _hkNum(r,'Heart Rate Variability (ms)')),
+      borderColor:'#fcd34d', backgroundColor:'rgba(252,211,77,0.06)',
+      borderWidth:2, pointRadius:3, pointBackgroundColor:'#fcd34d',
+      tension:0.3, fill:true, spanGaps:true,
+    }]},
+    options: { animation:false, responsive:true, maintainAspectRatio:true,
+      plugins:{ legend:{display:false}, tooltip:_HK_TOOLTIP }, scales:_HK_SCALES }
+  });
+
+  // ── Sleep stacked bar ─────────────────────────────────────────
+  _hkCharts.sleep = new Chart(document.getElementById('hk-sleep-chart'), {
+    type: 'bar',
+    data: { labels, datasets: [
+      { label:'Deep',  data:rows.map(r=>_hkNum(r,'Sleep Analysis [Deep] (hr)')),  backgroundColor:'#8b5cf6', stack:'s' },
+      { label:'REM',   data:rows.map(r=>_hkNum(r,'Sleep Analysis [REM] (hr)')),   backgroundColor:'#06b6d4', stack:'s' },
+      { label:'Core',  data:rows.map(r=>_hkNum(r,'Sleep Analysis [Core] (hr)')),  backgroundColor:'#3b82f6', stack:'s' },
+      { label:'Awake', data:rows.map(r=>_hkNum(r,'Sleep Analysis [Awake] (hr)')), backgroundColor:'rgba(255,255,255,0.08)', stack:'s' },
+    ]},
+    options: { animation:false, responsive:true, maintainAspectRatio:true,
+      plugins:{ legend:{ display:true, labels:{color:'#9b9ba8',font:{size:11},boxWidth:10,padding:12} }, tooltip:_HK_TOOLTIP },
+      scales:{
+        x:{ ..._HK_SCALES.x, stacked:true },
+        y:{ ..._HK_SCALES.y, stacked:true },
+      }
+    }
+  });
+
+  // ── Steps bar chart ───────────────────────────────────────────
+  _hkCharts.steps = new Chart(document.getElementById('hk-steps-chart'), {
+    type: 'bar',
+    data: { labels, datasets: [{
+      data: rows.map(r => _hkNum(r,'Step Count (steps)')),
+      backgroundColor:'rgba(6,182,212,0.5)', borderColor:'#06b6d4',
+      borderWidth:1, borderRadius:3,
+    }]},
+    options: { animation:false, responsive:true, maintainAspectRatio:true,
+      plugins:{ legend:{display:false}, tooltip:_HK_TOOLTIP }, scales:_HK_SCALES }
+  });
 }
 
 // ── Idle sign-out timer ───────────────────────────────────────
