@@ -3199,16 +3199,27 @@ function _renderCompoundRow(item, prefillVal) {
     </div>`;
   } else {
     const val = prefillVal !== undefined && prefillVal !== '' ? String(prefillVal) : '';
-    return `<div class="log-comp-row" style="display:flex;align-items:center;gap:8px;padding:4px 0;margin-bottom:4px">
-      <label style="font-size:13px;color:var(--text);flex:1;font-weight:600">
-        ${compName}${unit ? `<span style="color:var(--muted);font-weight:400;font-size:11px"> · ${unit}</span>` : ''}
-      </label>
-      <button onclick="logStepDown('${safeH}')" style="width:28px;height:28px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:16px;cursor:pointer;line-height:1;flex-shrink:0">−</button>
-      <input class="log-compound-input" data-header="${safeH}" id="inp-${safeH}"
-        type="number" step="0.05" min="0" value="${val}" placeholder="units"
-        style="width:70px;padding:5px 6px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;text-align:center;flex-shrink:0">
-      <button onclick="logStepUp('${safeH}')" style="width:28px;height:28px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:16px;cursor:pointer;line-height:1;flex-shrink:0">+</button>
-      ${removeBtn}
+    // Determine if this is a direct-unit compound (IU/mcg) or a volume-based mg/ml injectable
+    const isMgMl = unit && /^\d/.test(unit) && unit.toLowerCase().includes('mg');
+    const placeholder = /^(iu|mcg|ug)/i.test(unit) ? unit.replace(/^(\d+)/,'').trim() || 'iu' : isMgMl ? 'ml' : 'dose';
+    // For mg/ml vials, extract the numeric concentration for the live preview
+    const concNum = isMgMl ? parseFloat(unit) : null;
+    const previewId = 'prev-' + safeH;
+    return `<div class="log-comp-row" style="display:flex;flex-direction:column;gap:2px;padding:4px 0;margin-bottom:4px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <label style="font-size:13px;color:var(--text);flex:1;font-weight:600">
+          ${compName}${unit ? `<span style="color:var(--muted);font-weight:400;font-size:11px"> · ${unit}</span>` : ''}
+        </label>
+        <button onclick="logStepDown('${safeH}')" style="width:28px;height:28px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:16px;cursor:pointer;line-height:1;flex-shrink:0">−</button>
+        <input class="log-compound-input" data-header="${safeH}" id="inp-${safeH}"
+          type="number" step="0.05" min="0" value="${val}" placeholder="${placeholder}"
+          data-conc="${concNum||''}"
+          oninput="logUpdatePreview('${safeH}')"
+          style="width:70px;padding:5px 6px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;text-align:center;flex-shrink:0">
+        <button onclick="logStepUp('${safeH}')" style="width:28px;height:28px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:16px;cursor:pointer;line-height:1;flex-shrink:0">+</button>
+        ${removeBtn}
+      </div>
+      ${concNum ? `<div id="${previewId}" style="font-size:10px;color:var(--muted);padding-left:2px;min-height:14px"></div>` : ''}
     </div>`;
   }
 }
@@ -3230,12 +3241,25 @@ function logStepUp(h) {
   if(!inp) return;
   const v = parseFloat(inp.value) || 0;
   inp.value = Math.round((v + 0.05) * 100) / 100;
+  logUpdatePreview(h);
 }
 function logStepDown(h) {
   const inp = document.getElementById('inp-' + h);
   if(!inp) return;
   const v = parseFloat(inp.value) || 0;
   inp.value = Math.max(0, Math.round((v - 0.05) * 100) / 100);
+  logUpdatePreview(h);
+}
+function logUpdatePreview(h) {
+  const inp = document.getElementById('inp-' + h);
+  const prev = document.getElementById('prev-' + h);
+  if(!inp || !prev) return;
+  const conc = parseFloat(inp.dataset.conc);
+  if(!conc) return;
+  const v = parseFloat(inp.value);
+  if(!v || isNaN(v)) { prev.textContent = ''; return; }
+  const mg = Math.round(v * conc * 10) / 10;
+  prev.textContent = `→ ${mg} mg`;
 }
 
 function logRemoveCompound(h) {
