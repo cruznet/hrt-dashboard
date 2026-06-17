@@ -778,6 +778,7 @@
     </div>
   </div>
   <div class="right">
+    <div id="log-coverage" class="card" style="padding:16px 20px"></div>
     <div id="day-detail" class="card"><div style="color:var(--muted);font-size:13px;padding:8px">Click any day on the timeline to see details</div></div>
     <div class="card">
       <h2>Protocol Changes / Notes</h2>
@@ -1220,7 +1221,50 @@ function renderAll() {
   renderWeekdayHeatmap();
   renderWeeklySummary();
   renderChangelog();
+  renderLogCoverage();
   showDayDetail(DATA[selectedIdx] || DATA[DATA.length-1]);
+}
+
+function renderLogCoverage() {
+  const el = document.getElementById('log-coverage');
+  if(!el) return;
+  const loggedDates = new Set(ALL_DATA.map(d => d.date));
+  const today = new Date(); today.setHours(0,0,0,0);
+  // Start on the Sunday of 5 weeks ago so columns align to day-of-week
+  const start = new Date(today);
+  start.setDate(today.getDate() - today.getDay() - 35);
+  const totalDays = Math.round((today - start) / 86400000) + 1;
+  const weeks = Math.ceil(totalDays / 7);
+
+  let html = `<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Log Coverage</div>`;
+  html += `<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:2px">`;
+  ['Su','Mo','Tu','We','Th','Fr','Sa'].forEach(l => {
+    html += `<div style="text-align:center;font-size:9px;color:var(--muted)">${l}</div>`;
+  });
+  html += `</div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px">`;
+
+  for(let i = 0; i < weeks * 7; i++) {
+    const d = new Date(start); d.setDate(start.getDate() + i); d.setHours(0,0,0,0);
+    if(d > today) { html += `<div style="aspect-ratio:1"></div>`; continue; }
+    const key = `${d.getMonth()+1}/${d.getDate()}/${d.getFullYear()}`;
+    const logged = loggedDates.has(key);
+    const isToday = d.getTime() === today.getTime();
+    const label = d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    const iso = d.toISOString().slice(0,10);
+    const bg = logged ? '#22c55e' : 'rgba(255,255,255,0.06)';
+    const border = isToday ? '1px solid #fcd34d' : '1px solid transparent';
+    const clickFn = logged
+      ? `showDayDetail(ALL_DATA.find(dd=>dd.date===${JSON.stringify(key)}))`
+      : `openLogPanel();setTimeout(()=>{var el=document.getElementById('log-date');if(el)el.value=${JSON.stringify(iso)};},200)`;
+    html += `<div title="${label}${logged?' · logged':' · not logged'}" style="aspect-ratio:1;border-radius:3px;background:${bg};border:${border};cursor:pointer" onclick="${clickFn.replace(/"/g,'&quot;')}"></div>`;
+  }
+
+  html += `</div><div style="display:flex;gap:12px;margin-top:7px;font-size:10px;color:var(--muted)">
+    <span style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:#22c55e;display:inline-block"></span>Logged</span>
+    <span style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:rgba(255,255,255,0.06);display:inline-block"></span>No entry</span>
+    <span style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;border:1px solid #fcd34d;display:inline-block"></span>Today</span>
+  </div>`;
+  el.innerHTML = html;
 }
 
 // ── Page nav ──────────────────────────────────────────────────
@@ -1617,6 +1661,7 @@ function renderSiteRotation() {
 
 // ── Day Detail ────────────────────────────────────────────────
 function showDayDetail(d) {
+  _lastDetailEntry = d;
   const inj = Object.entries(d.injectables);
   const yearBadge = `<span style="font-size:11px;padding:2px 7px;border-radius:10px;background:rgba(108,142,247,.15);color:var(--accent);margin-left:8px">${d.year}</span>`;
   let html = `<div class="day-detail-date">${d.weekday}, ${d.date}${yearBadge}</div>
@@ -1636,6 +1681,7 @@ function showDayDetail(d) {
   const lab = LABS.find(l=>l.date===d.date);
   if(lab) html += `<div class="detail-section"><div class="section-title">🔬 Lab Drawn This Day</div><div class="pill-row"><span class="pill pill-oral" style="cursor:pointer" onclick="switchPage('labs',null);setTimeout(()=>document.getElementById('lab-card-${lab.date.replace(/\//g,'')}')?.scrollIntoView({behavior:'smooth'}),200)">View ${lab.label} results →</span></div></div>`;
   if(!inj.length && !peptideEntries.length && !oralEntries.length && !d.comments) html += `<p class="no-data">No compounds logged this day.</p>`;
+  html += `<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)"><button onclick="openLogPanelForEdit(_lastDetailEntry)" style="font-size:12px;padding:5px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer">✏️ Edit this entry</button></div>`;
   document.getElementById('day-detail').innerHTML = html;
   // sync date picker
   try {
@@ -2982,6 +3028,28 @@ function updateLogAuthUI() {
   }
 }
 
+async function updateRowInSheet(dateStr, rowData) {
+  // Find the 1-indexed row number by searching column A for the matching date
+  const colARes = await fetch(`${SHEETS_BASE}/${SHEET_ID}/values/2026!A:A?key=${SHEETS_API_KEY}`);
+  const colAData = await colARes.json();
+  const colA = colAData.values || [];
+  const rowIdx = colA.findIndex(r => r[0] && r[0].toString().trim() === dateStr);
+  if(rowIdx < 1) throw new Error(`Date "${dateStr}" not found in sheet — use Save to add a new entry.`);
+  const rowNum = rowIdx + 1;
+  const range = encodeURIComponent(`2026!A${rowNum}:ZZ${rowNum}`);
+  const url = `${SHEETS_BASE}/${SHEET_ID}/values/${range}?valueInputOption=USER_ENTERED&key=${SHEETS_API_KEY}`;
+  const res = await fetch(url, {
+    method: 'PUT',
+    headers: { 'Authorization': 'Bearer ' + sheetsToken, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ values: [rowData] }),
+  });
+  if(!res.ok) {
+    const err = await res.json().catch(() => ({error:{message:'Unknown error'}}));
+    throw new Error(err.error?.message || 'Update failed');
+  }
+  return res.json();
+}
+
 async function appendRowToSheet(rowData) {
   // rowData: array of values in column order matching 2026 sheet headers
   const url = `${SHEETS_BASE}/${SHEET_ID}/values/2026!A:ZZ:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS&key=${SHEETS_API_KEY}`;
@@ -3065,8 +3133,13 @@ async function submitLogEntry() {
       }
     });
 
-    await appendRowToSheet(row);
-    btn.textContent = '✓ Saved!';
+    if(_editingEntry) {
+      await updateRowInSheet(dateStr, row);
+      btn.textContent = '✓ Updated!';
+    } else {
+      await appendRowToSheet(row);
+      btn.textContent = '✓ Saved!';
+    }
     setTimeout(() => syncFromSheets(), 1000);
     setTimeout(() => closeLogPanel(), 1800);
   } catch(e) {
@@ -3078,6 +3151,8 @@ async function submitLogEntry() {
 // Shared state for the log form
 let _logAllItems = [];
 let _logLastEntry = null;
+let _editingEntry = null;   // set when editing an existing entry
+let _lastDetailEntry = null; // reference for Edit button in day detail panel
 
 function _parseCompoundHeader(h) {
   const hClean = h.replace(/\s+units?\s*$/i,'').trim();
@@ -3259,8 +3334,11 @@ async function openLogPanel() {
   const _lp = document.getElementById('log-panel');
   _lp.style.display = window.innerWidth <= 640 ? 'flex' : '';
 
-  // Apply toggle styles after render
-  setTimeout(_applyToggleStyles, 50);
+  // Apply toggle styles after render, then pre-fill if editing
+  setTimeout(() => {
+    _applyToggleStyles();
+    if(_editingEntry) _prefillEditingEntry();
+  }, 100);
 }
 
 function _buildLogGrid(prefillMap) {
@@ -3365,6 +3443,82 @@ function closeLogPanel() {
   if(subEl) subEl.innerHTML = '';
   const notesEl = document.getElementById('log-notes');
   if(notesEl) notesEl.value = '';
+  // Reset edit state
+  _editingEntry = null;
+  const submitBtn = document.getElementById('log-submit-btn');
+  if(submitBtn) submitBtn.textContent = '✓ Save to Sheet';
+  const dateEl = document.getElementById('log-date');
+  if(dateEl) { dateEl.readOnly = false; dateEl.style.opacity = ''; }
+}
+
+function openLogPanelForEdit(d) {
+  if(!d) return;
+  _editingEntry = d;
+  openLogPanel();
+}
+
+function _prefillEditingEntry() {
+  const d = _editingEntry;
+  if(!d) return;
+
+  // Header badge
+  const subEl = document.getElementById('log-header-sub');
+  if(subEl) subEl.innerHTML = `<span style="background:rgba(252,211,77,.15);color:var(--accent);padding:1px 8px;border-radius:4px;font-size:10px;font-weight:700">✏️ Editing ${d.date}</span>`;
+
+  // Submit button label
+  const submitBtn = document.getElementById('log-submit-btn');
+  if(submitBtn) submitBtn.textContent = '✓ Update Entry';
+
+  // Date (locked — can't change the date of an existing row)
+  const dateEl = document.getElementById('log-date');
+  if(dateEl && d.date) {
+    const [m, day, yr] = d.date.split('/');
+    dateEl.value = `${yr}-${m.padStart(2,'0')}-${day.padStart(2,'0')}`;
+    dateEl.readOnly = true;
+    dateEl.style.opacity = '0.55';
+  }
+
+  // Weight
+  const wEl = document.getElementById('log-weight');
+  if(wEl && d.weight) wEl.value = d.weight;
+
+  // Injection site
+  const sEl = document.getElementById('log-site');
+  if(sEl && d.site) sEl.value = d.site;
+
+  // Notes
+  const nEl = document.getElementById('log-notes');
+  if(nEl) nEl.value = d.comments || '';
+
+  // Sleep
+  const slEl = document.getElementById('log-sleep');
+  if(slEl && d.sleepHours) slEl.value = d.sleepHours;
+
+  // Mood / energy wellness buttons
+  ['mood','energy'].forEach(type => {
+    const val = d[type];
+    if(!val) return;
+    document.querySelectorAll(`#log-${type}-btns button`).forEach(b => {
+      const active = String(b.dataset.val) === String(val);
+      b.classList.toggle('w-active', active);
+      b.style.background = active ? 'var(--accent)' : 'var(--bg3)';
+      b.style.color = active ? '#000' : 'var(--muted)';
+    });
+  });
+
+  // Compounds — match by compound name against form inputs
+  const allCompounds = { ...(d.injectables||{}), ...(d.peptides||{}), ...(d.orals||{}) };
+  document.querySelectorAll('.log-compound-input').forEach(inp => {
+    const item = _logAllItems.find(i => i.h === inp.dataset.header);
+    if(!item) return;
+    const entry = allCompounds[item.compName];
+    if(inp.type === 'checkbox') {
+      inp.checked = !!(entry);
+      inp.dispatchEvent(new Event('change'));
+    } else if(entry && entry.dose !== undefined) {
+      inp.value = entry.dose;
+    }
+  });
 }
 
 function logAddCompound(sel) {
