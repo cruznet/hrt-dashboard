@@ -950,6 +950,7 @@
       <button class="hk-period-btn" data-days="365" onclick="setHkPeriod(365)" style="padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-size:11px;font-weight:600;cursor:pointer">1Y</button>
       <button class="hk-period-btn" data-days="0"   onclick="setHkPeriod(0)"   style="padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-size:11px;font-weight:600;cursor:pointer">All</button>
     </div>
+    <div id="hk-sync-status" style="margin-left:auto;display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)"></div>
   </div>
   <div id="hk-stats" style="display:grid;grid-template-columns:repeat(8,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:20px">
     <div style="padding:16px;background:var(--bg2);text-align:center;color:var(--muted);font-size:12px;grid-column:1/-1">Loading…</div>
@@ -3873,6 +3874,23 @@ function _hkRender(allRows) {
     ? allRows.filter(r => { const d = _hkParseDate(r['Date/Time'] || ''); return d && d >= cutoff; })
     : allRows;
   const labels = rows.map(r => _hkLabel(r['Date/Time'] || ''));
+
+  // ── Sync status badge ─────────────────────────────────────────
+  (function() {
+    const el = document.getElementById('hk-sync-status');
+    if(!el) return;
+    const lastDate = allRows.reduce((best, r) => {
+      const d = _hkParseDate(r['Date/Time'] || '');
+      return (d && (!best || d > best)) ? d : best;
+    }, null);
+    if(!lastDate) { el.innerHTML = ''; return; }
+    const daysAgo = Math.floor((Date.now() - lastDate) / 86400000);
+    const label = daysAgo === 0 ? 'today' : daysAgo === 1 ? 'yesterday' : daysAgo + ' days ago';
+    const dot = daysAgo <= 1 ? '#22c55e' : daysAgo <= 3 ? '#f59e0b' : '#ef4444';
+    el.innerHTML = `<span style="width:7px;height:7px;border-radius:50%;background:${dot};display:inline-block"></span>Synced ${label}`;
+    el.title = 'Last data: ' + lastDate.toLocaleDateString('en-US', {month:'long', day:'numeric', year:'numeric'}) + ' · Auto-sync runs daily at 3 AM';
+  })();
+
 
   // ── Stat strip (always latest from all time) ──────────────────
   const lastRow = k => [...allRows].reverse().find(r => r[k] && r[k] !== '');
