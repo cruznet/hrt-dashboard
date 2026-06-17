@@ -3085,7 +3085,8 @@ async function submitLogEntry() {
     // Parse date to M/D/YYYY
     const [yr,mo,dy] = dateVal.split('-');
     const dateStr = `${parseInt(mo)}/${parseInt(dy)}/${yr}`;
-    const dt = new Date(dateVal);
+    // Use local-time date to avoid UTC-midnight-shifting the weekday
+    const dt = new Date(parseInt(yr), parseInt(mo) - 1, parseInt(dy));
     const weekdays = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
     const weekday = weekdays[dt.getDay()];
     const jan1 = new Date(parseInt(yr),0,1);
