@@ -17,13 +17,13 @@
     --bg:#17171d;--bg2:#202028;--bg3:#252530;--border:#2d2d38;
     --text:#fafafa;--muted:#9b9ba8;--accent:#fcd34d;--accent2:#ef4444;
     --accent3:#10b981;--accent4:#fcd34d;--accent5:#8b5cf6;--accent6:#06b6d4;
-    --warn:#f97316;--danger:#ef4444;--ok:#10b981;--radius:10px;
+    --warn:#f97316;--danger:#ef4444;--ok:#10b981;--radius:14px;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   body{background:var(--bg);color:var(--text);font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh}
 
   /* ── Header ── */
-  .header{padding:22px 32px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+  .header{padding:14px 32px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
   .header h1{font-size:20px;font-weight:800;letter-spacing:-.5px;color:var(--text)}
   .header h1 span{color:var(--accent)}
   .header-right{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
@@ -38,7 +38,7 @@
   .stats-row{display:flex;gap:1px;padding:0;background:var(--border);border-bottom:1px solid var(--border)}
   .stat-card{background:var(--bg);border:none;border-radius:0;padding:20px 28px;flex:1;min-width:130px}
   .stat-card .label{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:8px;font-weight:600}
-  .stat-card .value{font-size:28px;font-weight:800;color:var(--text);line-height:1}
+  .stat-card .value{font-size:36px;font-weight:900;color:var(--text);line-height:1;font-variant-numeric:tabular-nums}
   .stat-card .value.accent{color:var(--accent)}
   .stat-card .sub{font-size:11px;color:var(--muted);margin-top:6px}
 
@@ -54,7 +54,7 @@
 
   /* ── Cards ── */
   .card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
-  .card h2{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:16px}
+  .card h2{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:2px;margin-bottom:16px}
   .left{display:flex;flex-direction:column;gap:16px}
   .right{display:flex;flex-direction:column;gap:16px}
 
@@ -614,9 +614,16 @@
     <span id="header-range">Loading...</span>
     <span id="sheets-status" style="font-size:11px;color:var(--muted);margin-left:16px"></span>
     <button onclick="syncFromSheets()" style="margin-left:10px;padding:4px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--muted);font-size:11px;cursor:pointer;font-weight:600" title="Sync from Google Sheets">↻ Sync</button>
+    <span id="last-synced" style="font-size:10px;color:var(--muted)"></span>
     <button id="header-signin-btn" onclick="oauthSignIn()" style="margin-left:8px;padding:4px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:11px;cursor:pointer;font-weight:600">🔑 Sign In</button>
-    <span id="header-user-email" style="display:none;font-size:11px;color:var(--muted);margin-left:10px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle"></span>
-    <button id="header-signout-btn" onclick="clearToken()" style="display:none;margin-left:6px;padding:4px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--muted);font-size:11px;cursor:pointer;font-weight:600">Sign Out</button>
+    <!-- User avatar (shown after sign-in) -->
+    <div id="header-avatar-wrap" style="display:none;position:relative;margin-left:8px">
+      <button id="header-avatar-btn" onclick="toggleAvatarMenu()" title="Account" style="width:32px;height:32px;border-radius:50%;background:var(--accent);color:#000;font-weight:800;font-size:13px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;letter-spacing:-.5px">?</button>
+      <div id="avatar-dropdown" style="display:none;position:absolute;right:0;top:40px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;min-width:220px;z-index:600;box-shadow:0 8px 32px rgba(0,0,0,.8)">
+        <div id="avatar-email" style="font-size:11px;color:var(--muted);margin-bottom:12px;word-break:break-all;line-height:1.5"></div>
+        <button onclick="clearToken();closeAvatarMenu()" style="width:100%;padding:8px;background:var(--bg3);border:1px solid var(--border);border-radius:7px;color:var(--muted);font-size:12px;cursor:pointer;font-weight:600">Sign Out</button>
+      </div>
+    </div>
   <button onclick="openLogPanel()" style="margin-left:8px;padding:4px 12px;background:var(--accent);border:1px solid var(--accent);border-radius:6px;color:#000;font-size:11px;cursor:pointer;font-weight:700">+ Log Today</button>
   <button class="hamburger-btn" id="hamburger-btn" onclick="toggleMobMenu()" aria-label="Menu">
     <span class="hb"></span><span class="hb"></span><span class="hb"></span>
@@ -779,12 +786,31 @@
 
 
 <div class="nav-tabs">
-  <button class="nav-tab active" onclick="switchPage('log',event)">📋 Daily Log</button>
+  <button class="nav-tab active" onclick="switchPage('log',event)">🏠 Overview</button>
   <button class="nav-tab" onclick="switchPage('compounds',event)">💉 Compounds</button>
   <button class="nav-tab" onclick="switchPage('labs',event)">🔬 Blood Labs</button>
-  <button class="nav-tab" onclick="switchPage('intel',event)">🧠 Protocol Intelligence</button>
+  <button class="nav-tab" onclick="switchPage('intel',event)">🧠 Intelligence</button>
   <button class="nav-tab" onclick="switchPage('fitness',event)">🏋️ Fitness</button>
-  <button class="nav-tab" onclick="switchPage('healthkit',event)">❤️ HealthKit</button>
+  <button class="nav-tab" onclick="switchPage('healthkit',event)">🍎 HealthKit</button>
+</div>
+
+<!-- ── Mobile bottom nav ─────────────────────────────────────── -->
+<div id="mob-bottom-nav">
+  <button class="mob-bottom-tab active" data-page="log" onclick="switchPage('log')">
+    <span class="mob-bottom-icon">🏠</span><span>Overview</span>
+  </button>
+  <button class="mob-bottom-tab" data-page="labs" onclick="switchPage('labs')">
+    <span class="mob-bottom-icon">🔬</span><span>Labs</span>
+  </button>
+  <button class="mob-bottom-tab" data-page="fitness" onclick="switchPage('fitness')">
+    <span class="mob-bottom-icon">🏋️</span><span>Fitness</span>
+  </button>
+  <button class="mob-bottom-tab" data-page="healthkit" onclick="switchPage('healthkit')">
+    <span class="mob-bottom-icon">🍎</span><span>Health</span>
+  </button>
+  <button class="mob-bottom-tab" data-page="_log" onclick="openLogPanel()">
+    <span class="mob-bottom-icon">📋</span><span>Log</span>
+  </button>
 </div>
 
 <div class="page active" id="page-log">
@@ -840,11 +866,6 @@
 </div>
 <div class="page" id="page-labs">
 <div class="labs-page">
-  <div class="labs-trend">
-    <h2>Marker Trends Over Time</h2>
-    <div class="labs-trend-tabs" id="labs-trend-tabs"></div>
-    <div class="labs-chart-wrap"><canvas id="labsChart"></canvas></div>
-  </div>
   <div class="flags-bar" id="flags-bar"></div>
   <div class="labs-grid" id="labs-grid"></div>
 </div>
@@ -858,7 +879,21 @@
 <div class="page" id="page-intel">
 <div class="intel-page" id="panel-intel">
 
-  <!-- Compound vs Lab — most powerful feature, shown first -->
+  <!-- Marker Trends Over Time (moved from Blood Labs) -->
+  <div class="intel-section">
+    <div class="intel-section-title">Marker Trends Over Time</div>
+    <div class="labs-trend-tabs" id="labs-trend-tabs"></div>
+    <div class="labs-chart-wrap"><canvas id="labsChart"></canvas></div>
+  </div>
+
+  <!-- What You Were Running (moved from Blood Labs) -->
+  <div class="intel-section">
+    <div class="intel-section-title">What You Were Running</div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Compounds active in the 90-day window before each lab draw.</p>
+    <div id="intel-compound-context"></div>
+  </div>
+
+  <!-- Compound vs Lab — most powerful feature -->
   <div class="intel-section">
     <div class="intel-section-title">Compound ↔ Lab Comparison</div>
     <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Average lab values while on vs. off each compound (based on 14-day window before each draw).</p>
@@ -866,7 +901,7 @@
     <div id="intel-correlation" class="correl-grid"></div>
   </div>
 
-  <!-- Lab Marker Trends -->
+  <!-- Lab Marker Trends (sparklines) -->
   <div class="intel-section">
     <div class="intel-section-title">Lab Marker Trends</div>
     <div id="intel-markers" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px"></div>
@@ -968,74 +1003,117 @@
 <div id="page-healthkit" class="page">
 <div style="padding:20px 32px 32px;width:100%">
 
-  <!-- Period selector + Stats strip -->
+  <!-- Period selector -->
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap">
     <div style="font-size:11px;color:var(--muted);font-weight:600">Show:</div>
     <div style="display:flex;gap:4px">
       <button class="hk-period-btn" data-days="30"  onclick="setHkPeriod(30)"  style="padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-size:11px;font-weight:600;cursor:pointer">30d</button>
-      <button class="hk-period-btn" data-days="90"  onclick="setHkPeriod(90)"  style="padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-size:11px;font-weight:600;cursor:pointer">90d</button>
-      <button class="hk-period-btn" data-days="180" onclick="setHkPeriod(180)" style="padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--accent);font-size:11px;font-weight:600;cursor:pointer">180d</button>
+      <button class="hk-period-btn" data-days="90"  onclick="setHkPeriod(90)"  style="padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--accent);font-size:11px;font-weight:600;cursor:pointer">90d</button>
+      <button class="hk-period-btn" data-days="180" onclick="setHkPeriod(180)" style="padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-size:11px;font-weight:600;cursor:pointer">180d</button>
       <button class="hk-period-btn" data-days="365" onclick="setHkPeriod(365)" style="padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-size:11px;font-weight:600;cursor:pointer">1Y</button>
       <button class="hk-period-btn" data-days="0"   onclick="setHkPeriod(0)"   style="padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-size:11px;font-weight:600;cursor:pointer">All</button>
     </div>
     <div id="hk-sync-status" style="margin-left:auto;display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)"></div>
   </div>
-  <div id="hk-stats" style="display:grid;grid-template-columns:repeat(8,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:20px">
+
+  <!-- Stats strip: 7 items -->
+  <div id="hk-stats" style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:24px">
     <div style="padding:16px;background:var(--bg2);text-align:center;color:var(--muted);font-size:12px;grid-column:1/-1">Loading…</div>
   </div>
 
-  <!-- Body Composition -->
-  <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Body Composition</div>
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:16px;margin-bottom:20px">
-    <div class="card"><h2>Weight (lbs)</h2><canvas id="hk-weight-chart" height="110"></canvas></div>
+  <!-- Section 1: Body Composition -->
+  <div style="font-size:11px;color:#8b5cf6;font-weight:700;text-transform:uppercase;letter-spacing:2px;margin-bottom:10px">Body Composition</div>
+  <div style="display:flex;gap:12px;margin-bottom:14px">
+    <div style="background:var(--bg3);border-radius:8px;padding:10px 16px">
+      <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Body Fat %</div>
+      <div id="hk-stat-bf" style="font-size:20px;font-weight:700;color:#8b5cf6">—</div>
+    </div>
+    <div style="background:var(--bg3);border-radius:8px;padding:10px 16px">
+      <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Lean Mass</div>
+      <div id="hk-stat-lean" style="font-size:20px;font-weight:700;color:#8b5cf6">—</div>
+    </div>
+    <div style="background:var(--bg3);border-radius:8px;padding:10px 16px">
+      <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Weight</div>
+      <div id="hk-stat-weight" style="font-size:20px;font-weight:700;color:#fcd34d">—</div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:28px">
     <div class="card"><h2>Body Fat %</h2><canvas id="hk-bodyfat-chart" height="110"></canvas></div>
     <div class="card"><h2>Lean Body Mass (lbs)</h2><canvas id="hk-lean-chart" height="110"></canvas></div>
-    <div class="card"><h2>BMI</h2><canvas id="hk-bmi-chart" height="110"></canvas></div>
+    <div class="card"><h2>Weight (lbs)</h2><canvas id="hk-weight-chart" height="110"></canvas></div>
   </div>
 
-  <!-- Heart & Recovery -->
-  <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Heart &amp; Recovery</div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
-    <div class="card">
-      <h2>Heart Rate Variability (ms)</h2>
-      <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Low HRV may indicate protocol or recovery stress</p>
-      <canvas id="hk-hrv-chart" height="110"></canvas>
+  <!-- Section 2: Heart & Cardiovascular -->
+  <div style="font-size:11px;color:#06b6d4;font-weight:700;text-transform:uppercase;letter-spacing:2px;margin-bottom:10px">Heart &amp; Cardiovascular</div>
+  <div style="display:flex;gap:12px;margin-bottom:14px">
+    <div style="background:var(--bg3);border-radius:8px;padding:10px 16px">
+      <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">HRV</div>
+      <div id="hk-stat-hrv" style="font-size:20px;font-weight:700;color:#fcd34d">—</div>
     </div>
-    <div class="card">
-      <h2>Heart Rate — Min / Avg / Max (bpm)</h2>
-      <canvas id="hk-hr-chart" height="110"></canvas>
+    <div style="background:var(--bg3);border-radius:8px;padding:10px 16px">
+      <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Resting HR</div>
+      <div id="hk-stat-rhr" style="font-size:20px;font-weight:700;color:#06b6d4">—</div>
+    </div>
+    <div style="background:var(--bg3);border-radius:8px;padding:10px 16px">
+      <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">HR Avg</div>
+      <div id="hk-stat-hravg" style="font-size:20px;font-weight:700;color:#06b6d4">—</div>
     </div>
   </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
-    <div class="card"><h2>Blood Pressure (mmHg)</h2><canvas id="hk-bp-chart" height="100"></canvas></div>
-    <div class="card"><h2>VO2 Max (ml/kg/min)</h2><canvas id="hk-vo2-chart" height="100"></canvas></div>
+  <div class="card" style="margin-bottom:16px">
+    <h2>Heart Rate Variability (ms)</h2>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Key HRT recovery marker — low HRV may indicate protocol stress</p>
+    <canvas id="hk-hrv-chart" height="160"></canvas>
   </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:20px">
-    <div class="card"><h2>Cardio Recovery (bpm drop)</h2><canvas id="hk-cardio-chart" height="100"></canvas></div>
-    <div class="card"><h2>Blood Oxygen Saturation (SpO2 %)</h2><canvas id="hk-spo2-chart" height="100"></canvas></div>
-    <div class="card"><h2>Respiratory Rate (count/min)</h2><canvas id="hk-resp-chart" height="100"></canvas></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:28px">
+    <div class="card"><h2>Resting Heart Rate (bpm)</h2><canvas id="hk-resting-hr-chart" height="110"></canvas></div>
+    <div class="card"><h2>Heart Rate — Min / Avg / Max (bpm)</h2><canvas id="hk-hr-chart" height="110"></canvas></div>
   </div>
 
-  <!-- Activity -->
-  <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Activity</div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+  <!-- Section 3: Sleep -->
+  <div style="font-size:11px;color:#6366f1;font-weight:700;text-transform:uppercase;letter-spacing:2px;margin-bottom:10px">Sleep</div>
+  <div style="display:flex;gap:12px;margin-bottom:14px">
+    <div style="background:var(--bg3);border-radius:8px;padding:10px 16px">
+      <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Avg Total</div>
+      <div id="hk-avg-total" style="font-size:20px;font-weight:700;color:#6366f1">—</div>
+    </div>
+    <div style="background:var(--bg3);border-radius:8px;padding:10px 16px">
+      <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Avg Deep</div>
+      <div id="hk-avg-deep" style="font-size:20px;font-weight:700;color:#8b5cf6">—</div>
+    </div>
+    <div style="background:var(--bg3);border-radius:8px;padding:10px 16px">
+      <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Avg REM</div>
+      <div id="hk-avg-rem" style="font-size:20px;font-weight:700;color:#06b6d4">—</div>
+    </div>
+  </div>
+  <div class="card" style="margin-bottom:28px">
+    <h2>Sleep Breakdown (hrs) — Deep · REM</h2>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:8px">
+      <span style="display:inline-block;width:16px;border-top:2px dashed rgba(99,102,241,0.6);vertical-align:middle;margin-right:4px"></span>8h goal &nbsp;·&nbsp;
+      <span style="display:inline-block;width:16px;border-top:2px dashed rgba(139,92,246,0.6);vertical-align:middle;margin-right:4px"></span>1.5h deep goal
+    </p>
+    <canvas id="hk-sleep-chart" height="140"></canvas>
+  </div>
+
+  <!-- Section 4: Activity -->
+  <div style="font-size:11px;color:#10b981;font-weight:700;text-transform:uppercase;letter-spacing:2px;margin-bottom:10px">Activity</div>
+  <div style="display:flex;gap:12px;margin-bottom:14px">
+    <div style="background:var(--bg3);border-radius:8px;padding:10px 16px">
+      <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Avg Steps</div>
+      <div id="hk-stat-steps" style="font-size:20px;font-weight:700;color:#10b981">—</div>
+    </div>
+    <div style="background:var(--bg3);border-radius:8px;padding:10px 16px">
+      <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Avg Active</div>
+      <div id="hk-stat-active" style="font-size:20px;font-weight:700;color:#f97316">—</div>
+    </div>
+    <div style="background:var(--bg3);border-radius:8px;padding:10px 16px">
+      <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Avg Exercise</div>
+      <div id="hk-stat-exercise" style="font-size:20px;font-weight:700;color:#10b981">—</div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:24px">
     <div class="card"><h2>Step Count</h2><canvas id="hk-steps-chart" height="110"></canvas></div>
-    <div class="card"><h2>Walking + Running Distance (mi)</h2><canvas id="hk-distance-chart" height="110"></canvas></div>
-  </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
     <div class="card"><h2>Active Energy (kcal)</h2><canvas id="hk-active-chart" height="110"></canvas></div>
-    <div class="card"><h2>Resting Energy (kcal)</h2><canvas id="hk-resting-chart" height="110"></canvas></div>
-  </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
-    <div class="card"><h2>Apple Exercise Time (min)</h2><canvas id="hk-exercise-chart" height="110"></canvas></div>
-    <div class="card"><h2>Stand Hours</h2><canvas id="hk-stand-chart" height="110"></canvas></div>
-  </div>
-
-  <!-- Sleep -->
-  <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Sleep Analysis</div>
-  <div class="card">
-    <h2>Sleep Breakdown (hrs) — Deep · REM · Core · Awake</h2>
-    <canvas id="hk-sleep-chart" height="120"></canvas>
+    <div class="card"><h2>Exercise Time (min)</h2><canvas id="hk-exercise-chart" height="110"></canvas></div>
   </div>
 
 </div>
@@ -1342,10 +1420,21 @@ let activePage = 'log';
 function switchPage(name, evt) {
   activePage = name;
   try { localStorage.setItem('hrt_active_page', name); } catch(e) {}
+
+  const newPageEl = document.getElementById('page-' + name);
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-  document.getElementById('page-' + name).classList.add('active');
-  // Highlight the matching nav tab whether called from click or programmatically
+
+  // Fade in incoming page
+  newPageEl.style.opacity = '0';
+  newPageEl.classList.add('active');
+  requestAnimationFrame(function() {
+    newPageEl.style.transition = 'opacity 150ms ease';
+    newPageEl.style.opacity = '1';
+    setTimeout(function() { newPageEl.style.transition = ''; }, 160);
+  });
+
+  // Highlight desktop nav tab
   if(evt) {
     evt.currentTarget.classList.add('active');
   } else {
@@ -1355,13 +1444,20 @@ function switchPage(name, evt) {
       }
     });
   }
+
   if(name === 'compounds') { renderTimeline(); renderSupportTimeline(); renderSites(); renderSiteRotation(); }
   if(name === 'intel') { renderIntelligence(); }
   if(name === 'fitness' && !fitnessInitialized) { initFitness(); }
   if(name === 'labs' && !labsInitialized) { renderLabs(); labsInitialized = true; }
   if(name === 'healthkit' && !hkInitialized) { renderHealthKit(); }
+
+  // Mobile drawer highlight
   document.querySelectorAll('.mob-nav-item').forEach(item => {
     item.classList.toggle('active', item.dataset.page === name);
+  });
+  // Mobile bottom nav highlight
+  document.querySelectorAll('.mob-bottom-tab').forEach(tab => {
+    tab.classList.toggle('active', tab.dataset.page === name);
   });
 }
 let labsInitialized = false;
@@ -1847,29 +1943,51 @@ function showDayDetail(d) {
   } catch(e){}
 }
 
-// ── Compound tab day detail ───────────────────────────────────
+// ── Compound tab day detail (compact tooltip) ─────────────────
 function showCompoundPageDetail(d) {
   const el = document.getElementById('compound-day-detail');
   if(!el) return;
-  const inj = Object.entries(d.injectables);
+  const inj = Object.entries(d.injectables||{});
   const peptideEntries = Object.entries(d.peptides||{});
   const oralEntries = Object.entries(d.orals||{});
-  let html = `<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+
+  const allPills = [
+    ...inj.map(([k,v]) => `<span class="pill pill-inj" style="border-color:${getCompoundColor(k)||'#fcd34d'}44;color:${getCompoundColor(k)||'#fcd34d'}">${k} <strong>${v.dose}${v.unit}</strong></span>`),
+    ...peptideEntries.map(([k,v]) => `<span class="pill pill-other" style="border-color:${getPeptideColor(k)||'#f7c86c'}44;color:${getPeptideColor(k)||'#f7c86c'}">${k} <strong>${v.dose}${v.unit}</strong></span>`),
+    ...oralEntries.map(([k,v]) => `<span class="pill pill-oral" style="border-color:${getOralColor(k)||'#6cf7c8'}44;color:${getOralColor(k)||'#6cf7c8'}">${k}</span>`),
+  ].join('');
+
+  el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
     <div>
-      <div class="day-detail-date" style="font-size:16px">${d.weekday}, ${d.date}</div>
-      <div class="day-detail-sub">Week ${d.week}${d.weight?' · '+d.weight+' lbs':''}</div>
+      <div style="font-size:13px;font-weight:700;color:var(--text)">${d.weekday}, ${d.date}</div>
+      ${d.weight ? `<div style="font-size:11px;color:var(--muted);margin-top:1px">${d.weight} lbs</div>` : ''}
     </div>
-    <button onclick="document.getElementById('compound-day-detail').style.display='none'" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:0 4px;line-height:1">✕</button>
+    <button onclick="document.getElementById('compound-day-detail').style.display='none'" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:0 4px;line-height:1;flex-shrink:0">✕</button>
+  </div>
+  <div class="pill-row" style="margin-top:8px">${allPills || '<span style="font-size:12px;color:var(--muted)">No compounds logged</span>'}</div>
+  ${d.site ? `<div style="font-size:11px;color:var(--muted);margin-top:6px">📍 ${d.site}</div>` : ''}
+  ${d.comments ? `<div style="font-size:11px;color:var(--muted);margin-top:6px;font-style:italic">${d.comments}</div>` : ''}
+  <div style="margin-top:10px;border-top:1px solid var(--border);padding-top:8px">
+    <button onclick="jumpToLogDay('${d.date}')" style="font-size:11px;font-weight:600;color:var(--accent);background:none;border:none;cursor:pointer;padding:0">View full day →</button>
   </div>`;
-  if(inj.length) html += `<div class="detail-section"><div class="section-title">💉 Injectables</div><div class="pill-row">${inj.map(([k,v])=>`<span class="pill pill-inj" style="border-color:${getCompoundColor(k)||'#fcd34d'}44;color:${getCompoundColor(k)||'#fcd34d'}">${k} <strong>${v.dose}${v.unit}</strong></span>`).join('')}</div></div>`;
-  if(d.site) html += `<div class="detail-section"><div class="section-title">📍 ${d.site}</div></div>`;
-  if(peptideEntries.length) html += `<div class="detail-section"><div class="section-title">🧪 Peptides</div><div class="pill-row">${peptideEntries.map(([k,v])=>`<span class="pill pill-other" style="border-color:${getPeptideColor(k)||'#f7c86c'}44;color:${getPeptideColor(k)||'#f7c86c'}">${k} <strong>${v.dose}${v.unit}</strong></span>`).join('')}</div></div>`;
-  if(oralEntries.length) html += `<div class="detail-section"><div class="section-title">💊 Orals</div><div class="pill-row">${oralEntries.map(([k,v])=>`<span class="pill pill-oral" style="border-color:${getOralColor(k)||'#6cf7c8'}44;color:${getOralColor(k)||'#6cf7c8'}">${k}</span>`).join('')}</div></div>`;
-  if(d.comments) html += `<div class="comment-box" style="margin-top:8px">${d.comments}</div>`;
-  if(!inj.length && !peptideEntries.length && !oralEntries.length && !d.comments) html += `<p class="no-data">No compounds logged this day.</p>`;
-  el.innerHTML = html;
   el.style.display = 'block';
   el.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+function jumpToLogDay(dateStr) {
+  document.getElementById('compound-day-detail').style.display = 'none';
+  // Ensure 'all' years is active so we can find any date
+  if(activeYear !== 'all') {
+    activeYear = 'all';
+    DATA = ALL_DATA;
+    document.querySelectorAll('.year-btn').forEach(b => b.classList.remove('active'));
+    const allBtn = document.querySelector('.year-btn[onclick*="all"]');
+    if(allBtn) allBtn.classList.add('active');
+    renderAll();
+  }
+  const idx = DATA.findIndex(d => d.date === dateStr);
+  if(idx >= 0) { selectedIdx = idx; showDayDetail(DATA[idx]); }
+  switchPage('log');
 }
 
 // ── Weekly Summary ────────────────────────────────────────────
@@ -1931,28 +2049,10 @@ function renderWeeklySummary() {
     const deltaStr = delta === null ? '—' : `${delta>=0?'+':''}${delta.toFixed(1)}`;
     const cls = delta===null?'flat':delta>0.2?'up':delta<-0.2?'down':'flat';
 
-    // Only show compounds that are in the current active set
-    // Also include peptides and orals for each week
-    const allTotals = {};
-    w.entries.forEach(d => {
-      [...Object.entries(d.injectables||{}),
-       ...Object.entries(d.peptides||{}),
-       ...Object.entries(d.orals||{})].forEach(([k,v]) => {
-        if(activeCompounds.has(k)) {
-          allTotals[k] = Math.round(((allTotals[k]||0) + v.dose)*10)/10;
-        }
-      });
-    });
-
-    const mgSummary = Object.entries(allTotals)
-      .map(([k,v]) => `${k} ${v.toFixed(0)}mg`)
-      .join(' · ');
-
     return `<div class="week-item" data-week="${i}">
       <div class="week-num">${w.year} W${w.week}</div>
       <div class="week-weight">${w.avgWeight ? w.avgWeight.toFixed(1) : '—'}</div>
       <div class="week-delta ${cls}">${deltaStr}</div>
-      <div class="week-compounds" title="${mgSummary}">${mgSummary||'—'}</div>
     </div>`;
   }).join('');
 
@@ -2047,7 +2147,6 @@ function renderLabs() {
     <div class="flag-chip ${f.flag==='H'?'high':'low'}">${f.label} ${f.flag==='H'?'↑ HIGH':'↓ LOW'}</div>`).join('');
 
   document.getElementById('labs-grid').innerHTML = LABS.slice().reverse().map(lab => {
-    const ctx = getCompoundContext(lab.date, 90);
     const weightOnDay = getWeightOnDate(lab.date);
     const visibleMarkers = Object.entries(lab.markers).filter(([k,m])=>m.v!==null);
     const markersHtml = visibleMarkers.map(([k,m]) => {
@@ -2059,59 +2158,6 @@ function renderLabs() {
       </div>`;
     }).join('');
 
-    // Only show steroids & SARMs — exclude peptides and support/orals
-    const STEROID_SARM_KEYWORDS = [
-      'testosterone','tc','te','tc200','tc250','te300',
-      'masteron','mast','trenbolone','tren',
-      'dhb','dihydroboldenone',
-      'nandrolone','deca','npp',
-      'boldenone','eq',
-      'primobolan','primo',
-      'anavar','oxandrolone',
-      'winstrol','stanozolol',
-      'yk-11','yk11','rad-140','rad140',
-      'lgd','ostarine','cardarine','mk-677',
-      'proviron','mesterolone',
-    ];
-    function isSteroidOrSARM(name) {
-      const n = name.toLowerCase();
-      return STEROID_SARM_KEYWORDS.some(k => n.includes(k));
-    }
-
-    const entries = Object.entries(ctx).filter(([k,v])=>v.days>0 && isSteroidOrSARM(k))
-      .sort((a,b)=>b[1].streak-a[1].streak || b[1].days-a[1].days);
-    const injs  = entries.filter(([k,v])=>v.src==='inj');
-    const peps  = [];   // excluded
-    const orals = entries.filter(([k,v])=>v.src==='oral'); // SARMs taken orally
-
-    function durationLabel(v) {
-      // streak = consecutive days at draw time, days = total in 90d window
-      if(v.streak>0) return `${v.streak}d continuous`;
-      return `${v.days}d / 90d`;
-    }
-    function compoundPill(k, v, colorMap, defaultColor) {
-      const color = colorMap[k] || defaultColor;
-      const dur = durationLabel(v);
-      return `<div class="lab-compound-row">
-        <span class="pill" style="font-size:11px;padding:3px 9px;border-color:${color}44;color:${color};border:1px solid ${color}44;background:${color}0f;border-radius:20px">
-          ${k} <strong>${v.lastDose||''}</strong>
-        </span>
-        <span class="lab-compound-dur">${dur}</span>
-      </div>`;
-    }
-
-    const hasAny = injs.length||peps.length||orals.length;
-    const groupHtml = (label, items, colorMap, def) => items.length ? `
-      <div class="lab-compound-group">
-        <div class="lab-compound-group-label">${label}</div>
-        ${items.map(([k,v])=>compoundPill(k,v,colorMap,def)).join('')}
-      </div>` : '';
-
-    const compoundsHtml = (injs.length || orals.length)
-      ? groupHtml('💉 Injectables', injs, COMPOUND_COLORS, '#fcd34d') +
-        groupHtml('💊 Orals / SARMs', orals, ORAL_COLORS, '#6cf7c8')
-      : '<span style="font-size:12px;color:var(--muted)">No compound data near this date</span>';
-
     return `<div class="lab-card" id="lab-card-${lab.date.replace(/\//g,'')}">
       <div class="lab-card-header">
         <div>
@@ -2121,20 +2167,9 @@ function renderLabs() {
         </div>
         <div class="lab-cycle-badge">${lab.cycle}</div>
       </div>
-      <div class="lab-markers">${markersHtml}</div>
-      <div class="lab-compounds">
-        <div class="lab-compounds-label">What you were running (90-day window)</div>
-        <div class="lab-compounds-detail">${compoundsHtml}</div>
-      </div>
+      <div class="lab-markers">${markersHtml || '<div style="font-size:12px;color:var(--muted);padding:8px 0">No data</div>'}</div>
     </div>`;
   }).join('');
-
-  const trendMarkers = ['totalT','freeT','e2','hdl','hematocrit','shbg','igf1','dht','ast','alt','vitD'];
-  document.getElementById('labs-trend-tabs').innerHTML =
-    `<div style="font-size:10px;color:var(--muted);margin-bottom:6px;font-weight:600">SELECT UP TO 3 MARKERS</div>` +
-    trendMarkers.map(k=>`
-    <button class="labs-trend-tab ${activeTrendMarkers.has(k)?'active':''}" onclick="toggleTrendMarker('${k}',event)">${MARKER_META[k].label}</button>`).join('');
-  renderLabsChart();
 }
 
 function toggleTrendMarker(key, evt) {
@@ -2239,9 +2274,51 @@ let selectedCorrelCompound = null;
 
 function renderIntelligence() {
   intelInitialized = true;
-  renderIntelSelector();   // Compound vs Lab — first
-  renderIntelMarkers();    // Lab Marker Trends — second
-  renderIntelCycles();     // Cycle History — third
+  _renderIntelTrend();          // Marker Trends chart — first
+  renderIntelCompoundContext(); // What You Were Running — second
+  renderIntelSelector();        // Compound vs Lab — third
+  renderIntelMarkers();         // Lab Marker Trend sparklines — fourth
+  renderIntelCycles();          // Cycle History — fifth
+}
+
+function _renderIntelTrend() {
+  const trendMarkers = ['totalT','freeT','e2','hdl','hematocrit','shbg','igf1','dht','ast','alt','vitD'];
+  const tabsEl = document.getElementById('labs-trend-tabs');
+  if(tabsEl) tabsEl.innerHTML =
+    `<div style="font-size:10px;color:var(--muted);margin-bottom:6px;font-weight:600">SELECT UP TO 3 MARKERS</div>` +
+    trendMarkers.map(k =>
+      `<button class="labs-trend-tab ${activeTrendMarkers.has(k)?'active':''}" onclick="toggleTrendMarker('${k}',event)">${MARKER_META[k].label}</button>`
+    ).join('');
+  renderLabsChart();
+}
+
+function renderIntelCompoundContext() {
+  const el = document.getElementById('intel-compound-context');
+  if(!el) return;
+  if(!LABS.length) { el.innerHTML = '<div style="font-size:12px;color:var(--muted)">No lab data available.</div>'; return; }
+
+  const STEROID_SARM_KEYWORDS = ['testosterone','tc','te','masteron','mast','trenbolone','tren','dhb','nandrolone','deca','npp','boldenone','eq','primobolan','primo','anavar','oxandrolone','winstrol','stanozolol','yk-11','yk11','rad-140','rad140','lgd','ostarine','cardarine','mk-677','proviron','mesterolone'];
+  function isSteroidOrSARM(name) { return STEROID_SARM_KEYWORDS.some(k => name.toLowerCase().includes(k)); }
+
+  el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px">` +
+    LABS.slice().reverse().map(lab => {
+      const ctx = getCompoundContext(lab.date, 90);
+      const entries = Object.entries(ctx)
+        .filter(([k,v]) => v.days > 0 && isSteroidOrSARM(k))
+        .sort((a,b) => b[1].streak - a[1].streak || b[1].days - a[1].days);
+
+      const pills = entries.map(([k,v]) => {
+        const color = (v.src === 'inj' ? COMPOUND_COLORS[k] : ORAL_COLORS[k]) || '#fcd34d';
+        const dur = v.streak > 0 ? `${v.streak}d` : `${v.days}d/90d`;
+        return `<span style="font-size:11px;padding:3px 9px;border:1px solid ${color}44;color:${color};background:${color}0f;border-radius:20px;white-space:nowrap">${k} <strong>${v.lastDose||''}</strong> <span style="opacity:.6">${dur}</span></span>`;
+      }).join('');
+
+      return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px">
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px">🔬 ${lab.label}</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:10px">${lab.date}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px">${pills || '<span style="font-size:11px;color:var(--muted)">No compound data near this date</span>'}</div>
+      </div>`;
+    }).join('') + `</div>`;
 }
 
 // ── Cycle History Cards ───────────────────────────────────────
@@ -3112,6 +3189,30 @@ const TOKEN_EXP_KEY = 'hrt_oauth_token_exp';
 const USER_EMAIL_KEY = 'hrt_user_email';
 let _hrtUserEmail = (function() { try { return localStorage.getItem(USER_EMAIL_KEY) || null; } catch(e) { return null; } })();
 
+function _emailToInitials(email) {
+  if(!email) return '?';
+  const local = email.split('@')[0];
+  const parts = local.split(/[._\-]/);
+  if(parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return local.slice(0, 2).toUpperCase();
+}
+
+function toggleAvatarMenu() {
+  const menu = document.getElementById('avatar-dropdown');
+  if(!menu) return;
+  menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+}
+
+function closeAvatarMenu() {
+  const menu = document.getElementById('avatar-dropdown');
+  if(menu) menu.style.display = 'none';
+}
+
+document.addEventListener('click', function(e) {
+  const wrap = document.getElementById('header-avatar-wrap');
+  if(wrap && !wrap.contains(e.target)) closeAvatarMenu();
+});
+
 async function _fetchUserEmail(token) {
   try {
     const r = await fetch('https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=' + encodeURIComponent(token));
@@ -3151,6 +3252,7 @@ function clearToken() {
   } catch(e) {}
   sheetsToken = null;
   _hrtUserEmail = null;
+  closeAvatarMenu();
   updateLogAuthUI();
   const lp = document.getElementById('landing-page');
   if(lp) lp.style.display = '';
@@ -3190,16 +3292,17 @@ function updateLogAuthUI() {
   if(btn) btn.style.display = signedIn ? 'none' : '';
   if(form) form.style.display = signedIn ? '' : 'none';
   if(signout) signout.style.display = signedIn ? '' : 'none';
-  // Header buttons + user email
-  const hSignIn  = document.getElementById('header-signin-btn');
-  const hSignOut = document.getElementById('header-signout-btn');
-  const hEmail   = document.getElementById('header-user-email');
-  if(hSignIn)  hSignIn.style.display  = signedIn ? 'none' : '';
-  if(hSignOut) hSignOut.style.display = signedIn ? '' : 'none';
-  if(hEmail) {
+  // Header buttons + avatar
+  const hSignIn      = document.getElementById('header-signin-btn');
+  const hAvatarWrap  = document.getElementById('header-avatar-wrap');
+  const hAvatarBtn   = document.getElementById('header-avatar-btn');
+  const hAvatarEmail = document.getElementById('avatar-email');
+  if(hSignIn) hSignIn.style.display = signedIn ? 'none' : '';
+  if(hAvatarWrap) hAvatarWrap.style.display = signedIn ? '' : 'none';
+  if(signedIn) {
     if(!_hrtUserEmail) { try { _hrtUserEmail = localStorage.getItem(USER_EMAIL_KEY) || null; } catch(e) {} }
-    hEmail.textContent    = (signedIn && _hrtUserEmail) ? _hrtUserEmail : '';
-    hEmail.style.display  = (signedIn && _hrtUserEmail) ? '' : 'none';
+    if(hAvatarBtn) hAvatarBtn.textContent = _emailToInitials(_hrtUserEmail || '');
+    if(hAvatarEmail) hAvatarEmail.textContent = _hrtUserEmail || '';
   }
   // Dismiss landing if just signed in
   if(signedIn) {
@@ -4084,7 +4187,17 @@ async function loadSheetsData() {
   }
 }
 
-// ── Manual sync button ────────────────────────────────────────
+// ── Manual sync + last-synced tracker ────────────────────────
+let _lastSyncAt = null;
+
+function _updateLastSynced() {
+  const el = document.getElementById('last-synced');
+  if(!el || !_lastSyncAt) return;
+  const mins = Math.floor((Date.now() - _lastSyncAt) / 60000);
+  el.textContent = mins === 0 ? 'synced just now' : 'synced ' + mins + 'm ago';
+}
+setInterval(_updateLastSynced, 60000);
+
 async function syncFromSheets() {
   const fresh = await fetchSheetData();
   if(fresh && fresh.length > 0) {
@@ -4101,6 +4214,8 @@ async function syncFromSheets() {
     selectedIdx = bestS;
     renderAll();
     switchPage(activePage);
+    _lastSyncAt = Date.now();
+    _updateLastSynced();
     setSheetsStatus(`✓ Synced ${fresh.length} entries`, 'var(--ok)');
     setTimeout(() => setSheetsStatus('', 'var(--muted)'), 4000);
   }
@@ -4163,7 +4278,7 @@ function landingSignIn() {
 let hkInitialized = false;
 let _hkCharts = {};
 let _hkRows = null;      // cache all rows
-let _hkPeriod = 180;     // days to show in charts (0 = all)
+let _hkPeriod = 90;      // days to show in charts (0 = all)
 let _hkSource = 'sheets'; // 'sheets' or 'csv'
 
 async function loadHealthKit() {
@@ -4330,31 +4445,32 @@ function _hkRender(allRows) {
       + (_hkSource === 'csv' ? ' · Using bundled CSV (HealthKit sheet tab not yet synced)' : ' · Auto-sync runs daily at 3 AM');
   })();
 
-
-  // ── Stat strip (always latest from all time) ──────────────────
+  // ── Helpers ───────────────────────────────────────────────────
   const lastRow = k => [...allRows].reverse().find(r => r[k] && r[k] !== '');
-  const fmt = (r, k, dec, suf) => r ? (parseFloat(r[k]).toFixed(dec) + suf) : '—';
-  const lW = lastRow('Weight (lbs)');
-  const lH = lastRow('Heart Rate Variability (ms)');
-  const lBPs = lastRow('Blood Pressure [Systolic] (mmHg)');
-  const lBPd = lastRow('Blood Pressure [Diastolic] (mmHg)');
-  const lV = lastRow('VO2 Max (ml/(kg\xb7min))');
-  const lC = lastRow('Cardio Recovery (count/min)');
-  const lO = lastRow('Blood Oxygen Saturation (%)');
-  const lS = lastRow('Sleep Analysis [Total] (hr)');
-  const lT = lastRow('Step Count (steps)');
-  const bpVal = (lBPs && lBPd)
-    ? Math.round(parseFloat(lBPs['Blood Pressure [Systolic] (mmHg)'])) + '/' + Math.round(parseFloat(lBPd['Blood Pressure [Diastolic] (mmHg)'])) + ' mmHg'
-    : '—';
+  const fmt     = (r, k, dec, suf) => r ? (parseFloat(r[k]).toFixed(dec) + suf) : '—';
+  const avg     = (col) => {
+    const vals = rows.map(r => _hkNum(r, col)).filter(v => v !== null);
+    return vals.length ? vals.reduce((s,v)=>s+v,0)/vals.length : null;
+  };
+  const setText = (id, val) => { const el=document.getElementById(id); if(el) el.textContent=val; };
+
+  // ── Stat strip — 7 items (latest values) ─────────────────────
+  const lW  = lastRow('Weight (lbs)');
+  const lBF = lastRow('Body Fat Percentage (%)');
+  const lLM = lastRow('Lean Body Mass (lbs)');
+  const lH  = lastRow('Heart Rate Variability (ms)');
+  const lRH = lastRow('Resting Heart Rate (bpm)');
+  const lS  = lastRow('Sleep Analysis [Total] (hr)');
+  const lT  = lastRow('Step Count (steps)');
+  const avgSteps = avg('Step Count (steps)');
   const statCards = [
-    { label:'Weight',   val:fmt(lW,'Weight (lbs)',1,' lbs'),                      color:'#fafafa' },
-    { label:'HRV',      val:fmt(lH,'Heart Rate Variability (ms)',0,' ms'),         color:'#fcd34d' },
-    { label:'BP',       val:bpVal,                                                  color:'#ef4444' },
-    { label:'VO2 Max',  val:fmt(lV,'VO2 Max (ml/(kg\xb7min))',1,''),              color:'#10b981' },
-    { label:'Recovery', val:fmt(lC,'Cardio Recovery (count/min)',0,' bpm'),        color:'#8b5cf6' },
-    { label:'SpO2',     val:fmt(lO,'Blood Oxygen Saturation (%)',1,'%'),           color:'#06b6d4' },
-    { label:'Sleep',    val:fmt(lS,'Sleep Analysis [Total] (hr)',1,'h'),           color:'#8b5cf6' },
-    { label:'Steps',    val:lT ? Math.round(parseFloat(lT['Step Count (steps)'])).toLocaleString() : '—', color:'#10b981' },
+    { label:'Weight',     val:fmt(lW, 'Weight (lbs)',1,' lbs'),              color:'#fafafa' },
+    { label:'Body Fat',   val:fmt(lBF,'Body Fat Percentage (%)',1,'%'),      color:'#8b5cf6' },
+    { label:'Lean Mass',  val:fmt(lLM,'Lean Body Mass (lbs)',1,' lbs'),      color:'#8b5cf6' },
+    { label:'HRV',        val:fmt(lH, 'Heart Rate Variability (ms)',0,' ms'),color:'#fcd34d' },
+    { label:'Resting HR', val:fmt(lRH,'Resting Heart Rate (bpm)',0,' bpm'),  color:'#06b6d4' },
+    { label:'Total Sleep',val:fmt(lS, 'Sleep Analysis [Total] (hr)',1,'h'),  color:'#6366f1' },
+    { label:'Steps',      val:lT ? Math.round(parseFloat(lT['Step Count (steps)'])).toLocaleString() : '—', color:'#10b981' },
   ];
   const statsEl = document.getElementById('hk-stats');
   if(statsEl) statsEl.innerHTML = statCards.map(s =>
@@ -4363,14 +4479,27 @@ function _hkRender(allRows) {
     `<div style="font-size:15px;font-weight:700;color:${s.color};white-space:nowrap">${s.val}</div></div>`
   ).join('');
 
-  // ── Body Composition ──────────────────────────────────────────
-  _hkCharts.weight  = _hkLine('hk-weight-chart',  'Weight (lbs)',            rows, labels, '#fcd34d', 'rgba(252,211,77,0.07)');
-  _hkCharts.bodyfat = _hkLine('hk-bodyfat-chart', 'Body Fat Percentage (%)', rows, labels, '#10b981', 'rgba(16,185,129,0.07)');
-  _hkCharts.lean    = _hkLine('hk-lean-chart',    'Lean Body Mass (lbs)',    rows, labels, '#8b5cf6', 'rgba(139,92,246,0.07)');
-  _hkCharts.bmi     = _hkLine('hk-bmi-chart',     'Body Mass Index (count)', rows, labels, '#f97316', 'rgba(249,115,22,0.07)');
+  // ── Body Composition section stat cards ───────────────────────
+  setText('hk-stat-bf',     fmt(lBF,'Body Fat Percentage (%)',1,'%'));
+  setText('hk-stat-lean',   fmt(lLM,'Lean Body Mass (lbs)',1,' lbs'));
+  setText('hk-stat-weight', fmt(lW, 'Weight (lbs)',1,' lbs'));
 
-  // ── HRV ───────────────────────────────────────────────────────
-  _hkCharts.hrv = _hkLine('hk-hrv-chart', 'Heart Rate Variability (ms)', rows, labels, '#fcd34d', 'rgba(252,211,77,0.06)');
+  // ── Body Composition charts ───────────────────────────────────
+  _hkCharts.bodyfat = _hkLine('hk-bodyfat-chart', 'Body Fat Percentage (%)', rows, labels, '#8b5cf6', 'rgba(139,92,246,0.07)');
+  _hkCharts.lean    = _hkLine('hk-lean-chart',    'Lean Body Mass (lbs)',    rows, labels, '#8b5cf6', 'rgba(139,92,246,0.07)');
+  _hkCharts.weight  = _hkLine('hk-weight-chart',  'Weight (lbs)',            rows, labels, '#fcd34d', 'rgba(252,211,77,0.07)');
+
+  // ── Heart & Cardiovascular section stat cards ─────────────────
+  const lHAvg = lastRow('Heart Rate [Avg] (bpm)');
+  setText('hk-stat-hrv',   fmt(lH,   'Heart Rate Variability (ms)',0,' ms'));
+  setText('hk-stat-rhr',   fmt(lRH,  'Resting Heart Rate (bpm)',0,' bpm'));
+  setText('hk-stat-hravg', fmt(lHAvg,'Heart Rate [Avg] (bpm)',0,' bpm'));
+
+  // ── HRV (most prominent chart) ────────────────────────────────
+  _hkCharts.hrv = _hkLine('hk-hrv-chart', 'Heart Rate Variability (ms)', rows, labels, '#fcd34d', 'rgba(252,211,77,0.08)');
+
+  // ── Resting Heart Rate ────────────────────────────────────────
+  _hkCharts.restingHr = _hkLine('hk-resting-hr-chart', 'Resting Heart Rate (bpm)', rows, labels, '#06b6d4', 'rgba(6,182,212,0.07)');
 
   // ── HR Min / Avg / Max ────────────────────────────────────────
   const hrEl = document.getElementById('hk-hr-chart');
@@ -4386,50 +4515,46 @@ function _hkRender(allRows) {
       scales:_HK_SCALES }
   });
 
-  // ── Blood Pressure ────────────────────────────────────────────
-  const bpEl = document.getElementById('hk-bp-chart');
-  if(bpEl) _hkCharts.bp = new Chart(bpEl, {
-    type: 'line',
-    data: { labels, datasets: [
-      { label:'Systolic',  data:rows.map(r=>_hkNum(r,'Blood Pressure [Systolic] (mmHg)')),  borderColor:'#ef4444', borderWidth:2, pointRadius:2, tension:0.3, spanGaps:true, fill:false },
-      { label:'Diastolic', data:rows.map(r=>_hkNum(r,'Blood Pressure [Diastolic] (mmHg)')), borderColor:'#f97316', borderWidth:2, pointRadius:2, tension:0.3, spanGaps:true, fill:false },
-    ]},
-    options: { animation:false, responsive:true, maintainAspectRatio:true,
-      plugins:{ legend:{ display:true, labels:{color:'#9b9ba8',font:{size:10},boxWidth:10,padding:10} }, tooltip:_HK_TOOLTIP },
-      scales:_HK_SCALES }
-  });
+  // ── Sleep section stat cards ──────────────────────────────────
+  const fmtH = v => v !== null ? v.toFixed(1)+'h' : '—';
+  const avgDeep  = avg('Sleep Analysis [Deep] (hr)');
+  const avgREM   = avg('Sleep Analysis [REM] (hr)');
+  const avgTotal = avg('Sleep Analysis [Total] (hr)');
+  setText('hk-avg-total', fmtH(avgTotal));
+  setText('hk-avg-deep',  fmtH(avgDeep));
+  setText('hk-avg-rem',   fmtH(avgREM));
 
-  // ── VO2 Max + Cardio Recovery ─────────────────────────────────
-  _hkCharts.vo2    = _hkLine('hk-vo2-chart',    'VO2 Max (ml/(kg\xb7min))',      rows, labels, '#10b981', 'rgba(16,185,129,0.07)');
-  _hkCharts.cardio = _hkLine('hk-cardio-chart', 'Cardio Recovery (count/min)',   rows, labels, '#8b5cf6', 'rgba(139,92,246,0.07)');
-
-  // ── SpO2 + Respiratory Rate ───────────────────────────────────
-  _hkCharts.spo2 = _hkLine('hk-spo2-chart', 'Blood Oxygen Saturation (%)',  rows, labels, '#06b6d4', 'rgba(6,182,212,0.07)');
-  _hkCharts.resp = _hkLine('hk-resp-chart', 'Respiratory Rate (count/min)', rows, labels, '#9b9ba8');
-
-  // ── Activity ──────────────────────────────────────────────────
-  _hkCharts.steps    = _hkBar('hk-steps-chart',    'Step Count (steps)',              rows, labels, 'rgba(16,185,129,0.5)',  '#10b981');
-  _hkCharts.distance = _hkBar('hk-distance-chart', 'Walking + Running Distance (mi)', rows, labels, 'rgba(59,130,246,0.5)',  '#3b82f6');
-  _hkCharts.active   = _hkBar('hk-active-chart',   'Active Energy (kcal)',            rows, labels, 'rgba(249,115,22,0.5)',  '#f97316');
-  _hkCharts.resting  = _hkBar('hk-resting-chart',  'Resting Energy (kcal)',           rows, labels, 'rgba(155,155,168,0.4)', '#9b9ba8');
-  _hkCharts.exercise = _hkBar('hk-exercise-chart', 'Apple Exercise Time (min)',       rows, labels, 'rgba(16,185,129,0.5)',  '#10b981');
-  _hkCharts.stand    = _hkBar('hk-stand-chart',    'Apple Stand Hour (hr)',           rows, labels, 'rgba(252,211,77,0.5)',  '#fcd34d');
-
-  // ── Sleep stacked bar ─────────────────────────────────────────
+  // ── Sleep stacked bar with reference lines ────────────────────
   const sleepEl = document.getElementById('hk-sleep-chart');
   if(sleepEl) _hkCharts.sleep = new Chart(sleepEl, {
     type: 'bar',
     data: { labels, datasets: [
-      { label:'Deep',  data:rows.map(r=>_hkNum(r,'Sleep Analysis [Deep] (hr)')),  backgroundColor:'#8b5cf6', stack:'s' },
-      { label:'REM',   data:rows.map(r=>_hkNum(r,'Sleep Analysis [REM] (hr)')),   backgroundColor:'#06b6d4', stack:'s' },
-      { label:'Core',  data:rows.map(r=>_hkNum(r,'Sleep Analysis [Core] (hr)')),  backgroundColor:'#3b82f6', stack:'s' },
-      { label:'Awake', data:rows.map(r=>_hkNum(r,'Sleep Analysis [Awake] (hr)')), backgroundColor:'rgba(255,255,255,0.1)', stack:'s' },
+      { label:'Deep', data:rows.map(r=>_hkNum(r,'Sleep Analysis [Deep] (hr)')), backgroundColor:'#8b5cf6', stack:'s' },
+      { label:'REM',  data:rows.map(r=>_hkNum(r,'Sleep Analysis [REM] (hr)')),  backgroundColor:'#06b6d4', stack:'s' },
+      { label:'', type:'line', data:rows.map(()=>8),   borderColor:'rgba(99,102,241,0.55)', borderDash:[6,4], borderWidth:1.5, pointRadius:0, fill:false, order:0 },
+      { label:'', type:'line', data:rows.map(()=>1.5), borderColor:'rgba(139,92,246,0.55)', borderDash:[6,4], borderWidth:1.5, pointRadius:0, fill:false, order:0 },
     ]},
     options: { animation:false, responsive:true, maintainAspectRatio:true,
-      plugins:{ legend:{ display:true, labels:{color:'#9b9ba8',font:{size:11},boxWidth:10,padding:12} }, tooltip:_HK_TOOLTIP },
+      plugins:{
+        legend:{ display:true, labels:{color:'#9b9ba8',font:{size:11},boxWidth:10,padding:12,filter:item=>!!item.text} },
+        tooltip:_HK_TOOLTIP
+      },
       scales:{ x:{..._HK_SCALES.x, stacked:true}, y:{..._HK_SCALES.y, stacked:true} }
     }
   });
+
+  // ── Activity section stat cards ───────────────────────────────
+  const avgActive   = avg('Active Energy (kcal)');
+  const avgExercise = avg('Apple Exercise Time (min)');
+  setText('hk-stat-steps',    avgSteps !== null ? Math.round(avgSteps).toLocaleString() : '—');
+  setText('hk-stat-active',   avgActive !== null ? Math.round(avgActive).toLocaleString() + ' kcal' : '—');
+  setText('hk-stat-exercise', avgExercise !== null ? Math.round(avgExercise) + ' min' : '—');
+
+  // ── Activity charts ───────────────────────────────────────────
+  _hkCharts.steps    = _hkBar('hk-steps-chart',    'Step Count (steps)',        rows, labels, 'rgba(16,185,129,0.5)',  '#10b981');
+  _hkCharts.active   = _hkBar('hk-active-chart',   'Active Energy (kcal)',      rows, labels, 'rgba(249,115,22,0.5)',  '#f97316');
+  _hkCharts.exercise = _hkBar('hk-exercise-chart', 'Apple Exercise Time (min)', rows, labels, 'rgba(16,185,129,0.5)',  '#10b981');
+
   // Refresh today bar now that HRV/sleep data is available
   renderTodayBar();
 }
@@ -4768,6 +4893,70 @@ body { padding-bottom: env(safe-area-inset-bottom, 0); }
 
 /* ── Smooth scroll on iOS ── */
 html { -webkit-overflow-scrolling: touch; }
+
+/* ══════════════════════════════════════════════════════════════
+   FEATURE ADDITIONS: MOBILE NAV, TYPOGRAPHY, CARD POLISH, TABS
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Card hover polish ── */
+.card {
+  border-radius: 14px;
+  transition: transform 200ms ease, box-shadow 200ms ease !important;
+}
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 0 1px rgba(245,158,11,.15), 0 8px 32px rgba(0,0,0,.4) !important;
+}
+
+/* ── Section headings inside pages ── */
+.page h2:not(.card h2) { font-size: 20px; font-weight: 800; }
+
+/* ── Per-tab accent color scoping ── */
+#page-log      { --tab-accent: #f59e0b; }
+#page-labs     { --tab-accent: #06b6d4; }
+#page-fitness  { --tab-accent: #10b981; }
+#page-healthkit{ --tab-accent: #8b5cf6; }
+#page-compounds{ --tab-accent: #f97316; }
+
+/* ── Mobile bottom nav ── */
+#mob-bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: var(--bg2);
+  border-top: 1px solid var(--border);
+  z-index: 800;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+.mob-bottom-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 10px 4px 8px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .3px;
+  cursor: pointer;
+  border: none;
+  background: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: color .15s;
+}
+.mob-bottom-tab.active { color: var(--accent); }
+.mob-bottom-icon { font-size: 20px; line-height: 1; }
+
+/* ── Show bottom nav + hide desktop tabs + add page padding on mobile ── */
+@media (max-width: 768px) {
+  #mob-bottom-nav { display: flex; }
+  .nav-tabs { display: none !important; }
+  .hamburger-btn { display: flex; }
+  .page { padding-bottom: 72px; }
+  #page-healthkit > div { padding-bottom: 72px !important; }
+}
 </style>
 </body>
 </html>
