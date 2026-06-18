@@ -176,14 +176,14 @@ function setupTrigger() {
     }
   });
 
-  // Daily at 3 AM
+  // Daily at 7 AM
   ScriptApp.newTrigger('syncHealthKit')
     .timeBased()
     .everyDays(1)
     .atHour(7)
     .create();
 
-  Logger.log('✓ Trigger set: syncHealthKit at 3 AM daily');
+  Logger.log('✓ Trigger set: syncHealthKit at 7 AM daily');
   Logger.log('Running initial sync...');
   syncHealthKit();
 }
