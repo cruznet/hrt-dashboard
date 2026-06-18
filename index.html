@@ -1038,9 +1038,9 @@
     </div>
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:28px">
-    <div class="card"><h2>Body Fat %</h2><canvas id="hk-bodyfat-chart" height="110"></canvas></div>
-    <div class="card"><h2>Lean Body Mass (lbs)</h2><canvas id="hk-lean-chart" height="110"></canvas></div>
-    <div class="card"><h2>Weight (lbs)</h2><canvas id="hk-weight-chart" height="110"></canvas></div>
+    <div class="card"><h2>Body Fat %</h2><div style="position:relative;height:160px"><canvas id="hk-bodyfat-chart"></canvas></div></div>
+    <div class="card"><h2>Lean Body Mass (lbs)</h2><div style="position:relative;height:160px"><canvas id="hk-lean-chart"></canvas></div></div>
+    <div class="card"><h2>Weight (lbs)</h2><div style="position:relative;height:160px"><canvas id="hk-weight-chart"></canvas></div></div>
   </div>
 
   <!-- Section 2: Heart & Cardiovascular -->
@@ -1062,11 +1062,11 @@
   <div class="card" style="margin-bottom:16px">
     <h2>Heart Rate Variability (ms)</h2>
     <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Key HRT recovery marker — low HRV may indicate protocol stress</p>
-    <canvas id="hk-hrv-chart" height="160"></canvas>
+    <div style="position:relative;height:160px"><canvas id="hk-hrv-chart"></canvas></div>
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:28px">
-    <div class="card"><h2>Resting Heart Rate (bpm)</h2><canvas id="hk-resting-hr-chart" height="110"></canvas></div>
-    <div class="card"><h2>Heart Rate — Min / Avg / Max (bpm)</h2><canvas id="hk-hr-chart" height="110"></canvas></div>
+    <div class="card"><h2>Resting Heart Rate (bpm)</h2><div style="position:relative;height:160px"><canvas id="hk-resting-hr-chart"></canvas></div></div>
+    <div class="card"><h2>Heart Rate — Min / Avg / Max (bpm)</h2><div style="position:relative;height:160px"><canvas id="hk-hr-chart"></canvas></div></div>
   </div>
 
   <!-- Section 3: Sleep -->
@@ -1091,7 +1091,7 @@
       <span style="display:inline-block;width:16px;border-top:2px dashed rgba(99,102,241,0.6);vertical-align:middle;margin-right:4px"></span>8h goal &nbsp;·&nbsp;
       <span style="display:inline-block;width:16px;border-top:2px dashed rgba(139,92,246,0.6);vertical-align:middle;margin-right:4px"></span>1.5h deep goal
     </p>
-    <canvas id="hk-sleep-chart" height="140"></canvas>
+    <div style="position:relative;height:160px"><canvas id="hk-sleep-chart"></canvas></div>
   </div>
 
   <!-- Section 4: Activity -->
@@ -1111,9 +1111,9 @@
     </div>
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:24px">
-    <div class="card"><h2>Step Count</h2><canvas id="hk-steps-chart" height="110"></canvas></div>
-    <div class="card"><h2>Active Energy (kcal)</h2><canvas id="hk-active-chart" height="110"></canvas></div>
-    <div class="card"><h2>Exercise Time (min)</h2><canvas id="hk-exercise-chart" height="110"></canvas></div>
+    <div class="card"><h2>Step Count</h2><div style="position:relative;height:160px"><canvas id="hk-steps-chart"></canvas></div></div>
+    <div class="card"><h2>Active Energy (kcal)</h2><div style="position:relative;height:160px"><canvas id="hk-active-chart"></canvas></div></div>
+    <div class="card"><h2>Exercise Time (min)</h2><div style="position:relative;height:160px"><canvas id="hk-exercise-chart"></canvas></div></div>
   </div>
 
 </div>
@@ -4366,7 +4366,7 @@ function _hkLine(id, col, rows, labels, color, fill) {
       borderWidth: 2, pointRadius: 2, pointBackgroundColor: color,
       tension: 0.3, fill: !!fill, spanGaps: true,
     }]},
-    options: { animation:false, responsive:true, maintainAspectRatio:true,
+    options: { animation:false, responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{display:false}, tooltip:_HK_TOOLTIP }, scales:_HK_SCALES }
   });
 }
@@ -4380,7 +4380,7 @@ function _hkBar(id, col, rows, labels, bg, border) {
       data: rows.map(r => _hkNum(r, col)),
       backgroundColor: bg, borderColor: border || bg, borderWidth:1, borderRadius:3,
     }]},
-    options: { animation:false, responsive:true, maintainAspectRatio:true,
+    options: { animation:false, responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{display:false}, tooltip:_HK_TOOLTIP }, scales:_HK_SCALES }
   });
 }
@@ -4510,7 +4510,7 @@ function _hkRender(allRows) {
       { label:'Avg', data:rows.map(r=>_hkNum(r,'Heart Rate [Avg] (bpm)')), borderColor:'#fafafa', borderWidth:2, pointRadius:2, tension:0.3, spanGaps:true, fill:false },
       { label:'Max', data:rows.map(r=>_hkNum(r,'Heart Rate [Max] (bpm)')), borderColor:'#ef4444', borderDash:[4,3], borderWidth:1.5, pointRadius:0, tension:0.3, spanGaps:true, fill:false },
     ]},
-    options: { animation:false, responsive:true, maintainAspectRatio:true,
+    options: { animation:false, responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{ display:true, labels:{color:'#9b9ba8',font:{size:10},boxWidth:10,padding:10} }, tooltip:_HK_TOOLTIP },
       scales:_HK_SCALES }
   });
@@ -4534,7 +4534,7 @@ function _hkRender(allRows) {
       { label:'', type:'line', data:rows.map(()=>8),   borderColor:'rgba(99,102,241,0.55)', borderDash:[6,4], borderWidth:1.5, pointRadius:0, fill:false, order:0 },
       { label:'', type:'line', data:rows.map(()=>1.5), borderColor:'rgba(139,92,246,0.55)', borderDash:[6,4], borderWidth:1.5, pointRadius:0, fill:false, order:0 },
     ]},
-    options: { animation:false, responsive:true, maintainAspectRatio:true,
+    options: { animation:false, responsive:true, maintainAspectRatio:false,
       plugins:{
         legend:{ display:true, labels:{color:'#9b9ba8',font:{size:11},boxWidth:10,padding:12,filter:item=>!!item.text} },
         tooltip:_HK_TOOLTIP
