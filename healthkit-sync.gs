@@ -180,7 +180,7 @@ function setupTrigger() {
   ScriptApp.newTrigger('syncHealthKit')
     .timeBased()
     .everyDays(1)
-    .atHour(3)
+    .atHour(7)
     .create();
 
   Logger.log('✓ Trigger set: syncHealthKit at 3 AM daily');
