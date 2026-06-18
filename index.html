@@ -488,6 +488,14 @@
     </div>
   </div>
 
+  <!-- Privacy trust banner -->
+  <div style="max-width:680px;margin:32px auto 0;padding:0 32px">
+    <div style="border-left:3px solid var(--accent);padding:13px 18px;background:rgba(245,158,11,0.06);border-radius:0 6px 6px 0;color:var(--muted);font-size:13px;line-height:1.65">
+      Your data never leaves your Google Sheet. No servers. No tracking.<br>
+      Built by someone on HRT, for people on HRT.
+    </div>
+  </div>
+
   <!-- Mock dashboard preview -->
   <section class="lp-section" style="padding-top:64px">
     <div class="lp-section-label">Dashboard</div>
@@ -738,6 +746,23 @@
       <button id="log-submit-btn" onclick="submitLogEntry()" style="width:100%;padding:12px;background:var(--accent);border:none;border-radius:8px;color:#000;font-weight:800;font-size:15px;cursor:pointer">✓ Save to Sheet</button>
     </div>
   </div>
+</div>
+
+<!-- ── Today at a Glance ─────────────────────────────────── -->
+<div id="today-bar" style="display:flex;align-items:center;gap:16px;padding:8px 32px;background:var(--bg2);border-bottom:1px solid var(--border);font-size:12px;flex-wrap:wrap">
+  <span id="today-bar-date" style="color:var(--accent);font-weight:700;font-size:13px"></span>
+  <span id="today-bar-weight" style="color:var(--muted)"></span>
+  <span id="today-bar-hrv" style="color:var(--muted)"></span>
+  <span id="today-bar-sleep" style="color:var(--muted)"></span>
+  <span id="today-bar-logged"></span>
+  <button onclick="openLogPanel()" style="margin-left:auto;padding:3px 10px;background:var(--accent);border:none;border-radius:5px;color:#000;font-size:11px;font-weight:700;cursor:pointer">+ Log Today</button>
+</div>
+
+<!-- ── Session expiry warning ─────────────────────────────── -->
+<div id="session-expiry-warn" style="display:none;background:rgba(245,158,11,0.08);border-bottom:1px solid rgba(245,158,11,0.25);padding:7px 32px;font-size:12px;color:var(--accent);align-items:center;gap:10px">
+  <span>⏱ Your session expires soon —</span>
+  <button onclick="oauthSignIn()" style="color:var(--accent);background:none;border:1px solid rgba(245,158,11,0.35);border-radius:4px;padding:2px 8px;font-size:11px;cursor:pointer;font-weight:600;margin-left:2px">click to refresh</button>
+  <button onclick="document.getElementById('session-expiry-warn').style.display='none'" style="margin-left:auto;color:var(--muted);background:none;border:none;cursor:pointer;font-size:16px;line-height:1">✕</button>
 </div>
 
 <div class="stats-row" id="stats-row"></div>
@@ -1224,6 +1249,50 @@ function renderAll() {
   renderChangelog();
   renderLogCoverage();
   showDayDetail(DATA[selectedIdx] || DATA[DATA.length-1]);
+  renderTodayBar();
+}
+
+function renderTodayBar() {
+  var now = new Date();
+  var todayStr = (now.getMonth()+1) + '/' + now.getDate() + '/' + now.getFullYear();
+
+  var dateEl = document.getElementById('today-bar-date');
+  if(dateEl) dateEl.textContent = now.toLocaleDateString('en-US', {weekday:'long', month:'long', day:'numeric'});
+
+  var wEl = document.getElementById('today-bar-weight');
+  if(wEl) {
+    var lastW = null;
+    for(var i = ALL_DATA.length - 1; i >= 0; i--) { if(ALL_DATA[i].weight) { lastW = ALL_DATA[i]; break; } }
+    wEl.textContent = lastW ? '⚖ ' + lastW.weight + ' lbs' : '';
+  }
+
+  var hrvEl = document.getElementById('today-bar-hrv');
+  if(hrvEl) {
+    var hk = _hkRows || [];
+    var lastHrv = null;
+    for(var j = hk.length - 1; j >= 0; j--) {
+      if(hk[j]['Heart Rate Variability (ms)'] && hk[j]['Heart Rate Variability (ms)'] !== '') { lastHrv = hk[j]; break; }
+    }
+    hrvEl.textContent = lastHrv ? '❤ HRV ' + Math.round(parseFloat(lastHrv['Heart Rate Variability (ms)'])) + ' ms' : '';
+  }
+
+  var sleepEl = document.getElementById('today-bar-sleep');
+  if(sleepEl) {
+    var hk2 = _hkRows || [];
+    var lastSleep = null;
+    for(var k = hk2.length - 1; k >= 0; k--) {
+      if(hk2[k]['Sleep Analysis [Total] (hr)'] && hk2[k]['Sleep Analysis [Total] (hr)'] !== '') { lastSleep = hk2[k]; break; }
+    }
+    sleepEl.textContent = lastSleep ? '🌙 ' + parseFloat(lastSleep['Sleep Analysis [Total] (hr)']).toFixed(1) + 'h sleep' : '';
+  }
+
+  var logEl = document.getElementById('today-bar-logged');
+  if(logEl) {
+    var loggedToday = ALL_DATA.some(function(d) { return d.date === todayStr; });
+    logEl.innerHTML = loggedToday
+      ? '<span style="color:#22c55e;font-weight:600">✓ Logged</span>'
+      : '<span style="color:#f59e0b;font-weight:600">⚠ Not logged today</span>';
+  }
 }
 
 function renderLogCoverage() {
@@ -3139,6 +3208,8 @@ function updateLogAuthUI() {
     try { localStorage.setItem('hrt_landing_dismissed', '1'); } catch(e) {}
     _idleTimerReset();
   }
+  // Refresh session expiry banner on any auth state change
+  if(typeof _checkSessionExpiry === 'function') _checkSessionExpiry();
 }
 
 async function updateRowInSheet(dateStr, rowData) {
@@ -4359,6 +4430,8 @@ function _hkRender(allRows) {
       scales:{ x:{..._HK_SCALES.x, stacked:true}, y:{..._HK_SCALES.y, stacked:true} }
     }
   });
+  // Refresh today bar now that HRV/sleep data is available
+  renderTodayBar();
 }
 
 // ── Idle sign-out timer ───────────────────────────────────────
@@ -4451,8 +4524,59 @@ function closeMobMenu() {
 }
 
 // ── Init ──────────────────────────────────────────────────────
+// ── Session expiry warning ────────────────────────────────────
+function _checkSessionExpiry() {
+  var warn = document.getElementById('session-expiry-warn');
+  if(!warn) return;
+  var token = getSavedToken();
+  if(!token) { warn.style.display = 'none'; return; }
+  try {
+    var exp = parseInt(localStorage.getItem(TOKEN_EXP_KEY) || '0');
+    var remaining = exp - Date.now();
+    // Show when less than 10 minutes remain but token is still valid
+    if(remaining > 0 && remaining < 10 * 60 * 1000) {
+      warn.style.display = 'flex';
+    } else {
+      warn.style.display = 'none';
+    }
+  } catch(e) {}
+}
+setInterval(_checkSessionExpiry, 60 * 1000); // poll every minute
+
+// ── Scroll fade-in animations ─────────────────────────────────
+(function() {
+  var _io = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) {
+      if(e.isIntersecting) {
+        e.target.style.opacity = '1';
+        e.target.style.transform = 'translateY(0)';
+        _io.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.05, rootMargin: '0px 0px -30px 0px' });
+
+  function _fadeInit(el) {
+    if(el.dataset.fadeInit) return;
+    el.dataset.fadeInit = '1';
+    var rect = el.getBoundingClientRect();
+    // Skip elements already in the initial viewport — no flash for above-fold content
+    if(rect.top < window.innerHeight * 0.9) return;
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(16px)';
+    el.style.transition = 'opacity 300ms ease, transform 300ms ease';
+    _io.observe(el);
+  }
+
+  new MutationObserver(function() {
+    document.querySelectorAll('.card').forEach(_fadeInit);
+  }).observe(document.body, { childList: true, subtree: true });
+
+  setTimeout(function() { document.querySelectorAll('.card').forEach(_fadeInit); }, 200);
+})();
+
 bootWithSheets();
 showLandingIfNeeded();
+_checkSessionExpiry();
 </script>
 
 <style>
