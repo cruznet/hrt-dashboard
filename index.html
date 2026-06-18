@@ -607,7 +607,8 @@
     <span id="sheets-status" style="font-size:11px;color:var(--muted);margin-left:16px"></span>
     <button onclick="syncFromSheets()" style="margin-left:10px;padding:4px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--muted);font-size:11px;cursor:pointer;font-weight:600" title="Sync from Google Sheets">↻ Sync</button>
     <button id="header-signin-btn" onclick="oauthSignIn()" style="margin-left:8px;padding:4px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:11px;cursor:pointer;font-weight:600">🔑 Sign In</button>
-    <button id="header-signout-btn" onclick="clearToken()" style="display:none;margin-left:8px;padding:4px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--muted);font-size:11px;cursor:pointer;font-weight:600">Sign Out</button>
+    <span id="header-user-email" style="display:none;font-size:11px;color:var(--muted);margin-left:10px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle"></span>
+    <button id="header-signout-btn" onclick="clearToken()" style="display:none;margin-left:6px;padding:4px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--muted);font-size:11px;cursor:pointer;font-weight:600">Sign Out</button>
   <button onclick="openLogPanel()" style="margin-left:8px;padding:4px 12px;background:var(--accent);border:1px solid var(--accent);border-radius:6px;color:#000;font-size:11px;cursor:pointer;font-weight:700">+ Log Today</button>
   <button class="hamburger-btn" id="hamburger-btn" onclick="toggleMobMenu()" aria-label="Menu">
     <span class="hb"></span><span class="hb"></span><span class="hb"></span>
@@ -1334,6 +1335,93 @@ function jumpToDate() {
     showDayDetail(DATA[best]);
     highlightTimelineCell(best);
   }
+}
+
+// ── Search ────────────────────────────────────────────────────
+function doSearch(q) {
+  q = (q || '').trim();
+  const res = document.getElementById('search-results');
+  if(!res) return;
+  if(!q) { res.classList.remove('open'); return; }
+  const ql = q.toLowerCase();
+  const hits = [];
+
+  ALL_DATA.forEach(function(d, ai) {
+    let reason = '';
+    // Date match — supports "June 5", "Jun 5 2026", "6/5/2026", etc.
+    try {
+      const dt   = parseMDY(d.date);
+      const long  = dt.toLocaleDateString('en-US', {month:'long',  day:'numeric', year:'numeric'});
+      const short = dt.toLocaleDateString('en-US', {month:'long',  day:'numeric'});
+      const abbr  = dt.toLocaleDateString('en-US', {month:'short', day:'numeric'});
+      if(d.date.includes(ql) || long.toLowerCase().includes(ql) ||
+         short.toLowerCase().includes(ql) || abbr.toLowerCase().includes(ql)) {
+        reason = long;
+      }
+    } catch(e) {}
+    // Notes / comments match
+    if(!reason && d.comments && d.comments.toLowerCase().includes(ql)) {
+      const preview = d.comments.length > 60 ? d.comments.slice(0, 60) + '…' : d.comments;
+      reason = '💬 ' + preview;
+    }
+    // Compound match (injectables, peptides, orals)
+    if(!reason) {
+      const compounds = [
+        ...Object.keys(d.injectables || {}),
+        ...Object.keys(d.peptides    || {}),
+        ...Object.keys(d.orals       || {}),
+      ];
+      const hit = compounds.find(function(c) { return c.toLowerCase().includes(ql); });
+      if(hit) reason = '💉 ' + hit;
+    }
+    if(reason) hits.push({d: d, ai: ai, reason: reason});
+  });
+
+  if(!hits.length) {
+    res.innerHTML = '<div style="padding:12px 14px;color:var(--muted);font-size:12px">No results</div>';
+    res.classList.add('open');
+    return;
+  }
+  // Most recent first, cap at 10
+  hits.reverse();
+  res.innerHTML = hits.slice(0, 10).map(function(h) {
+    var lbl;
+    try { lbl = parseMDY(h.d.date).toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'}); }
+    catch(e) { lbl = h.d.date; }
+    return '<div class="search-result-item" onclick="selectSearchResult(' + h.ai + ')">' +
+      '<div class="search-result-date">' + lbl + '</div>' +
+      '<div style="color:var(--muted);font-size:12px;margin-top:1px">' + h.reason + '</div>' +
+      '</div>';
+  }).join('');
+  res.classList.add('open');
+}
+
+function closeSearch() {
+  const res = document.getElementById('search-results');
+  if(res) res.classList.remove('open');
+}
+
+function selectSearchResult(allIdx) {
+  closeSearch();
+  const entry = ALL_DATA[allIdx];
+  if(!entry) return;
+  // If entry isn't in current year filter, expand to All Years
+  let idx = DATA.indexOf(entry);
+  if(idx < 0) {
+    setYear('all');
+    // Re-apply the All Years button highlight (setYear without event clears all)
+    document.querySelectorAll('.year-btn').forEach(function(b) {
+      b.classList.toggle('active', b.getAttribute('onclick') && b.getAttribute('onclick').includes("'all'"));
+    });
+    idx = DATA.indexOf(entry);
+  }
+  if(idx < 0) return;
+  selectedIdx = idx;
+  switchPage('log');
+  showDayDetail(DATA[idx]);
+  highlightTimelineCell(idx);
+  const inp = document.getElementById('search-input');
+  if(inp) inp.value = '';
 }
 
 // ── Protocol card ─────────────────────────────────────────────
@@ -2952,6 +3040,22 @@ const SHEET_TABS        = ['2026','2025','2024','2024-2'];
 let sheetsToken = null;
 const TOKEN_KEY = 'hrt_oauth_token';
 const TOKEN_EXP_KEY = 'hrt_oauth_token_exp';
+const USER_EMAIL_KEY = 'hrt_user_email';
+let _hrtUserEmail = (function() { try { return localStorage.getItem(USER_EMAIL_KEY) || null; } catch(e) { return null; } })();
+
+async function _fetchUserEmail(token) {
+  try {
+    const r = await fetch('https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=' + encodeURIComponent(token));
+    if(r.ok) {
+      const info = await r.json();
+      if(info.email) {
+        _hrtUserEmail = info.email;
+        try { localStorage.setItem(USER_EMAIL_KEY, info.email); } catch(e) {}
+        updateLogAuthUI();
+      }
+    }
+  } catch(e) {}
+}
 
 function getSavedToken() {
   try {
@@ -2973,9 +3077,11 @@ function clearToken() {
   try {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(TOKEN_EXP_KEY);
+    localStorage.removeItem(USER_EMAIL_KEY);
     sessionStorage.removeItem('hrt_landing_dismissed');
   } catch(e) {}
   sheetsToken = null;
+  _hrtUserEmail = null;
   updateLogAuthUI();
   const lp = document.getElementById('landing-page');
   if(lp) lp.style.display = '';
@@ -2996,6 +3102,7 @@ function oauthSignIn() {
         sheetsToken = resp.access_token;
         var exp = parseInt(resp.expires_in || '3600');
         saveToken(sheetsToken, exp);
+        _fetchUserEmail(sheetsToken);
         updateLogAuthUI();
       },
     });
@@ -3014,11 +3121,17 @@ function updateLogAuthUI() {
   if(btn) btn.style.display = signedIn ? 'none' : '';
   if(form) form.style.display = signedIn ? '' : 'none';
   if(signout) signout.style.display = signedIn ? '' : 'none';
-  // Header buttons
-  const hSignIn = document.getElementById('header-signin-btn');
+  // Header buttons + user email
+  const hSignIn  = document.getElementById('header-signin-btn');
   const hSignOut = document.getElementById('header-signout-btn');
-  if(hSignIn) hSignIn.style.display = signedIn ? 'none' : '';
+  const hEmail   = document.getElementById('header-user-email');
+  if(hSignIn)  hSignIn.style.display  = signedIn ? 'none' : '';
   if(hSignOut) hSignOut.style.display = signedIn ? '' : 'none';
+  if(hEmail) {
+    if(!_hrtUserEmail) { try { _hrtUserEmail = localStorage.getItem(USER_EMAIL_KEY) || null; } catch(e) {} }
+    hEmail.textContent    = (signedIn && _hrtUserEmail) ? _hrtUserEmail : '';
+    hEmail.style.display  = (signedIn && _hrtUserEmail) ? '' : 'none';
+  }
   // Dismiss landing if just signed in
   if(signedIn) {
     const lp = document.getElementById('landing-page');
