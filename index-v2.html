@@ -2227,6 +2227,12 @@ function renderLabDashboardCards(cache) {
       if (row != null) { latestValue = row.value; break; }
     }
 
+    // Always update label and unit regardless of data presence
+    const labelEl = document.querySelector(`#${cardId}`)?.closest('.metric-card')?.querySelector('.metric-label');
+    if (labelEl) labelEl.textContent = def.label;
+    const unitEl = document.querySelector(`#${cardId}`)?.closest('.metric-card')?.querySelector('.metric-unit');
+    if (unitEl) unitEl.textContent = def.unit;
+
     if (latestValue == null) {
       updateMetricCard(cardId, '—', 'No data', 'badge-muted');
       return;
@@ -2238,10 +2244,6 @@ function renderLabDashboardCards(cache) {
 
     // Format value
     const display = Number.isInteger(latestValue) ? latestValue : parseFloat(latestValue).toFixed(1);
-
-    // Update card label to match current profile marker
-    const labelEl = document.querySelector(`#${cardId}`)?.closest('.metric-card')?.querySelector('.metric-label');
-    if (labelEl) labelEl.textContent = def.label;
 
     updateMetricCard(cardId, display, labelMap[cls], badgeMap[cls]);
 

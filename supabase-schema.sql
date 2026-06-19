@@ -990,3 +990,29 @@ INSERT INTO compound_library (
  8, NULL,
  'ED', 1.0,
  '#c084fc', 96, 'Steroidal SARM / myostatin inhibitor. Promotes muscle growth beyond genetic limit. Limited human data.');
+
+-- lab_markers: EAV table for all blood lab values (replaces flat lab_results columns)
+CREATE TABLE IF NOT EXISTS lab_markers (
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id     uuid REFERENCES auth.users NOT NULL,
+  drawn_at    date NOT NULL,
+  marker_key  text NOT NULL,
+  value       numeric NOT NULL,
+  lab_source  text CHECK (lab_source IN ('manual', 'labcorp_pdf', 'quest_pdf', 'csv')),
+  created_at  timestamptz DEFAULT now(),
+  UNIQUE (user_id, drawn_at, marker_key)
+);
+
+CREATE INDEX IF NOT EXISTS lab_markers_user_date
+  ON lab_markers (user_id, drawn_at DESC);
+
+CREATE INDEX IF NOT EXISTS lab_markers_user_marker_date
+  ON lab_markers (user_id, marker_key, drawn_at DESC);
+
+ALTER TABLE lab_markers ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can manage their own lab markers"
+  ON lab_markers
+  FOR ALL
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
