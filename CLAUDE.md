@@ -1,173 +1,223 @@
-# HRT Log Dashboard — Claude Instructions
+# HRT Dashboard — Claude Instructions
 
 ## What this project is
 
-A single-file HTML dashboard (`index.html`) for tracking HRT (Hormone Replacement Therapy) data. It reads from and writes to a Google Sheet and deploys automatically to Cloudflare Pages via GitHub.
+Two single-file HTML dashboards coexisting in this directory:
 
-**Live URL:** https://health.cruznetllc.com  
-**GitHub repo:** https://github.com/cruznet/hrt-dashboard  
-**Auto-deploy:** Every push to `main` deploys to Cloudflare Pages in ~30 seconds.
+- **`index.html`** — Google Sheets-based tracker (active dev, OLED Dark redesign on `v2` branch)
+- **`index-v2.html`** — Supabase+localStorage rewrite (separate architecture)
 
----
-
-## The only file that matters
-
-Everything — HTML, CSS, JavaScript — lives in **`index.html`**. There are no build steps, no npm, no bundler. Edit the file, commit, push. That's it.
+Both are fully self-contained — no build system, no npm, no bundler.
 
 ---
 
-## Credentials (already in the file, do not change)
+## Files
 
-```
-SHEETS_API_KEY   = AIzaSyBtDRuMPJmpfozjauPcjNYqtkWgb8BIoZo
-SHEETS_CLIENT_ID = 671234379522-7i667etomk82dcoegnuhosu2lf0njtv2.apps.googleusercontent.com
-SHEET_ID         = 1-1zGJo-1SudZ37LZKzqgs-7pCcvLU2haSNjOYUuF19Q
-```
-
-The Google Sheet has yearly tabs (e.g. `2024`, `2025`, `2026`). Row 1 is headers, data starts at row 2.
-
----
-
-## Google OAuth — how it works
-
-Authentication uses Google Identity Services (GIS) token client — **not** the deprecated implicit grant flow. The pattern is:
-
-```javascript
-_gisClient = window.google.accounts.oauth2.initTokenClient({
-  client_id: SHEETS_CLIENT_ID,
-  scope: 'https://www.googleapis.com/auth/spreadsheets',
-  callback: function(resp) {
-    sheetsToken = resp.access_token;
-    saveToken(sheetsToken, parseInt(resp.expires_in || '3600'));
-    updateLogAuthUI();
-  },
-});
-_gisClient.requestAccessToken(); // NOT requestToken()
-```
-
-**Do not change this to implicit grant or any other flow.** It took multiple debugging sessions to land on this.
+| File | Purpose |
+|---|---|
+| `index.html` | Google Sheets-based HRT dashboard — active redesign (v1 theme, Google Sheets API + GIS OAuth) |
+| `index-v2.html` | Supabase+localStorage rewrite — separate architecture, see § below |
+| `supabase-schema.sql` | Supabase DB schema v2.1 — run in Supabase SQL editor |
+| `server.py` | Local dev server — `python3 server.py` → `http://localhost:3000` |
+| `healthkit-sync.gs` | Google Apps Script — syncs Apple Health data to Sheets, trigger fires at 7 AM |
+| `healthkit-data.csv` | CSV fallback for HealthKit tab when Sheets tab is empty or not yet synced |
+| `CLAUDE.md` | This file |
 
 ---
 
-## Key functions to know
+## Branch strategy
+
+| Branch | Purpose |
+|---|---|
+| `main` | Stable — last known-good `index.html` state |
+| `v2` | Active redesign — OLED Dark theme, SVG nav, dense layout |
+
+---
+
+## index.html — Google Sheets Dashboard
+
+Single-file (~5200 lines). No build system, no npm. All HTML/CSS/JS in one file.
+
+**Stack:** Vanilla JS · Chart.js 4.4.1 · Google Sheets API v4 (read via API key) · GIS OAuth (write) · Motion v11
+
+### Auth — critical constraints
+
+- OAuth flow: GIS `initTokenClient` + `requestAccessToken()` — **do not change to implicit grant or any other flow**
+- **Do not add `redirect_uri` to the GIS token client config** — GIS token client does not use redirects
+- **Do not send numeric values to oral compound columns in Sheets** — those columns validate TRUE/FALSE only
+
+### Tabs
+
+| Tab | ID | Notes |
+|---|---|---|
+| Overview | `page-log` | KPI stat cards + activity log |
+| Compounds | `page-compounds` | Protocol Timelines / Injection Sites sub-nav |
+| Blood Labs | `page-labs` | 6-key-marker snapshot strip + full lab history |
+| Intelligence | `page-intelligence` | Collapsible sections; last 2 start collapsed |
+| Fitness | `page-fitness` | |
+| HealthKit | `page-healthkit` | Reads `healthkit-data.csv` as fallback |
+
+### Key functions (index.html)
 
 | Function | What it does |
 |---|---|
-| `bootWithSheets()` | Loads all sheet data on page load |
-| `syncFromSheets()` | Manual re-sync from Google Sheets |
-| `oauthSignIn()` | Triggers Google sign-in popup |
-| `clearToken()` | Signs out, clears saved token |
-| `updateLogAuthUI()` | Shows/hides sign-in form based on auth state |
-| `openLogPanel()` | Opens the log entry modal |
-| `renderLogForm()` | Builds the compound input form |
-| `showLandingIfNeeded()` | Shows landing page if no token and not dismissed |
-| `dismissLanding()` | Hides landing page, sets localStorage flag |
+| `switchPage(name, evt)` | Tab navigation with Motion v11 animation |
+| `switchCompoundsView(view, btn)` | Toggles Protocol Timelines / Injection Sites sub-sections |
+| `toggleIntelSection(id, btn)` | Collapses/expands Intelligence section bodies |
+| `renderLabs()` | Populates `#labs-snapshot` 6-key-marker grid + full lab table |
+| `renderStats()` | KPI cards with per-metric colored accent bars |
+
+### Styling conventions (index.html)
+
+Typography: **Fira Sans** (body/labels) + **Fira Code** (all data values). SVG icons only — no emoji.
+
+```css
+:root {
+  --bg:#080808; --bg2:#0f0f12; --bg3:#161619; --border:#1f1f26;
+  --text:#f0f0f4; --muted:#7a7a88; --accent:#fcd34d;
+  --accent2:#ef4444; --accent3:#22c55e; --accent4:#fcd34d;
+  --accent5:#8b5cf6; --accent6:#06b6d4;
+  --warn:#f97316; --danger:#ef4444; --ok:#22c55e;
+  --radius:8px;
+  --grid-gap:12px; --card-padding:14px 16px;
+  --header-height:52px; --sidebar-width:240px;
+}
+```
 
 ---
 
-## Dashboard tabs
+## index-v2.html — Supabase Dashboard
 
-- **Overview** — stats, compound heatmap timeline, day detail panel
-- **Blood Labs** — bloodwork panel (reads from sheet)
-- **Fitness** — Hevy workout data
-- **Log** — write new entries to the sheet
+### Data storage
+
+All user data is **localStorage-first**. Supabase is wired but optional — the app works fully offline.
+
+| localStorage key | Contents |
+|---|---|
+| `hrt_protocols` | Array of saved protocol objects |
+| `hrt_active_protocol` | ID of the active protocol |
+| `hrt_active_protocol_data` | Full active protocol object |
+| `hrt_vitals_log` | Array of vitals entries `{date, weight, systolic, diastolic, glucose, mood, energy, notes}` |
+| `hrt_doses_taken` | Array of dose acknowledgments `{label, date, ts}` |
+| `hrt_mode` | UI mode preference |
+
+### Key functions
+
+| Function | What it does |
+|---|---|
+| `normalizeCompound(c)` | Handles old combined `unit="mg E3.5D"` vs new separate `unit`+`freq` fields |
+| `pbFreqToInjectionsPerWeek(freq)` | ED→7, EOD→3.5, E3.5D/2X/WK→2, Weekly→1 |
+| `renderVitalsToCards()` | Populates dashboard metric cards from vitals log |
+| `renderUpcoming()` | Builds upcoming doses schedule with mark-taken buttons |
+| `renderAdherenceBadge()` | Calculates adherence % over last 30 days |
+| `markDoseTaken(label, date)` | Logs a dose acknowledgment to localStorage |
 
 ---
 
-## Log form behavior
+## Pages
 
-The log form (`renderLogForm()`) is smart:
-- Only shows compounds used in the **last 30 days** (not all columns)
-- **Orals** (anastrozole, exemestane, enclomiphene, clomid, etc.) render as toggle switches that emit `TRUE` or `''`
-- **Injectables and peptides** render as number steppers (step 0.05)
-- Oral columns in the sheet expect `TRUE`/`FALSE` — never send a number to them
+### Dashboard (`page-dashboard`)
+- Metric cards: weight, BP, glucose, mood/energy sparklines, log streak
+- Vitals populated on load via `renderVitalsToCards()`
+- Upcoming doses with dose acknowledgment (mark taken / log late)
+- Adherence badge
+
+### My Protocols (`page-protocols`)
+- CRUD for protocols stored in `hrt_protocols`
+- Protocol Builder: add compounds with dose/freq/unit, computes weekly totals
+
+### Calculators (`page-calculators`)
+Tabs: Dose Calculator · Peptide Calculator · Protocol Builder
+
+- **Dose Calculator** — PK blood level simulation using half-life decay
+- **Peptide Calculator** — single compound or blend mode; custom BAC water; draw volume output
+- **Protocol Builder** — multi-compound protocols; weekly total = `perInjection × injectionsPerWeek`
+
+### Vitals Log (`page-vitals`)
+- Log weight, BP, glucose, mood (1–10), energy (1–10), notes
+- Feeds dashboard metric cards and sparklines
+
+### Compounds (`page-compounds`)
+- Reference table for 60+ compounds: AAS, SARMs, peptides, insulins, fat loss, support meds
+- Data lives in the `COMPOUNDS` array in `index-v2.html`
+
+---
+
+## Compound library
+
+`COMPOUNDS` array — each entry shape:
+```js
+{
+  name: 'Testosterone Cypionate',
+  cat: 'AAS',           // AAS | SARM | Peptide | Insulin | Fat Loss | Support | Other
+  hl: '8',              // half-life in days (string)
+  unit: 'mg',
+  freq: 'E3.5D',
+  ai: 'Yes',            // aromatizes
+  dht: 'Yes',           // DHT conversion
+  note: '...'
+}
+```
+
+Weekly total always computed as `perInjection × pbFreqToInjectionsPerWeek(freq)` — never from stored `weeklyDose`.
+
+---
+
+## Peptide calculator — blend mode
+
+Draw fraction is calibrated to the **target peptide's mg**, not total vial mg:
+```js
+drawMl = (desiredMg / targetPeptideMg) * bacWater;
+```
+
+All other peptides in the blend scale by the same `drawMl / bacWater` fraction.
+
+---
+
+## Vitals → Dashboard feedback loop
+
+`renderVitalsToCards()` runs on page load and after every vitals save. Delta indicators use `lowerIsBetter` flag:
+- BP (systolic), glucose → lower = green
+- Weight → neutral
+- Mood/energy → higher = green (sparklines only)
+
+---
+
+## Dose acknowledgment
+
+- `hrt_doses_taken` stores `{label, date, ts}` per confirmed dose
+- `label` format: `"TC 100mg"` (abbreviated compound name + dose + unit)
+- Missed dose detection: looks back 3 days for injection days without confirmation
+- Adherence: confirmed/expected ratio over last 30 days
 
 ---
 
 ## Styling conventions
 
-CSS variables are defined at `:root`. The theme is:
-- Background: `#000000` (pure black)
-- Accent: `#f59e0b` (amber gold)
-- Text: `#ffffff`
-- Muted: `#666666`
-- Border: `#222222`
+CSS variables defined at `:root`:
+```css
+--primary:        #6366F1   /* indigo */
+--green:          #10B981
+--amber:          #F59E0B
+--red:            #EF4444
+--bg:             #0F1117
+--bg-card:        #1A1D27
+--bg-deep:        #13151F
+--border:         #2A2D3A
+--text-primary:   #F1F5F9
+--text-secondary: #94A3B8
+--text-muted:     #64748B
+--font-data:      'JetBrains Mono', monospace
+```
 
-All new UI should use these variables, not hardcoded colors.
-
----
-
-## Landing page
-
-The landing page (`#landing-page`) is a fullscreen overlay shown to unauthenticated users who haven't dismissed it. It uses `localStorage` key `hrt_landing_dismissed` to remember dismissal. It disappears automatically when the user signs in.
-
----
-
-## Deployment workflow
-
-1. Edit `index.html`
-2. `git add index.html`
-3. `git commit -m "your message"`
-4. `git push origin main`
-5. Visit https://health.cruznetllc.com in ~30 seconds
-
-No zip uploads. No Cloudflare UI. Just push.
+All new UI must use these variables — no hardcoded colors.
 
 ---
 
 ## What to avoid
 
-- Do not split into multiple files — keep everything in `index.html`
+- Do not split into multiple files — keep everything in `index-v2.html`
 - Do not add a build system or package.json
-- Do not change the OAuth method — `initTokenClient` + `requestAccessToken` is the correct pattern
-- Do not send numeric values to oral compound columns in the sheet (they validate TRUE/FALSE only)
-- Do not add `redirect_uri` to the GIS token client config — it doesn't use redirects
-
----
-
-## Skill: Extract Design Language (`/extract-design`)
-
-Extract the full design system (colors, fonts, spacing, tokens) from any website URL.
-
-### How to run
-
-```bash
-# In VS Code terminal
-npx designlang <url> --screenshots
-```
-
-Examples:
-```bash
-npx designlang https://testosterone.tools --screenshots
-npx designlang https://health.cruznetllc.com --screenshots --dark
-npx designlang https://example.com --depth 3 --screenshots
-```
-
-### Output files (saved to `./design-extract-output/`)
-
-| File | Use for |
-|---|---|
-| `*-design-language.md` | Paste into Claude as context for styling work |
-| `*-preview.html` | Open in browser — visual swatches, type scale, a11y score |
-| `*-tailwind.config.js` | Drop into any Tailwind project |
-| `*-variables.css` | Copy CSS vars into `index.html` |
-| `*-shadcn-theme.css` | shadcn/ui globals.css |
-| `*-figma-variables.json` | Import into Figma |
-| `*-theme.js` | React/CSS-in-JS theme |
-| `*-design-tokens.json` | W3C Design Tokens format |
-
-### Useful flags
-
-| Flag | What it does |
-|---|---|
-| `--dark` | Also extract dark mode palette |
-| `--depth 3` | Crawl 3 pages deep for site-wide tokens |
-| `--out ./my-folder` | Custom output directory |
-| `--wait 2000` | Wait 2s after load (for SPAs) |
-
-### Typical workflow
-
-1. Run `npx designlang <url> --screenshots`
-2. Open `*-preview.html` in browser to review
-3. Copy `*-variables.css` vars into `index.html` to match a site's style
-4. Paste `*-design-language.md` into Claude chat as design context
+- Do not use `c.weeklyDose` for weekly totals — always compute from `perInjection × injectionsPerWeek`
+- Do not add Google Sheets or HealthKit dependencies — v2 is Supabase + localStorage only
+- Do not rename `normalizeCompound()` — it handles backward compat with v1 protocol data
