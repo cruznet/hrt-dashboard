@@ -461,6 +461,7 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
 .lab-group-header:hover { background:var(--hover); }
 .lab-group-body { padding:14px; border-top:1px solid var(--border); }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
 </head>
 <body>
 
@@ -937,17 +938,43 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
       </div>
 
       <div class="tab-panel" id="labs-upload">
-        <div class="card" style="max-width:500px;">
-          <div class="card-title">Upload PDF Bloodwork</div>
-          <div class="upload-zone" onclick="document.getElementById('pdf-input').click()">
-            <div class="upload-icon"><i class="ti ti-file-type-pdf"></i></div>
-            <div class="upload-text">Click to upload or drag &amp; drop</div>
-            <div class="upload-sub">PDF files from LabCorp, Quest, or any lab</div>
-            <input type="file" id="pdf-input" accept=".pdf" style="display:none;" onchange="handlePdfUpload(this)">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start;">
+          <div class="card">
+            <div class="card-title">Upload PDF Bloodwork</div>
+            <div class="form-group">
+              <label class="form-label">Draw Date (from the PDF)</label>
+              <input type="date" class="form-input" id="import-date">
+            </div>
+            <div class="upload-zone" onclick="document.getElementById('pdf-input').click()">
+              <div class="upload-icon"><i class="ti ti-file-type-pdf"></i></div>
+              <div class="upload-text">Click to upload or drag &amp; drop</div>
+              <div class="upload-sub">LabCorp or Quest PDF — order codes matched automatically</div>
+              <input type="file" id="pdf-input" accept=".pdf" style="display:none;" onchange="handlePdfUpload(this)">
+            </div>
+            <div id="pdf-status" style="margin-top:12px;font-size:12px;display:none;"></div>
+            <div style="margin-top:14px;font-size:11px;color:var(--text-muted);line-height:1.6;">
+              <i class="ti ti-shield-check" style="color:var(--green);"></i> Parsed entirely in your browser. No PDF is uploaded to any server.
+            </div>
           </div>
-          <div id="pdf-status" style="margin-top:12px;font-size:12px;display:none;"></div>
-          <div style="margin-top:14px;font-size:11px;color:var(--text-muted);line-height:1.6;">
-            <i class="ti ti-shield-check" style="color:var(--green);"></i> Your PDF is parsed privately. We extract values and delete the file immediately.
+          <div class="card">
+            <div class="card-title">Lab Code Reference</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">Use these codes when ordering labs to ensure automatic matching.</div>
+            <div style="max-height:400px;overflow-y:auto;">
+              <table class="data-table" id="lab-code-ref-table">
+                <thead><tr><th>Marker</th><th>LabCorp</th><th>Quest</th></tr></thead>
+                <tbody id="lab-code-ref-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <!-- Import preview (shown after parsing) -->
+        <div class="card" id="lab-import-preview" style="display:none;margin-top:14px;">
+          <div class="card-title">Review Extracted Values</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">Green = order code matched (high confidence). Amber = name matched (verify). Edit any value before confirming.</div>
+          <div id="lab-import-table-wrap"></div>
+          <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px;">
+            <button class="btn-secondary" onclick="document.getElementById('lab-import-preview').style.display='none'">Cancel</button>
+            <button class="btn-primary" id="lab-import-confirm-btn" onclick="">Confirm &amp; Save</button>
           </div>
         </div>
       </div>
@@ -2348,6 +2375,174 @@ function renderReferenceRanges() {
     <div style="font-size:11px;color:var(--text-muted);margin-top:14px;line-height:1.6;">Source: Bloodwork Reference Guide v1.0 (May 2026). For informational use only — consult your provider for clinical decisions.</div>`;
 }
 
+async function handlePdfUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const status = document.getElementById('pdf-status');
+  status.style.display = 'block'; status.style.color = 'var(--amber)';
+  status.textContent = '⏳ Parsing PDF…';
+  const drawnAt = document.getElementById('import-date').value;
+  try {
+    const rows = await parsePdf(file);
+    if (rows.length === 0) {
+      status.style.color = 'var(--red)';
+      status.textContent = '⚠ No markers found. Try uploading a CSV instead, or use Manual Entry.';
+      return;
+    }
+    status.style.display = 'none';
+    showLabImportPreview(rows, 'pdf', drawnAt);
+  } catch(e) {
+    console.error('[parsePdf] failed:', e);
+    status.style.color = 'var(--red)';
+    status.textContent = '⚠ Could not read this PDF. Try the CSV export from your lab portal, or use Manual Entry.';
+  }
+  input.value = '';
+}
+
+async function parsePdf(file) {
+  // pdf.js extracts text page by page
+  const pdfjsLib = window['pdfjs-dist/build/pdf'];
+  if (!pdfjsLib) throw new Error('pdf.js not loaded');
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+  const buffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+  let fullText = '';
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    fullText += content.items.map(item => item.str).join(' ') + '\n';
+  }
+
+  const results = [];
+  const seen = new Set();
+
+  // Strategy 1: match known order codes
+  for (const [code, keys] of Object.entries(CODE_TO_MARKERS)) {
+    // Find the code in the text (LabCorp/Quest codes appear as standalone numbers)
+    const codeRegex = new RegExp(`\\b${code}\\b`);
+    if (!codeRegex.test(fullText)) continue;
+
+    // For each marker_key this code can produce, look for the marker's label nearby
+    keys.forEach(marker_key => {
+      if (seen.has(marker_key)) return;
+      const def = MARKER_DEFINITIONS[marker_key];
+      if (!def) return;
+      // Look for a number near the marker label or code in the text
+      const labelVariants = [def.label, marker_key.replace(/_/g,' ')];
+      for (const lv of labelVariants) {
+        // Find numeric value: first decimal or integer after the label within 120 chars
+        const idx = fullText.toLowerCase().indexOf(lv.toLowerCase());
+        if (idx === -1) continue;
+        const snippet = fullText.slice(idx, idx + 120);
+        const numMatch = snippet.match(/(\d+\.?\d*)/);
+        if (numMatch) {
+          results.push({ marker_key, value: parseFloat(numMatch[1]), confidence: 'high' });
+          seen.add(marker_key);
+          break;
+        }
+      }
+    });
+  }
+
+  // Strategy 2: name-based fallback for unmatched markers
+  for (const [marker_key, def] of Object.entries(MARKER_DEFINITIONS)) {
+    if (seen.has(marker_key)) continue;
+    const labelVariants = [def.label.toLowerCase(), marker_key.replace(/_/g,' ')];
+    for (const lv of labelVariants) {
+      const idx = fullText.toLowerCase().indexOf(lv);
+      if (idx === -1) continue;
+      const snippet = fullText.slice(idx, idx + 80);
+      const numMatch = snippet.match(/(\d+\.?\d*)/);
+      if (numMatch) {
+        results.push({ marker_key, value: parseFloat(numMatch[1]), confidence: 'medium' });
+        seen.add(marker_key);
+        break;
+      }
+    }
+  }
+
+  return results;
+}
+
+function showLabImportPreview(rows, source, drawnAt) {
+  const preview = document.getElementById('lab-import-preview');
+  const wrap = document.getElementById('lab-import-table-wrap');
+  if (!preview || !wrap) return;
+
+  const confColor = { high: 'var(--green)', medium: 'var(--amber)' };
+  const confIcon  = { high: '✓', medium: '~' };
+
+  wrap.innerHTML = `<table class="data-table">
+    <thead><tr><th>Confidence</th><th>Marker</th><th>Value</th><th>Unit</th></tr></thead>
+    <tbody>
+      ${rows.map((r, i) => {
+        const def = MARKER_DEFINITIONS[r.marker_key] || {};
+        return `<tr>
+          <td style="color:${confColor[r.confidence] || 'var(--text-muted)'};">${confIcon[r.confidence] || '?'}</td>
+          <td>${def.label || r.marker_key}</td>
+          <td><input type="number" class="form-input" style="width:100px;padding:4px 8px;"
+              id="import-val-${i}" value="${r.value}" step="0.01"></td>
+          <td style="color:var(--text-muted);">${def.unit || ''}</td>
+        </tr>`;
+      }).join('')}
+    </tbody>
+  </table>`;
+
+  // Wire confirm button with current rows + source + drawnAt
+  const btn = document.getElementById('lab-import-confirm-btn');
+  if (btn) btn.onclick = () => confirmLabImport(rows, source, drawnAt);
+
+  preview.style.display = 'block';
+  preview.scrollIntoView({ behavior: 'smooth' });
+}
+
+async function confirmLabImport(rows, source, drawnAt) {
+  if (!drawnAt) { alert('Please set the draw date before confirming.'); return; }
+
+  // Read edited values from the preview inputs
+  const finalRows = rows.map((r, i) => {
+    const el = document.getElementById(`import-val-${i}`);
+    return { ...r, value: el ? parseFloat(el.value) : r.value };
+  }).filter(r => !isNaN(r.value));
+
+  // Persist to localStorage
+  const stored = lsGet('hrt_lab_markers', []);
+  finalRows.forEach(({ marker_key, value }) => {
+    const idx = stored.findIndex(r => r.drawn_at === drawnAt && r.marker_key === marker_key);
+    const row = { drawn_at: drawnAt, marker_key, value, lab_source: source === 'pdf' ? 'labcorp_pdf' : 'csv' };
+    if (idx >= 0) stored[idx] = row; else stored.push(row);
+  });
+  stored.sort((a, b) => b.drawn_at.localeCompare(a.drawn_at));
+  localStorage.setItem('hrt_lab_markers', JSON.stringify(stored));
+
+  // Update in-memory cache
+  if (!window._labMarkersCache) window._labMarkersCache = {};
+  if (!window._labMarkersCache[drawnAt]) window._labMarkersCache[drawnAt] = [];
+  finalRows.forEach(({ marker_key, value }) => {
+    const cache = window._labMarkersCache[drawnAt];
+    const idx = cache.findIndex(r => r.marker_key === marker_key);
+    const row = { marker_key, value, lab_source: source === 'pdf' ? 'labcorp_pdf' : 'csv' };
+    if (idx >= 0) cache[idx] = row; else cache.push(row);
+  });
+
+  // Supabase upsert
+  if (_supa && _supaUser) {
+    const supaRows = finalRows.map(({ marker_key, value }) => ({
+      user_id: _supaUser.id, drawn_at: drawnAt, marker_key, value,
+      lab_source: source === 'pdf' ? 'labcorp_pdf' : 'csv'
+    }));
+    const { error } = await _supa.from('lab_markers').upsert(supaRows, { onConflict: 'user_id,drawn_at,marker_key' });
+    if (error) console.error('[confirmLabImport] Supabase upsert failed:', error);
+  }
+
+  renderLabDashboardCards(window._labMarkersCache);
+  renderLabHistory();
+  document.getElementById('lab-import-preview').style.display = 'none';
+  alert(`✓ ${finalRows.length} markers saved for ${drawnAt}.`);
+}
+
 function renderLabMetrics(data) {
   const latest = data[0];
   if (!latest) return;
@@ -2857,13 +3052,7 @@ async function submitLabEntry() {
   setTimeout(() => { s.style.display = 'none'; }, 3000);
 }
 
-function handlePdfUpload(input) {
-  const status = document.getElementById('pdf-status');
-  if (!input.files[0]) return;
-  status.style.display = 'block';
-  status.style.color = 'var(--amber)';
-  status.textContent = '⏳ PDF upload feature requires a Supabase Edge Function with Claude API parsing. This will be enabled in the next build. For now, use Manual Entry.';
-}
+// handlePdfUpload, parsePdf, showLabImportPreview, confirmLabImport defined after renderReferenceRanges
 
 // ── Protocol Builder ──
 let pbState = { name: '', phase: 'cruise', weeks: 16, compounds: [] };
@@ -4167,6 +4356,14 @@ window.addEventListener('DOMContentLoaded', () => {
   if (_pSex) _pSex.value = _p.sex;
   if (_pFocus) _pFocus.value = _p.focus;
   renderReferenceRanges();
+
+  // Populate lab code reference table
+  const codeBody = document.getElementById('lab-code-ref-body');
+  if (codeBody) {
+    codeBody.innerHTML = Object.entries(MARKER_DEFINITIONS).map(([, def]) =>
+      `<tr><td>${def.label}</td><td class="mono">${def.labcorp_code || '—'}</td><td class="mono">${def.quest_code || '—'}</td></tr>`
+    ).join('');
+  }
 });
 </script>
 </body>
