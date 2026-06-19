@@ -462,6 +462,7 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
 .lab-group-body { padding:14px; border-top:1px solid var(--border); }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js" defer></script>
 </head>
 <body>
 
@@ -938,43 +939,67 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
       </div>
 
       <div class="tab-panel" id="labs-upload">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start;">
-          <div class="card">
-            <div class="card-title">Upload PDF Bloodwork</div>
-            <div class="form-group">
-              <label class="form-label">Draw Date (from the PDF)</label>
-              <input type="date" class="form-input" id="import-date">
+        <div class="tab-bar" style="margin-bottom:12px;">
+          <button class="tab-btn active" onclick="switchTab(this,'upload-pdf')">PDF</button>
+          <button class="tab-btn" onclick="switchTab(this,'upload-csv')">CSV</button>
+        </div>
+
+        <div class="tab-panel active" id="upload-pdf">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start;">
+            <div class="card">
+              <div class="card-title">Upload PDF Bloodwork</div>
+              <div class="form-group">
+                <label class="form-label">Draw Date (from the PDF)</label>
+                <input type="date" class="form-input" id="import-date">
+              </div>
+              <div class="upload-zone" onclick="document.getElementById('pdf-input').click()">
+                <div class="upload-icon"><i class="ti ti-file-type-pdf"></i></div>
+                <div class="upload-text">Click to upload or drag &amp; drop</div>
+                <div class="upload-sub">LabCorp or Quest PDF — order codes matched automatically</div>
+                <input type="file" id="pdf-input" accept=".pdf" style="display:none;" onchange="handlePdfUpload(this)">
+              </div>
+              <div id="pdf-status" style="margin-top:12px;font-size:12px;display:none;"></div>
+              <div style="margin-top:14px;font-size:11px;color:var(--text-muted);line-height:1.6;">
+                <i class="ti ti-shield-check" style="color:var(--green);"></i> Parsed entirely in your browser. No file is uploaded to any server.
+              </div>
             </div>
-            <div class="upload-zone" onclick="document.getElementById('pdf-input').click()">
-              <div class="upload-icon"><i class="ti ti-file-type-pdf"></i></div>
-              <div class="upload-text">Click to upload or drag &amp; drop</div>
-              <div class="upload-sub">LabCorp or Quest PDF — order codes matched automatically</div>
-              <input type="file" id="pdf-input" accept=".pdf" style="display:none;" onchange="handlePdfUpload(this)">
-            </div>
-            <div id="pdf-status" style="margin-top:12px;font-size:12px;display:none;"></div>
-            <div style="margin-top:14px;font-size:11px;color:var(--text-muted);line-height:1.6;">
-              <i class="ti ti-shield-check" style="color:var(--green);"></i> Parsed entirely in your browser. No PDF is uploaded to any server.
-            </div>
-          </div>
-          <div class="card">
-            <div class="card-title">Lab Code Reference</div>
-            <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">Use these codes when ordering labs to ensure automatic matching.</div>
-            <div style="max-height:400px;overflow-y:auto;">
-              <table class="data-table" id="lab-code-ref-table">
-                <thead><tr><th>Marker</th><th>LabCorp</th><th>Quest</th></tr></thead>
+            <div class="card">
+              <div class="card-title">Lab Code Reference</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">Use these codes when ordering labs.</div>
+              <div style="max-height:400px;overflow-y:auto;">
+                <table class="data-table"><thead><tr><th>Marker</th><th>LabCorp</th><th>Quest</th></tr></thead>
                 <tbody id="lab-code-ref-body"></tbody>
               </table>
+              </div>
             </div>
           </div>
         </div>
-        <!-- Import preview (shown after parsing) -->
+
+        <div class="tab-panel" id="upload-csv" style="display:none;">
+          <div class="card" style="max-width:500px;">
+            <div class="card-title">Upload CSV Results</div>
+            <div class="form-group">
+              <label class="form-label">Draw Date</label>
+              <input type="date" class="form-input" id="import-date-csv">
+            </div>
+            <div class="upload-zone" onclick="document.getElementById('csv-input').click()">
+              <div class="upload-icon"><i class="ti ti-file-spreadsheet"></i></div>
+              <div class="upload-text">Click to upload CSV</div>
+              <div class="upload-sub">Export from LabCorp Patient Portal or Quest MyQuest</div>
+              <input type="file" id="csv-input" accept=".csv,.xlsx" style="display:none;" onchange="handleCsvUpload(this)">
+            </div>
+            <div id="csv-status" style="margin-top:12px;font-size:12px;display:none;"></div>
+          </div>
+        </div>
+
+        <!-- Shared import preview -->
         <div class="card" id="lab-import-preview" style="display:none;margin-top:14px;">
           <div class="card-title">Review Extracted Values</div>
-          <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">Green = order code matched (high confidence). Amber = name matched (verify). Edit any value before confirming.</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">Green = high confidence match. Amber = verify before saving. Edit any value.</div>
           <div id="lab-import-table-wrap"></div>
           <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px;">
             <button class="btn-secondary" onclick="document.getElementById('lab-import-preview').style.display='none'">Cancel</button>
-            <button class="btn-primary" id="lab-import-confirm-btn" onclick="">Confirm &amp; Save</button>
+            <button class="btn-primary" id="lab-import-confirm-btn">Confirm &amp; Save</button>
           </div>
         </div>
       </div>
@@ -1912,17 +1937,31 @@ async function loadUserData() {
   updateUserUI(_supaUser);
   const uid = _supaUser.id;
   try {
-    const [logsRes, metricsRes, labsRes] = await Promise.all([
+    const [logsRes, metricsRes, labsRes, markersRes] = await Promise.all([
       _supa.from('administration_log').select('*').eq('user_id', uid).order('date', { ascending: false }).limit(50),
       _supa.from('daily_metrics').select('*').eq('user_id', uid).order('date', { ascending: false }).limit(90),
-      _supa.from('lab_results').select('id,drawn_at,total_testosterone,free_testosterone,estradiol,hematocrit,hemoglobin,psa,lh,ast,alt,shbg').eq('user_id', uid).order('drawn_at', { ascending: false }).limit(12)
+      _supa.from('lab_results').select('id,drawn_at,total_testosterone,free_testosterone,estradiol,hematocrit,hemoglobin,psa,lh,ast,alt,shbg').eq('user_id', uid).order('drawn_at', { ascending: false }).limit(12),
+      _supa.from('lab_markers').select('drawn_at,marker_key,value,lab_source').eq('user_id', uid).order('drawn_at', { ascending: false }).limit(500)
     ]);
     if (logsRes.error) console.error('[loadUserData] logs query failed:', logsRes.error);
     if (metricsRes.error) console.error('[loadUserData] metrics query failed:', metricsRes.error);
     if (labsRes.error) console.error('[loadUserData] labs query failed:', labsRes.error);
+    if (markersRes.error) console.error('[loadUserData] lab_markers query failed:', markersRes.error);
     if (metricsRes.data?.length) renderMetrics(metricsRes.data);
     if (logsRes.data?.length) renderLastEntry(logsRes.data[0]);
     if (labsRes.data?.length) renderLabMetrics(labsRes.data);
+    // Build _labMarkersCache from lab_markers rows
+    window._labMarkersCache = {};
+    (markersRes.data || []).forEach(r => {
+      if (!window._labMarkersCache[r.drawn_at]) window._labMarkersCache[r.drawn_at] = [];
+      window._labMarkersCache[r.drawn_at].push({ marker_key: r.marker_key, value: r.value, lab_source: r.lab_source });
+    });
+    renderLabDashboardCards(window._labMarkersCache);
+    renderLabHistory();
+    // Run migration if lab_results has data but lab_markers is empty
+    if ((labsRes.data?.length) && !(markersRes.data?.length)) {
+      migrateLabResults(uid, labsRes.data);
+    }
     // Store for chart rendering
     window._labHistory = labsRes.data || [];
     window._weightHistory = metricsRes.data || [];
@@ -2379,9 +2418,10 @@ async function handlePdfUpload(input) {
   const file = input.files[0];
   if (!file) return;
   const status = document.getElementById('pdf-status');
+  const drawnAt = document.getElementById('import-date').value;
+  if (!drawnAt) { status.style.color='var(--red)'; status.textContent='Set draw date first.'; status.style.display='block'; return; }
   status.style.display = 'block'; status.style.color = 'var(--amber)';
   status.textContent = '⏳ Parsing PDF…';
-  const drawnAt = document.getElementById('import-date').value;
   try {
     const rows = await parsePdf(file);
     if (rows.length === 0) {
@@ -2541,6 +2581,98 @@ async function confirmLabImport(rows, source, drawnAt) {
   renderLabHistory();
   document.getElementById('lab-import-preview').style.display = 'none';
   alert(`✓ ${finalRows.length} markers saved for ${drawnAt}.`);
+}
+
+function handleCsvUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const drawnAt = document.getElementById('import-date-csv').value;
+  const status = document.getElementById('csv-status');
+  if (!drawnAt) {
+    status.style.display='block'; status.style.color='var(--red)';
+    status.textContent = 'Set draw date before uploading.'; return;
+  }
+  status.style.display='block'; status.style.color='var(--amber)'; status.textContent='⏳ Parsing CSV…';
+  Papa.parse(file, {
+    header: true,
+    skipEmptyLines: true,
+    complete(result) {
+      try {
+        const rows = parseCsv(result.data);
+        if (!rows.length) {
+          status.style.color='var(--red)'; status.textContent='⚠ No markers matched. Check CSV format.'; return;
+        }
+        status.style.display='none';
+        showLabImportPreview(rows, 'csv', drawnAt);
+      } catch(e) {
+        status.style.color='var(--red)'; status.textContent='⚠ CSV parse error: ' + e.message;
+      }
+    },
+    error(e) { status.style.color='var(--red)'; status.textContent='⚠ ' + e.message; }
+  });
+  input.value = '';
+}
+
+function parseCsv(rows) {
+  // Build name-to-key reverse index from MARKER_DEFINITIONS
+  const nameIndex = {};
+  for (const [key, def] of Object.entries(MARKER_DEFINITIONS)) {
+    nameIndex[def.label.toLowerCase()] = key;
+    nameIndex[key.replace(/_/g,' ')] = key;
+    // Common Quest/LabCorp CSV column name variants
+    nameIndex[def.label.toLowerCase().replace(/[^a-z0-9]/g,'')] = key;
+  }
+
+  const results = [];
+  const seen = new Set();
+
+  rows.forEach(row => {
+    // Quest CSV: "Test Name", "Result" columns; LabCorp CSV: "Test", "Value"
+    const testName = (row['Test Name'] || row['Test'] || row['COMPONENT'] || '').toLowerCase().trim();
+    const rawValue = row['Result'] || row['Value'] || row['YOUR VALUE'] || '';
+    if (!testName || !rawValue) return;
+
+    const numVal = parseFloat(rawValue.replace(/[^0-9.-]/g, ''));
+    if (isNaN(numVal)) return;
+
+    // Try exact match, then normalized match
+    const key = nameIndex[testName] || nameIndex[testName.replace(/[^a-z0-9]/g,'')];
+    if (key && !seen.has(key)) {
+      results.push({ marker_key: key, value: numVal, confidence: 'high' });
+      seen.add(key);
+    }
+  });
+
+  return results;
+}
+
+async function migrateLabResults(userId, legacyRows) {
+  const columnMap = {
+    total_testosterone: 'total_testosterone',
+    free_testosterone:  'free_testosterone',
+    estradiol:          'estradiol',
+    hematocrit:         'hematocrit',
+    hemoglobin:         'hemoglobin',
+    psa:                'psa',
+    lh:                 'lh',
+    ast:                'ast',
+    alt:                'alt',
+    shbg:               'shbg',
+  };
+  const rows = [];
+  for (const legacy of legacyRows) {
+    for (const [col, key] of Object.entries(columnMap)) {
+      if (legacy[col] != null) {
+        rows.push({ user_id: userId, drawn_at: legacy.drawn_at, marker_key: key, value: parseFloat(legacy[col]), lab_source: 'manual' });
+      }
+    }
+  }
+  if (!rows.length) return;
+  const { error } = await _supa.from('lab_markers').upsert(rows, { onConflict: 'user_id,drawn_at,marker_key' });
+  if (error) { console.error('[migrateLabResults] failed:', error); return; }
+  console.log(`[migrateLabResults] migrated ${rows.length} rows from lab_results → lab_markers`);
+  // Reload to pick up migrated data
+  await loadUserData();
 }
 
 function renderLabMetrics(data) {
