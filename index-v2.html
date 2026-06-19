@@ -3013,6 +3013,89 @@ function normalizeCompound(c) {
   return { name, dose, unit: unit || '', freq: freq || '', weeks };
 }
 
+// ── Lab Marker Definitions ──
+// Single source of truth: labels, units, LabCorp/Quest codes, categories, reference ranges.
+const MARKER_DEFINITIONS = {
+  // HORMONAL
+  total_testosterone: { label:'Total Testosterone', unit:'ng/dL',  labcorp_code:'070130', quest_code:'36170',  category:'hormonal', sex:['male','female'], ranges:{ male:{optimal:[500,900],  normal:[300,1000], alert_above:1200}, female:{optimal:[30,80],   normal:[15,100],  alert_above:150}  }},
+  free_testosterone:  { label:'Free Testosterone',  unit:'ng/dL',  labcorp_code:'070130', quest_code:'36170',  category:'hormonal', sex:['male','female'], ranges:{ male:{optimal:[15,25],   normal:[9,30],    alert_above:35},   female:{optimal:[1,3],    normal:[0.5,5],   alert_above:8}    }},
+  estradiol:          { label:'Estradiol (E2)',      unit:'pg/mL',  labcorp_code:'140244', quest_code:'30289',  category:'hormonal', sex:['male','female'], ranges:{ male:{optimal:[20,35],   normal:[10,50],   alert_above:60},   female:{optimal:[50,200], normal:[20,400],  alert_above:500}  }},
+  shbg:               { label:'SHBG',               unit:'nmol/L', labcorp_code:'082016', quest_code:'30740',  category:'hormonal', sex:['male','female'], ranges:{ male:{optimal:[15,30],   normal:[10,57],   alert_above:50},   female:{optimal:[30,90],  normal:[18,144],  alert_above:144}  }},
+  dht:                { label:'DHT',                unit:'pg/mL',  labcorp_code:'504026', quest_code:'90567',  category:'hormonal', sex:['male','female'], ranges:{ male:{optimal:[300,700], normal:[112,955], alert_above:1000},  female:{optimal:[10,50],  normal:[5,80],    alert_above:100}  }},
+  prolactin:          { label:'Prolactin',           unit:'ng/mL',  labcorp_code:'004465', quest_code:'746',    category:'hormonal', sex:['male','female'], ranges:{ male:{optimal:[2,10],    normal:[2,18],    alert_above:18},   female:{optimal:[2,20],   normal:[2,30],    alert_above:30}   }},
+  lh:                 { label:'LH',                 unit:'mIU/mL', labcorp_code:'028480', quest_code:'7137',   category:'hormonal', sex:['male','female'], ranges:{ male:{optimal:[2,8],     normal:[1.7,8.6], alert_above:null},  female:{optimal:[2,15],   normal:[1,100],   alert_above:null} }},
+  fsh:                { label:'FSH',                unit:'mIU/mL', labcorp_code:'028480', quest_code:'7137',   category:'hormonal', sex:['male','female'], ranges:{ male:{optimal:[2,8],     normal:[1.5,12.4],alert_above:null},  female:{optimal:[2,20],   normal:[1,100],   alert_above:null} }},
+  progesterone:       { label:'Progesterone',        unit:'ng/mL',  labcorp_code:'004317', quest_code:'17183',  category:'hormonal', sex:['female'],        ranges:{ female:{optimal:[5,20],  normal:[0.1,25],  alert_above:null} }},
+  cortisol:           { label:'Cortisol (AM)',       unit:'mcg/dL', labcorp_code:'104018', quest_code:'367',    category:'hormonal', sex:['male','female'], ranges:{ male:{optimal:[10,20],   normal:[6,23],    alert_above:23},   female:{optimal:[10,20],  normal:[6,23],    alert_above:23}   }},
+  dhea_s:             { label:'DHEA-S',              unit:'mcg/dL', labcorp_code:'004020', quest_code:'402',    category:'hormonal', sex:['male','female'], ranges:{ male:{optimal:[200,400], normal:[100,600], alert_above:600},   female:{optimal:[100,300],normal:[40,430],  alert_above:430}  }},
+  pregnenolone:       { label:'Pregnenolone',        unit:'ng/dL',  labcorp_code:'140707', quest_code:'31493',  category:'hormonal', sex:['male','female'], ranges:{ male:{optimal:[50,200],  normal:[10,200],  alert_above:null},  female:{optimal:[50,200], normal:[10,200],  alert_above:null} }},
+  // THYROID & METABOLISM
+  tsh:                { label:'TSH',                unit:'mIU/L',  labcorp_code:'000620', quest_code:'7444',   category:'thyroid',  sex:['male','female'], ranges:{ male:{optimal:[1,2.5],   normal:[0.4,4.5], alert_above:4.5},   female:{optimal:[1,2.5],  normal:[0.4,4.5], alert_above:4.5}  }},
+  free_t3:            { label:'Free T3',            unit:'pg/mL',  labcorp_code:'010389', quest_code:'34429',  category:'thyroid',  sex:['male','female'], ranges:{ male:{optimal:[3,4],     normal:[2.3,4.2], alert_above:null},  female:{optimal:[3,4],    normal:[2.3,4.2], alert_above:null} }},
+  free_t4:            { label:'Free T4',            unit:'ng/dL',  labcorp_code:'001974', quest_code:'866',    category:'thyroid',  sex:['male','female'], ranges:{ male:{optimal:[1,1.5],   normal:[0.8,1.8], alert_above:null},  female:{optimal:[1,1.5],  normal:[0.8,1.8], alert_above:null} }},
+  reverse_t3:         { label:'Reverse T3',         unit:'ng/dL',  labcorp_code:'070104', quest_code:'90963',  category:'thyroid',  sex:['male','female'], ranges:{ male:{optimal:[9,25],    normal:[9,35],    alert_above:35},    female:{optimal:[9,25],   normal:[9,35],    alert_above:35}   }},
+  hba1c:              { label:'HbA1c',              unit:'%',      labcorp_code:'001453', quest_code:'496',    category:'thyroid',  sex:['male','female'], ranges:{ male:{optimal:[4.5,5.5], normal:[4,5.7],   alert_above:6.5},   female:{optimal:[4.5,5.5],normal:[4,5.7],   alert_above:6.5}  }},
+  fasting_insulin:    { label:'Fasting Insulin',    unit:'mcIU/mL',labcorp_code:'004333', quest_code:'561',    category:'thyroid',  sex:['male','female'], ranges:{ male:{optimal:[3,7],     normal:[2,20],    alert_above:20},    female:{optimal:[3,7],    normal:[2,20],    alert_above:20}   }},
+  cystatin_c:         { label:'Cystatin C / eGFR',  unit:'mg/L',   labcorp_code:'121265', quest_code:'94588',  category:'thyroid',  sex:['male','female'], ranges:{ male:{optimal:[0.5,1.0], normal:[0.5,1.2], alert_above:1.2},   female:{optimal:[0.5,1.0],normal:[0.5,1.2], alert_above:1.2}  }},
+  // CARDIOVASCULAR & LIPID
+  apob:               { label:'ApoB',               unit:'mg/dL',  labcorp_code:'167015', quest_code:'5224',   category:'cardiovascular', sex:['male','female'], ranges:{ male:{optimal:[null,80],  normal:[null,100], alert_above:100},  female:{optimal:[null,80], normal:[null,100], alert_above:100} }},
+  hs_crp:             { label:'hs-CRP',             unit:'mg/L',   labcorp_code:'120766', quest_code:'10124',  category:'cardiovascular', sex:['male','female'], ranges:{ male:{optimal:[null,1],   normal:[null,3],   alert_above:3},    female:{optimal:[null,1],  normal:[null,3],   alert_above:3}   }},
+  ldl:                { label:'LDL',                unit:'mg/dL',  labcorp_code:'303756', quest_code:'14852',  category:'cardiovascular', sex:['male','female'], ranges:{ male:{optimal:[null,100], normal:[null,130], alert_above:160},  female:{optimal:[null,100],normal:[null,130], alert_above:160} }},
+  hdl:                { label:'HDL',                unit:'mg/dL',  labcorp_code:'303756', quest_code:'14852',  category:'cardiovascular', sex:['male','female'], ranges:{ male:{optimal:[50,null],  normal:[40,null],  alert_below:40},   female:{optimal:[60,null], normal:[50,null],  alert_below:50}  }},
+  triglycerides:      { label:'Triglycerides',      unit:'mg/dL',  labcorp_code:'303756', quest_code:'14852',  category:'cardiovascular', sex:['male','female'], ranges:{ male:{optimal:[null,100], normal:[null,150], alert_above:200},  female:{optimal:[null,100],normal:[null,150], alert_above:200} }},
+  ggt:                { label:'GGT',                unit:'U/L',    labcorp_code:'001958', quest_code:'482',    category:'cardiovascular', sex:['male','female'], ranges:{ male:{optimal:[null,30],  normal:[null,55],  alert_above:55},   female:{optimal:[null,20], normal:[null,40],  alert_above:40}  }},
+  homocysteine:       { label:'Homocysteine',       unit:'mcmol/L',labcorp_code:'706994', quest_code:'31789',  category:'cardiovascular', sex:['male','female'], ranges:{ male:{optimal:[null,10],  normal:[null,15],  alert_above:15},   female:{optimal:[null,10], normal:[null,15],  alert_above:15}  }},
+  lipoprotein_a:      { label:'Lipoprotein(a)',     unit:'nmol/L', labcorp_code:'120188', quest_code:'34604',  category:'cardiovascular', sex:['male','female'], ranges:{ male:{optimal:[null,75],  normal:[null,125], alert_above:125},  female:{optimal:[null,75], normal:[null,125], alert_above:125} }},
+  // GROWTH & NUTRITIONAL
+  igf1:               { label:'IGF-1',              unit:'ng/mL',  labcorp_code:'010540', quest_code:'16293',  category:'growth',   sex:['male','female'], ranges:{ male:{optimal:[150,300], normal:[88,456],  alert_above:456},   female:{optimal:[100,250],normal:[55,350],  alert_above:350}  }},
+  growth_hormone:     { label:'Growth Hormone',     unit:'ng/mL',  labcorp_code:'004275', quest_code:'521',    category:'growth',   sex:['male','female'], ranges:{ male:{optimal:[null,3],  normal:[null,7.5],alert_above:null},  female:{optimal:[null,5], normal:[null,10], alert_above:null} }},
+  vitamin_d:          { label:'Vitamin D',          unit:'ng/mL',  labcorp_code:'081950', quest_code:'17306',  category:'growth',   sex:['male','female'], ranges:{ male:{optimal:[40,70],   normal:[30,100],  alert_below:20},    female:{optimal:[40,70],  normal:[30,100],  alert_below:20}   }},
+  ferritin:           { label:'Ferritin',           unit:'ng/mL',  labcorp_code:'004598', quest_code:'5616',   category:'growth',   sex:['male','female'], ranges:{ male:{optimal:[50,200],  normal:[12,300],  alert_above:300},   female:{optimal:[20,100], normal:[10,150],  alert_above:150}  }},
+  // GENERAL HEALTH & SAFETY (CBC + CMP components + others)
+  hematocrit:         { label:'Hematocrit',         unit:'%',      labcorp_code:'005009', quest_code:'6399',   category:'general',  sex:['male','female'], ranges:{ male:{optimal:[42,50],   normal:[38,54],   alert_above:52},    female:{optimal:[36,44],  normal:[34,47],   alert_above:48}   }},
+  hemoglobin:         { label:'Hemoglobin',         unit:'g/dL',   labcorp_code:'005009', quest_code:'6399',   category:'general',  sex:['male','female'], ranges:{ male:{optimal:[13.5,17], normal:[12,18],   alert_above:18.5},  female:{optimal:[12,15.5],normal:[11,16],   alert_above:17}   }},
+  wbc:                { label:'WBC',                unit:'K/uL',   labcorp_code:'005009', quest_code:'6399',   category:'general',  sex:['male','female'], ranges:{ male:{optimal:[4,10],    normal:[3.5,11],  alert_above:11},    female:{optimal:[4,10],   normal:[3.5,11],  alert_above:11}   }},
+  rbc:                { label:'RBC',                unit:'M/uL',   labcorp_code:'005009', quest_code:'6399',   category:'general',  sex:['male','female'], ranges:{ male:{optimal:[4.5,5.5], normal:[4.2,6],   alert_above:6},     female:{optimal:[3.8,5],  normal:[3.5,5.5], alert_above:5.5}  }},
+  platelets:          { label:'Platelets',          unit:'K/uL',   labcorp_code:'005009', quest_code:'6399',   category:'general',  sex:['male','female'], ranges:{ male:{optimal:[150,350], normal:[130,400], alert_below:100},   female:{optimal:[150,350],normal:[130,400], alert_below:100}  }},
+  psa:                { label:'PSA',                unit:'ng/mL',  labcorp_code:'010322', quest_code:'5363',   category:'general',  sex:['male'],          ranges:{ male:{optimal:[null,1.5],normal:[null,4],  alert_above:4}     }},
+  ast:                { label:'AST',                unit:'U/L',    labcorp_code:'322000', quest_code:'10231',  category:'general',  sex:['male','female'], ranges:{ male:{optimal:[null,35], normal:[null,50], alert_above:80},    female:{optimal:[null,35],normal:[null,50],  alert_above:80}   }},
+  alt:                { label:'ALT',                unit:'U/L',    labcorp_code:'322000', quest_code:'10231',  category:'general',  sex:['male','female'], ranges:{ male:{optimal:[null,35], normal:[null,56], alert_above:80},    female:{optimal:[null,35],normal:[null,56],  alert_above:80}   }},
+  creatinine:         { label:'Creatinine',         unit:'mg/dL',  labcorp_code:'322000', quest_code:'10231',  category:'general',  sex:['male','female'], ranges:{ male:{optimal:[0.7,1.2], normal:[0.6,1.3], alert_above:1.3},   female:{optimal:[0.5,1.0],normal:[0.4,1.1], alert_above:1.1}  }},
+  creatine_kinase:    { label:'Creatine Kinase (CK)',unit:'U/L',   labcorp_code:'001362', quest_code:'374',    category:'general',  sex:['male','female'], ranges:{ male:{optimal:[null,200], normal:[null,400],alert_above:1000},  female:{optimal:[null,150],normal:[null,300],alert_above:800}  }},
+  uric_acid:          { label:'Uric Acid',          unit:'mg/dL',  labcorp_code:'001057', quest_code:'905',    category:'general',  sex:['male','female'], ranges:{ male:{optimal:[3.5,6],   normal:[2.5,7.2], alert_above:7.2},   female:{optimal:[2.5,5.5],normal:[2,6],     alert_above:6}    }},
+};
+
+// Reverse lookup: lab order code → array of marker_keys it can produce
+// Panel codes (CBC, CMP, Lipid) return multiple markers — parser checks sub-marker names within the panel block.
+const CODE_TO_MARKERS = (() => {
+  const map = {};
+  for (const [key, def] of Object.entries(MARKER_DEFINITIONS)) {
+    for (const code of [def.labcorp_code, def.quest_code].filter(Boolean)) {
+      if (!map[code]) map[code] = [];
+      if (!map[code].includes(key)) map[code].push(key);
+    }
+  }
+  return map;
+})();
+
+// Classify a numeric value against a marker's ranges for a given sex.
+// Returns 'green' (optimal), 'amber' (normal but not optimal), 'red' (alert), or 'muted' (no data).
+function classifyValue(value, ranges, sex) {
+  if (value == null || value === '') return 'muted';
+  const r = ranges[sex] || ranges['male'] || ranges['female'];
+  if (!r) return 'muted';
+  const v = parseFloat(value);
+  if (r.alert_above != null && v > r.alert_above) return 'red';
+  if (r.alert_below != null && v < r.alert_below) return 'red';
+  const [optLow, optHigh] = r.optimal || [null, null];
+  const inOptimal = (optLow == null || v >= optLow) && (optHigh == null || v <= optHigh);
+  if (inOptimal) return 'green';
+  const [normLow, normHigh] = r.normal || [null, null];
+  const inNormal = (normLow == null || v >= normLow) && (normHigh == null || v <= normHigh);
+  if (inNormal) return 'amber';
+  return 'red';
+}
+
 // ── Abbreviate a full compound name to its short label (e.g. "Testosterone Cypionate" → "TC") ──
 const _COMPOUND_ABBREVS = {
   // Testosterone esters
