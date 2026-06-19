@@ -1585,6 +1585,29 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
         </div>
         <button class="btn-secondary" onclick="supaSignOut()">Sign out</button>
         <hr class="divider">
+        <div class="card" style="max-width:500px;margin-bottom:14px;">
+          <div class="card-title">Profile</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Biological Sex</label>
+              <select class="form-input" id="profile-sex" onchange="saveProfile({...getProfile(), sex: this.value}); renderReferenceRanges(); renderLabDashboardCards(window._labMarkersCache || {});">
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Primary Focus</label>
+              <select class="form-input" id="profile-focus" onchange="saveProfile({...getProfile(), focus: this.value}); renderLabDashboardCards(window._labMarkersCache || {});">
+                <option value="trt">TRT / HRT</option>
+                <option value="female_hrt">Female HRT</option>
+                <option value="aas">AAS / Performance</option>
+                <option value="gh_peptides">GH / Peptides</option>
+                <option value="insulin">Insulin</option>
+                <option value="sarms">SARMs</option>
+              </select>
+            </div>
+          </div>
+        </div>
         <div class="card-title">Mode</div>
         <div style="display:flex;gap:8px;">
           <button class="btn-primary" id="mode-trt" onclick="setMode('trt')">TRT / HRT Mode</button>
@@ -1676,6 +1699,13 @@ function lsGet(key, fallback) {
   if (raw == null) return fallback;
   try { return JSON.parse(raw); }
   catch (e) { console.error(`[localStorage] corrupt "${key}", resetting:`, e); localStorage.removeItem(key); return fallback; }
+}
+
+function getProfile() {
+  return lsGet('hrt_user_profile', { sex: 'male', focus: 'trt' });
+}
+function saveProfile(profile) {
+  localStorage.setItem('hrt_user_profile', JSON.stringify(profile));
 }
 
 function initSupa() {
@@ -3824,6 +3854,13 @@ window.addEventListener('DOMContentLoaded', () => {
   setMode(savedMode);
   renderCompoundsTable();
   // Charts start in empty state — populated only when real data is available
+
+  // Restore profile select values
+  const _p = getProfile();
+  const _pSex = document.getElementById('profile-sex');
+  const _pFocus = document.getElementById('profile-focus');
+  if (_pSex) _pSex.value = _p.sex;
+  if (_pFocus) _pFocus.value = _p.focus;
 });
 </script>
 </body>
