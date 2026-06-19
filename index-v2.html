@@ -1113,22 +1113,8 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
       </div>
 
       <div class="tab-panel" id="labs-ranges">
-        <div class="card">
-          <div class="card-title">Reference Ranges (Male, TRT)</div>
-          <table class="data-table">
-            <thead><tr><th>Marker</th><th>Optimal</th><th>Normal</th><th>Monitor If</th></tr></thead>
-            <tbody>
-              <tr><td>Total Testosterone</td><td class="mono" style="color:var(--green);">500–900 ng/dL</td><td class="mono">300–1000 ng/dL</td><td class="mono" style="color:var(--amber);">&gt;1200 ng/dL</td></tr>
-              <tr><td>Free Testosterone</td><td class="mono" style="color:var(--green);">15–25 ng/dL</td><td class="mono">9–30 ng/dL</td><td class="mono" style="color:var(--amber);">&gt;35 ng/dL</td></tr>
-              <tr><td>Estradiol (E2)</td><td class="mono" style="color:var(--green);">20–35 pg/mL</td><td class="mono">10–50 pg/mL</td><td class="mono" style="color:var(--amber);">&gt;60 pg/mL</td></tr>
-              <tr><td>SHBG</td><td class="mono" style="color:var(--green);">15–30 nmol/L</td><td class="mono">10–57 nmol/L</td><td class="mono" style="color:var(--amber);">&gt;50 nmol/L</td></tr>
-              <tr><td>Hematocrit</td><td class="mono" style="color:var(--green);">42–50%</td><td class="mono">38–54%</td><td class="mono" style="color:var(--red);">&gt;54%</td></tr>
-              <tr><td>Hemoglobin</td><td class="mono" style="color:var(--green);">13.5–17 g/dL</td><td class="mono">12–18 g/dL</td><td class="mono" style="color:var(--red);">&gt;18.5 g/dL</td></tr>
-              <tr><td>PSA</td><td class="mono" style="color:var(--green);">&lt;1.5 ng/mL</td><td class="mono">&lt;4.0 ng/mL</td><td class="mono" style="color:var(--red);">&gt;4.0 ng/mL</td></tr>
-              <tr><td>AST</td><td class="mono" style="color:var(--green);">&lt;35 U/L</td><td class="mono">&lt;50 U/L</td><td class="mono" style="color:var(--amber);">&gt;80 U/L</td></tr>
-              <tr><td>ALT</td><td class="mono" style="color:var(--green);">&lt;35 U/L</td><td class="mono">&lt;56 U/L</td><td class="mono" style="color:var(--amber);">&gt;80 U/L</td></tr>
-            </tbody>
-          </table>
+        <div class="card" id="ref-ranges-wrap">
+          <div style="color:var(--text-muted);font-size:12px;text-align:center;padding:20px;">Loading reference ranges…</div>
         </div>
       </div>
     </section>
@@ -2308,6 +2294,58 @@ function loadLabDateForEdit(drawnAt) {
   // Switch to Manual Entry tab
   const btn = document.querySelector('.tab-btn[onclick*="labs-manual"]');
   if (btn) switchTab(btn, 'labs-manual');
+}
+
+const CATEGORY_LABELS = {
+  hormonal: 'Hormonal Health',
+  thyroid: 'Thyroid & Metabolism',
+  cardiovascular: 'Cardiovascular & Lipid',
+  growth: 'Growth & Nutritional',
+  general: 'General Health & Safety',
+};
+
+function renderReferenceRanges() {
+  const wrap = document.getElementById('ref-ranges-wrap');
+  if (!wrap) return;
+  const sex = getProfile().sex;
+
+  const byCategory = {};
+  for (const [key, def] of Object.entries(MARKER_DEFINITIONS)) {
+    if (!def.sex.includes(sex)) continue;
+    if (!byCategory[def.category]) byCategory[def.category] = [];
+    byCategory[def.category].push({ key, def });
+  }
+
+  const fmtRange = (lo, hi) => {
+    if (lo == null && hi == null) return '—';
+    if (lo == null) return `< ${hi}`;
+    if (hi == null) return `> ${lo}`;
+    return `${lo} – ${hi}`;
+  };
+
+  const sections = Object.entries(CATEGORY_LABELS).map(([cat, catLabel]) => {
+    const entries = byCategory[cat];
+    if (!entries?.length) return '';
+    const rows = entries.map(({ def }) => {
+      const r = def.ranges[sex] || def.ranges.male || def.ranges.female;
+      const alertCol = r.alert_above != null
+        ? `> ${r.alert_above} ${def.unit}`
+        : r.alert_below != null
+          ? `< ${r.alert_below} ${def.unit}`
+          : '—';
+      return `<tr>
+        <td>${def.label}</td>
+        <td class="mono" style="color:var(--green);">${fmtRange(...(r.optimal||[null,null]))} ${def.unit}</td>
+        <td class="mono">${fmtRange(...(r.normal||[null,null]))} ${def.unit}</td>
+        <td class="mono" style="color:var(--red);">${alertCol}</td>
+      </tr>`;
+    }).join('');
+    return `<div class="card-title" style="margin-top:16px;">${catLabel}</div>
+      <table class="data-table"><thead><tr><th>Marker</th><th>Optimal</th><th>Normal</th><th>Alert If</th></tr></thead><tbody>${rows}</tbody></table>`;
+  }).join('');
+
+  wrap.innerHTML = `<div class="card-title">Reference Ranges — ${sex === 'male' ? 'Male' : 'Female'}</div>${sections}
+    <div style="font-size:11px;color:var(--text-muted);margin-top:14px;line-height:1.6;">Source: Bloodwork Reference Guide v1.0 (May 2026). For informational use only — consult your provider for clinical decisions.</div>`;
 }
 
 function renderLabMetrics(data) {
@@ -4128,6 +4166,7 @@ window.addEventListener('DOMContentLoaded', () => {
   const _pFocus = document.getElementById('profile-focus');
   if (_pSex) _pSex.value = _p.sex;
   if (_pFocus) _pFocus.value = _p.focus;
+  renderReferenceRanges();
 });
 </script>
 </body>
