@@ -1663,6 +1663,7 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
 
 <script>
 // ── Config ──
+// Supabase tables: administration_log, daily_metrics, lab_results (legacy), lab_markers
 const SUPABASE_URL      = 'https://lnxhksnvcewtpwkaghrh.supabase.co';
 const SUPABASE_ANON_KEY = localStorage.getItem('supa_anon_key') || 'YOUR_SUPABASE_ANON_KEY';
 
@@ -1781,6 +1782,10 @@ function loadDemoData() {
   renderUpcoming();
   renderAdherenceBadge();
   updateTopbarBadge();
+
+  // Restore lab metric cards from localStorage so they survive page reloads without Supabase
+  const savedLabs = lsGet('hrt_labs_log', []);
+  if (savedLabs.length) renderLabMetrics(savedLabs);
 }
 
 // ── Render vitals log → dashboard cards, deltas, sparklines, weight chart ──
@@ -2002,7 +2007,8 @@ function renderLabMetrics(data) {
       hLabel = 'Normal';   hClass = 'badge-green';
     }
     updateMetricCard('m-hct', h.toFixed(1), hLabel, hClass);
-    if (h > 52) showHctAlert(h);
+    if (h > 52) { showHctAlert(h); }
+    else { const el = document.getElementById('alert-hct'); if (el) el.style.display = 'none'; }
   }
 }
 
@@ -2235,12 +2241,14 @@ async function submitLog() {
     const metricsRow = {
       user_id: _supaUser.id, date: entry.date,
       weight_lbs: entry.weight || null,
-      mood: entry.mood ? Math.max(1, Math.min(5, Math.round(parseInt(entry.mood) / 2))) : null,
-      energy: entry.energy ? Math.max(1, Math.min(5, Math.round(parseInt(entry.energy) / 2))) : null,
+      mood: entry.mood ? parseInt(entry.mood) : null,
+      energy: entry.energy ? parseInt(entry.energy) : null,
       notes: entry.notes || null
     };
-    if (entry.bp) { const parts = entry.bp.split('/'); metricsRow.bp_systolic = parseInt(parts[0]); metricsRow.bp_diastolic = parseInt(parts[1]); }
-    if (entry.glucose) metricsRow.fasting_glucose = parseFloat(entry.glucose);
+    const bpParts = entry.bp ? entry.bp.split('/') : [];
+    metricsRow.bp_systolic    = bpParts.length === 2 ? parseInt(bpParts[0])        : null;
+    metricsRow.bp_diastolic   = bpParts.length === 2 ? parseInt(bpParts[1])        : null;
+    metricsRow.fasting_glucose = entry.glucose       ? parseFloat(entry.glucose)   : null;
     const { error: metricsErr } = await _supa.from('daily_metrics').upsert(metricsRow, { onConflict: 'user_id,date' });
     if (metricsErr) console.error('[submitLog] daily_metrics upsert failed:', metricsErr);
   }
@@ -2455,23 +2463,54 @@ async function submitLabEntry() {
       hctLabel = 'Normal';   hctClass = 'badge-green';
     }
     updateMetricCard('m-hct', hct.toFixed(1), hctLabel, hctClass);
-    if (hct > 52) showHctAlert(hct);
+    if (hct > 52) { showHctAlert(hct); }
+    else { const el = document.getElementById('alert-hct'); if (el) el.style.display = 'none'; }
   }
+  // Always persist labs locally so dashboard cards survive a page reload without Supabase
+  if (labData.date) {
+    const labsLog = lsGet('hrt_labs_log', []);
+    const labIdx = labsLog.findIndex(l => l.drawn_at === labData.date);
+    const localEntry = {
+      drawn_at: labData.date,
+      ...(labData.total_t ? { total_testosterone: parseFloat(labData.total_t) } : {}),
+      ...(labData.free_t  ? { free_testosterone:  parseFloat(labData.free_t)  } : {}),
+      ...(labData.e2      ? { estradiol:           parseFloat(labData.e2)      } : {}),
+      ...(labData.shbg    ? { shbg:                parseFloat(labData.shbg)    } : {}),
+      ...(labData.hct     ? { hematocrit:          parseFloat(labData.hct)     } : {}),
+      ...(labData.hgb     ? { hemoglobin:          parseFloat(labData.hgb)     } : {}),
+      ...(labData.psa     ? { psa:                 parseFloat(labData.psa)     } : {}),
+      ...(labData.lh      ? { lh:                  parseFloat(labData.lh)      } : {}),
+      ...(labData.ast     ? { ast:                 parseFloat(labData.ast)     } : {}),
+      ...(labData.alt     ? { alt:                 parseFloat(labData.alt)     } : {}),
+    };
+    if (labIdx >= 0) {
+      labsLog[labIdx] = { ...labsLog[labIdx], ...localEntry };
+    } else {
+      labsLog.unshift(localEntry);
+    }
+    labsLog.sort((a, b) => b.drawn_at.localeCompare(a.drawn_at));
+    localStorage.setItem('hrt_labs_log', JSON.stringify(labsLog));
+  }
+
   if (_supa && _supaUser && labData.date) {
-    const { error: labErr } = await _supa.from('lab_results').upsert({
+    // Fetch existing row so we don't clobber fields from a previous panel submission
+    const { data: existingLab } = await _supa.from('lab_results')
+      .select('*').eq('user_id', _supaUser.id).eq('drawn_at', labData.date).maybeSingle();
+    const labRow = {
       user_id: _supaUser.id,
       drawn_at: labData.date,
-      total_testosterone: labData.total_t || null,
-      free_testosterone: labData.free_t || null,
-      estradiol: labData.e2 || null,
-      shbg: labData.shbg || null,
-      hematocrit: labData.hct || null,
-      hemoglobin: labData.hgb || null,
-      psa: labData.psa || null,
-      lh: labData.lh || null,
-      ast: labData.ast || null,
-      alt: labData.alt || null,
-    }, { onConflict: 'user_id,drawn_at' });
+      total_testosterone: labData.total_t ? parseFloat(labData.total_t) : (existingLab?.total_testosterone ?? null),
+      free_testosterone: labData.free_t  ? parseFloat(labData.free_t)  : (existingLab?.free_testosterone  ?? null),
+      estradiol:         labData.e2      ? parseFloat(labData.e2)      : (existingLab?.estradiol          ?? null),
+      shbg:              labData.shbg    ? parseFloat(labData.shbg)    : (existingLab?.shbg               ?? null),
+      hematocrit:        labData.hct     ? parseFloat(labData.hct)     : (existingLab?.hematocrit         ?? null),
+      hemoglobin:        labData.hgb     ? parseFloat(labData.hgb)     : (existingLab?.hemoglobin         ?? null),
+      psa:               labData.psa     ? parseFloat(labData.psa)     : (existingLab?.psa                ?? null),
+      lh:                labData.lh      ? parseFloat(labData.lh)      : (existingLab?.lh                 ?? null),
+      ast:               labData.ast     ? parseFloat(labData.ast)     : (existingLab?.ast                ?? null),
+      alt:               labData.alt     ? parseFloat(labData.alt)     : (existingLab?.alt                ?? null),
+    };
+    const { error: labErr } = await _supa.from('lab_results').upsert(labRow, { onConflict: 'user_id,drawn_at' });
     if (labErr) {
       console.error('[submitLabEntry] lab_results upsert failed:', labErr);
       alert('Could not save labs to the server: ' + labErr.message + '\nValues shown on dashboard but NOT persisted.');
@@ -2976,20 +3015,61 @@ function normalizeCompound(c) {
 
 // ── Abbreviate a full compound name to its short label (e.g. "Testosterone Cypionate" → "TC") ──
 const _COMPOUND_ABBREVS = {
+  // Testosterone esters
   'Testosterone Cypionate': 'TC',
   'Testosterone Enanthate': 'TE',
   'Testosterone Propionate': 'TP',
+  'Testosterone Phenylpropionate': 'TPP',
   'Testosterone Undecanoate': 'TU',
-  'Primobolan (Methenolone E)': 'Primo',
+  'Testosterone Suspension': 'Test-Susp',
+  'Sustanon (Mixed Esters)': 'Sust',
+  // 19-nors
+  'Nandrolone Phenylpropionate (NPP)': 'NPP',
   'Nandrolone Decanoate (Deca)': 'Deca',
-  'Boldenone Undecylenate (EQ)': 'EQ',
-  'Masteron Enanthate': 'Mast',
   'Trenbolone Acetate': 'Tren-A',
   'Trenbolone Enanthate': 'Tren-E',
-  'Growth Hormone (rHGH)': 'GH',
+  'Trenbolone Hexahydrobenzylcarbonate (Parabolan)': 'Tren-Hex',
+  // DHT derivatives / injectables
+  'Boldenone Undecylenate (EQ)': 'EQ',
+  'Boldenone Cypionate': 'EQ-Cyp',
+  'DHB (Dihydroboldenone Cypionate)': 'DHB',
+  'Masteron Propionate': 'Mast-P',
+  'Masteron Enanthate': 'Mast-E',
+  'Primobolan (Methenolone E)': 'Primo',
+  'Stanozolol Depot (Winstrol Inj)': 'Winny-Inj',
+  // Orals
+  'Methandrostenolone (Dianabol)': 'Dbol',
   'Oxandrolone (Anavar)': 'Var',
   'Stanozolol (Winstrol Oral)': 'Winny',
-  'Stanozolol Depot (Winstrol Inj)': 'Winny-Inj',
+  'Oxymetholone (Anadrol)': 'Adrol',
+  'Turinabol': 'Tbol',
+  'Fluoxymesterone (Halotestin)': 'Halo',
+  'Mesterolone (Proviron)': 'Provi',
+  'Primobolan Oral (Methenolone Acetate)': 'Primo-A',
+  // SARMs
+  'Ostarine (MK-2866)': 'Osta',
+  'Ligandrol (LGD-4033)': 'LGD',
+  'RAD-140 (Testolone)': 'RAD-140',
+  'Andarine (S4)': 'S4',
+  'Cardarine (GW-501516)': 'GW',
+  'SR9009 (Stenabolic)': 'SR-9009',
+  // AIs / ancillaries
+  'Anastrozole': 'Adex',
+  'Exemestane': 'Aromasin',
+  'Letrozole': 'Femara',
+  'Enclomiphene': 'Enclo',
+  // Peptides / GH
+  'Growth Hormone (rHGH)': 'GH',
+  'MK-677 (Ibutamoren)': 'MK-677',
+  'CJC-1295 No DAC (Mod GRF 1-29)': 'Mod-GRF',
+  'CJC-1295 DAC': 'CJC',
+  'BPC-157': 'BPC',
+  'IGF-1 LR3': 'IGF-LR3',
+  'IGF-1 DES': 'IGF-DES',
+  // GLP-1s
+  'Semaglutide': 'Sema',
+  'Tirzepatide': 'Tirz',
+  // Insulins
   'Insulin (Humalog / Lispro)': 'Humalog',
   'Insulin (Novolog / Aspart)': 'Novolog',
   'Insulin (Apidra / Glulisine)': 'Apidra',
