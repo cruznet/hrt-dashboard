@@ -1945,9 +1945,14 @@ function loadDemoData() {
   renderAdherenceBadge();
   updateTopbarBadge();
 
-  // Restore lab metric cards from localStorage so they survive page reloads without Supabase
-  const savedLabs = lsGet('hrt_labs_log', []);
-  if (savedLabs.length) renderLabMetrics(savedLabs);
+  // Build _labMarkersCache from localStorage and refresh dashboard lab cards
+  const storedMarkers = lsGet('hrt_lab_markers', []);
+  window._labMarkersCache = {};
+  storedMarkers.forEach(r => {
+    if (!window._labMarkersCache[r.drawn_at]) window._labMarkersCache[r.drawn_at] = [];
+    window._labMarkersCache[r.drawn_at].push(r);
+  });
+  renderLabDashboardCards(window._labMarkersCache);
 }
 
 // ── Render vitals log → dashboard cards, deltas, sparklines, weight chart ──
@@ -2126,6 +2131,68 @@ function renderMetrics(data) {
     }
     updateMetricCard('m-glucose', g, gLabel, gClass);
   }
+}
+
+// Profile-to-card mapping: which 3 marker_keys to show on the dashboard per focus type.
+const PROFILE_DASHBOARD_CARDS = {
+  trt:        ['total_testosterone', 'estradiol', 'hematocrit'],
+  female_hrt: ['estradiol', 'progesterone', 'fsh'],
+  aas:        ['total_testosterone', 'hematocrit', 'alt'],
+  gh_peptides:['igf1', 'total_testosterone', 'estradiol'],
+  insulin:    ['fasting_insulin', 'hba1c', 'total_testosterone'],
+  sarms:      ['total_testosterone', 'lh', 'alt'],
+};
+
+// Dashboard card IDs that show lab data (3 slots: m-total-t, m-e2, m-hct)
+const LAB_CARD_IDS = ['m-total-t', 'm-e2', 'm-hct'];
+
+function renderLabDashboardCards(cache) {
+  const profile = getProfile();
+  const keys = PROFILE_DASHBOARD_CARDS[profile.focus] || PROFILE_DASHBOARD_CARDS.trt;
+
+  // Find the most recent value for each key across all draw dates
+  const allDates = Object.keys(cache || {}).sort((a, b) => b.localeCompare(a));
+
+  keys.forEach((marker_key, i) => {
+    const cardId = LAB_CARD_IDS[i];
+    if (!cardId) return;
+    const def = MARKER_DEFINITIONS[marker_key];
+    if (!def) return;
+
+    let latestValue = null;
+    for (const date of allDates) {
+      const row = (cache[date] || []).find(r => r.marker_key === marker_key);
+      if (row != null) { latestValue = row.value; break; }
+    }
+
+    if (latestValue == null) {
+      updateMetricCard(cardId, '—', 'No data', 'badge-muted');
+      return;
+    }
+
+    const cls = classifyValue(latestValue, def.ranges, profile.sex);
+    const badgeMap = { green: 'badge-green', amber: 'badge-amber', red: 'badge-red', muted: 'badge-muted' };
+    const labelMap = { green: 'Optimal', amber: 'Monitor', red: 'Alert', muted: 'No data' };
+
+    // Format value
+    const display = Number.isInteger(latestValue) ? latestValue : parseFloat(latestValue).toFixed(1);
+
+    // Update card label to match current profile marker
+    const labelEl = document.querySelector(`#${cardId}`)?.closest('.metric-card')?.querySelector('.metric-label');
+    if (labelEl) labelEl.textContent = def.label;
+
+    updateMetricCard(cardId, display, labelMap[cls], badgeMap[cls]);
+
+    // HCT-specific alert banner
+    if (marker_key === 'hematocrit') {
+      if (cls === 'red' || (cls === 'amber' && parseFloat(latestValue) > 52)) {
+        showHctAlert(parseFloat(latestValue));
+      } else {
+        const el = document.getElementById('alert-hct');
+        if (el) el.style.display = 'none';
+      }
+    }
+  });
 }
 
 function renderLabMetrics(data) {
