@@ -456,6 +456,10 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
 .upload-icon { font-size: 28px; color: var(--text-muted); margin-bottom: 8px; }
 .upload-text { font-size: 13px; color: var(--text-muted); }
 .upload-sub  { font-size: 11px; color: var(--text-muted); margin-top: 4px; opacity: 0.6; }
+.lab-group { border: 1px solid var(--border); border-radius:8px; margin-bottom:8px; overflow:hidden; }
+.lab-group-header { display:flex; align-items:center; gap:8px; padding:10px 14px; cursor:pointer; font-size:13px; font-weight:500; background:var(--card-bg); user-select:none; }
+.lab-group-header:hover { background:var(--hover); }
+.lab-group-body { padding:14px; border-top:1px solid var(--border); }
 </style>
 </head>
 <body>
@@ -940,65 +944,162 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
       </div>
 
       <div class="tab-panel" id="labs-manual">
-        <div class="card" style="max-width:560px;">
+        <div class="card" style="max-width:620px;">
           <div class="card-title">Enter Lab Results Manually</div>
+          <div id="lab-edit-banner" style="display:none;background:var(--amber);color:#000;padding:8px 12px;border-radius:6px;font-size:12px;font-weight:500;margin-bottom:12px;"></div>
           <div class="form-group">
             <label class="form-label">Lab Date</label>
             <input type="date" class="form-input" id="lab-date">
           </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">Total Testosterone (ng/dL)</label>
-              <input type="number" class="form-input" id="lab-total-t" placeholder="742">
+
+          <!-- Hormonal Health -->
+          <div class="lab-group">
+            <div class="lab-group-header" onclick="toggleLabGroup('grp-hormonal')">
+              <span>Hormonal Health</span>
+              <span id="grp-hormonal-count" style="font-size:11px;color:var(--text-muted);"></span>
+              <i class="ti ti-chevron-down" id="grp-hormonal-icon" style="margin-left:auto;"></i>
             </div>
-            <div class="form-group">
-              <label class="form-label">Free Testosterone (ng/dL)</label>
-              <input type="number" class="form-input" id="lab-free-t" placeholder="22.4" step="0.1">
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">Estradiol / E2 (pg/mL)</label>
-              <input type="number" class="form-input" id="lab-e2" placeholder="28" step="0.1">
-            </div>
-            <div class="form-group">
-              <label class="form-label">SHBG (nmol/L)</label>
-              <input type="number" class="form-input" id="lab-shbg" placeholder="18" step="0.1">
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">Hematocrit (%)</label>
-              <input type="number" class="form-input" id="lab-hct" placeholder="48.2" step="0.1">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Hemoglobin (g/dL)</label>
-              <input type="number" class="form-input" id="lab-hgb" placeholder="16.2" step="0.1">
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">PSA (ng/mL)</label>
-              <input type="number" class="form-input" id="lab-psa" placeholder="0.8" step="0.01">
-            </div>
-            <div class="form-group">
-              <label class="form-label">LH (mIU/mL)</label>
-              <input type="number" class="form-input" id="lab-lh" placeholder="0.2" step="0.1">
+            <div id="grp-hormonal" class="lab-group-body">
+              <div class="form-row">
+                <div class="form-group"><label class="form-label">Total Testosterone (ng/dL)</label><input type="number" class="form-input lab-field" data-key="total_testosterone" placeholder="742" step="0.1"></div>
+                <div class="form-group"><label class="form-label">Free Testosterone (ng/dL)</label><input type="number" class="form-input lab-field" data-key="free_testosterone" placeholder="22.4" step="0.1"></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label class="form-label">Estradiol / E2 (pg/mL)</label><input type="number" class="form-input lab-field" data-key="estradiol" placeholder="28" step="0.1"></div>
+                <div class="form-group"><label class="form-label">SHBG (nmol/L)</label><input type="number" class="form-input lab-field" data-key="shbg" placeholder="18" step="0.1"></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label class="form-label">DHT (pg/mL)</label><input type="number" class="form-input lab-field" data-key="dht" placeholder="450" step="0.1"></div>
+                <div class="form-group"><label class="form-label">Prolactin (ng/mL)</label><input type="number" class="form-input lab-field" data-key="prolactin" placeholder="8" step="0.1"></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label class="form-label">LH (mIU/mL)</label><input type="number" class="form-input lab-field" data-key="lh" placeholder="0.2" step="0.1"></div>
+                <div class="form-group"><label class="form-label">FSH (mIU/mL)</label><input type="number" class="form-input lab-field" data-key="fsh" placeholder="0.3" step="0.1"></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label class="form-label">Cortisol AM (mcg/dL)</label><input type="number" class="form-input lab-field" data-key="cortisol" placeholder="14" step="0.1"></div>
+                <div class="form-group"><label class="form-label">DHEA-S (mcg/dL)</label><input type="number" class="form-input lab-field" data-key="dhea_s" placeholder="280" step="0.1"></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label class="form-label">Progesterone (ng/mL)</label><input type="number" class="form-input lab-field" data-key="progesterone" placeholder="1.2" step="0.01"></div>
+                <div class="form-group"><label class="form-label">Pregnenolone (ng/dL)</label><input type="number" class="form-input lab-field" data-key="pregnenolone" placeholder="80" step="0.1"></div>
+              </div>
             </div>
           </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">AST (U/L)</label>
-              <input type="number" class="form-input" id="lab-ast" placeholder="32">
+
+          <!-- Thyroid & Metabolism -->
+          <div class="lab-group">
+            <div class="lab-group-header" onclick="toggleLabGroup('grp-thyroid')">
+              <span>Thyroid &amp; Metabolism</span>
+              <span id="grp-thyroid-count" style="font-size:11px;color:var(--text-muted);"></span>
+              <i class="ti ti-chevron-down" id="grp-thyroid-icon" style="margin-left:auto;"></i>
             </div>
-            <div class="form-group">
-              <label class="form-label">ALT (U/L)</label>
-              <input type="number" class="form-input" id="lab-alt" placeholder="28">
+            <div id="grp-thyroid" class="lab-group-body" style="display:none;">
+              <div class="form-row">
+                <div class="form-group"><label class="form-label">TSH (mIU/L)</label><input type="number" class="form-input lab-field" data-key="tsh" placeholder="1.8" step="0.01"></div>
+                <div class="form-group"><label class="form-label">Free T3 (pg/mL)</label><input type="number" class="form-input lab-field" data-key="free_t3" placeholder="3.2" step="0.1"></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label class="form-label">Free T4 (ng/dL)</label><input type="number" class="form-input lab-field" data-key="free_t4" placeholder="1.1" step="0.01"></div>
+                <div class="form-group"><label class="form-label">Reverse T3 (ng/dL)</label><input type="number" class="form-input lab-field" data-key="reverse_t3" placeholder="18" step="0.1"></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label class="form-label">HbA1c (%)</label><input type="number" class="form-input lab-field" data-key="hba1c" placeholder="5.4" step="0.1"></div>
+                <div class="form-group"><label class="form-label">Fasting Insulin (mcIU/mL)</label><input type="number" class="form-input lab-field" data-key="fasting_insulin" placeholder="5" step="0.1"></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label class="form-label">Cystatin C (mg/L)</label><input type="number" class="form-input lab-field" data-key="cystatin_c" placeholder="0.8" step="0.01"></div>
+                <div class="form-group"></div>
+              </div>
             </div>
           </div>
-          <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:6px;">
+
+          <!-- Cardiovascular & Lipid -->
+          <div class="lab-group">
+            <div class="lab-group-header" onclick="toggleLabGroup('grp-cardiovascular')">
+              <span>Cardiovascular &amp; Lipid</span>
+              <span id="grp-cardiovascular-count" style="font-size:11px;color:var(--text-muted);"></span>
+              <i class="ti ti-chevron-down" id="grp-cardiovascular-icon" style="margin-left:auto;"></i>
+            </div>
+            <div id="grp-cardiovascular" class="lab-group-body" style="display:none;">
+              <div class="form-row">
+                <div class="form-group"><label class="form-label">LDL (mg/dL)</label><input type="number" class="form-input lab-field" data-key="ldl" placeholder="95" step="0.1"></div>
+                <div class="form-group"><label class="form-label">HDL (mg/dL)</label><input type="number" class="form-input lab-field" data-key="hdl" placeholder="55" step="0.1"></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label class="form-label">Triglycerides (mg/dL)</label><input type="number" class="form-input lab-field" data-key="triglycerides" placeholder="90" step="0.1"></div>
+                <div class="form-group"><label class="form-label">ApoB (mg/dL)</label><input type="number" class="form-input lab-field" data-key="apob" placeholder="75" step="0.1"></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label class="form-label">hs-CRP (mg/L)</label><input type="number" class="form-input lab-field" data-key="hs_crp" placeholder="0.8" step="0.01"></div>
+                <div class="form-group"><label class="form-label">GGT (U/L)</label><input type="number" class="form-input lab-field" data-key="ggt" placeholder="22" step="0.1"></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label class="form-label">Homocysteine (mcmol/L)</label><input type="number" class="form-input lab-field" data-key="homocysteine" placeholder="8" step="0.1"></div>
+                <div class="form-group"><label class="form-label">Lipoprotein(a) (nmol/L)</label><input type="number" class="form-input lab-field" data-key="lipoprotein_a" placeholder="40" step="0.1"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Growth & Nutritional -->
+          <div class="lab-group">
+            <div class="lab-group-header" onclick="toggleLabGroup('grp-growth')">
+              <span>Growth &amp; Nutritional</span>
+              <span id="grp-growth-count" style="font-size:11px;color:var(--text-muted);"></span>
+              <i class="ti ti-chevron-down" id="grp-growth-icon" style="margin-left:auto;"></i>
+            </div>
+            <div id="grp-growth" class="lab-group-body" style="display:none;">
+              <div class="form-row">
+                <div class="form-group"><label class="form-label">IGF-1 (ng/mL)</label><input type="number" class="form-input lab-field" data-key="igf1" placeholder="220" step="0.1"></div>
+                <div class="form-group"><label class="form-label">Growth Hormone (ng/mL)</label><input type="number" class="form-input lab-field" data-key="growth_hormone" placeholder="1.2" step="0.01"></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label class="form-label">Vitamin D (ng/mL)</label><input type="number" class="form-input lab-field" data-key="vitamin_d" placeholder="52" step="0.1"></div>
+                <div class="form-group"><label class="form-label">Ferritin (ng/mL)</label><input type="number" class="form-input lab-field" data-key="ferritin" placeholder="110" step="0.1"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- General Health & Safety -->
+          <div class="lab-group">
+            <div class="lab-group-header" onclick="toggleLabGroup('grp-general')">
+              <span>General Health &amp; Safety</span>
+              <span id="grp-general-count" style="font-size:11px;color:var(--text-muted);"></span>
+              <i class="ti ti-chevron-down" id="grp-general-icon" style="margin-left:auto;"></i>
+            </div>
+            <div id="grp-general" class="lab-group-body" style="display:none;">
+              <div class="form-row">
+                <div class="form-group"><label class="form-label">Hematocrit (%)</label><input type="number" class="form-input lab-field" data-key="hematocrit" placeholder="48.2" step="0.1"></div>
+                <div class="form-group"><label class="form-label">Hemoglobin (g/dL)</label><input type="number" class="form-input lab-field" data-key="hemoglobin" placeholder="16.2" step="0.1"></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label class="form-label">WBC (K/uL)</label><input type="number" class="form-input lab-field" data-key="wbc" placeholder="6.2" step="0.1"></div>
+                <div class="form-group"><label class="form-label">RBC (M/uL)</label><input type="number" class="form-input lab-field" data-key="rbc" placeholder="5.1" step="0.01"></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label class="form-label">Platelets (K/uL)</label><input type="number" class="form-input lab-field" data-key="platelets" placeholder="220" step="1"></div>
+                <div class="form-group"><label class="form-label">PSA (ng/mL)</label><input type="number" class="form-input lab-field" data-key="psa" placeholder="0.8" step="0.01"></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label class="form-label">AST (U/L)</label><input type="number" class="form-input lab-field" data-key="ast" placeholder="32" step="1"></div>
+                <div class="form-group"><label class="form-label">ALT (U/L)</label><input type="number" class="form-input lab-field" data-key="alt" placeholder="28" step="1"></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label class="form-label">Creatinine (mg/dL)</label><input type="number" class="form-input lab-field" data-key="creatinine" placeholder="0.95" step="0.01"></div>
+                <div class="form-group"><label class="form-label">Creatine Kinase (U/L)</label><input type="number" class="form-input lab-field" data-key="creatine_kinase" placeholder="180" step="1"></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label class="form-label">Uric Acid (mg/dL)</label><input type="number" class="form-input lab-field" data-key="uric_acid" placeholder="5.2" step="0.1"></div>
+                <div class="form-group"></div>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px;">
+            <button class="btn-secondary" onclick="clearLabForm()">Clear</button>
             <button class="btn-primary" onclick="submitLabEntry()">Save Labs</button>
           </div>
+          <div id="lab-status" style="display:none;margin-top:8px;font-size:12px;text-align:right;"></div>
         </div>
       </div>
 
@@ -1707,6 +1808,37 @@ function getProfile() {
 function saveProfile(profile) {
   localStorage.setItem('hrt_user_profile', JSON.stringify(profile));
 }
+
+function toggleLabGroup(id) {
+  const body = document.getElementById(id);
+  const icon = document.getElementById(id + '-icon');
+  if (!body) return;
+  const isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : 'block';
+  if (icon) icon.style.transform = isOpen ? '' : 'rotate(180deg)';
+}
+
+function clearLabForm() {
+  document.querySelectorAll('.lab-field').forEach(el => { el.value = ''; });
+  document.querySelectorAll('[id$="-count"]').forEach(el => { el.textContent = ''; });
+  const banner = document.getElementById('lab-edit-banner');
+  if (banner) banner.style.display = 'none';
+}
+
+// Update the filled-field count chip on each group header
+function updateLabGroupCounts() {
+  ['hormonal','thyroid','cardiovascular','growth','general'].forEach(grp => {
+    const body = document.getElementById('grp-' + grp);
+    if (!body) return;
+    const filled = body.querySelectorAll('.lab-field').length
+      ? [...body.querySelectorAll('.lab-field')].filter(el => el.value.trim() !== '').length
+      : 0;
+    const el = document.getElementById('grp-' + grp + '-count');
+    if (el) el.textContent = filled > 0 ? `${filled} filled` : '';
+  });
+}
+// Update counts whenever any lab field changes
+document.addEventListener('input', e => { if (e.target.classList.contains('lab-field')) updateLabGroupCounts(); });
 
 function initSupa() {
   const key = localStorage.getItem('supa_anon_key') || SUPABASE_ANON_KEY;
@@ -2445,111 +2577,64 @@ function submitQuickLog() {
 }
 
 async function submitLabEntry() {
-  const labData = {
-    date: document.getElementById('lab-date').value,
-    total_t: document.getElementById('lab-total-t').value,
-    free_t: document.getElementById('lab-free-t').value,
-    e2: document.getElementById('lab-e2').value,
-    shbg: document.getElementById('lab-shbg').value,
-    hct: document.getElementById('lab-hct').value,
-    hgb: document.getElementById('lab-hgb').value,
-    psa: document.getElementById('lab-psa').value,
-    lh: document.getElementById('lab-lh').value,
-    ast: document.getElementById('lab-ast').value,
-    alt: document.getElementById('lab-alt').value,
-  };
-  if (labData.total_t) {
-    const t = parseFloat(labData.total_t);
-    let tLabel, tClass;
-    if (t > 1100) {
-      tLabel = 'Elevated'; tClass = 'badge-amber';
-    } else if (t > 400) {
-      tLabel = 'In range'; tClass = 'badge-green';
-    } else {
-      tLabel = 'Low';      tClass = 'badge-red';
-    }
-    updateMetricCard('m-total-t', Math.round(t), tLabel, tClass);
-  }
-  if (labData.e2) {
-    const e = parseFloat(labData.e2);
-    let eLabel, eClass;
-    if (e > 60) {
-      eLabel = 'Elevated'; eClass = 'badge-amber';
-    } else if (e > 15) {
-      eLabel = 'Optimal';  eClass = 'badge-green';
-    } else {
-      eLabel = 'Low';      eClass = 'badge-red';
-    }
-    updateMetricCard('m-e2', Math.round(e), eLabel, eClass);
-  }
-  if (labData.hct) {
-    const hct = parseFloat(labData.hct);
-    let hctLabel, hctClass;
-    if (hct > 54) {
-      hctLabel = 'High';     hctClass = 'badge-red';
-    } else if (hct > 50) {
-      hctLabel = 'Elevated'; hctClass = 'badge-amber';
-    } else {
-      hctLabel = 'Normal';   hctClass = 'badge-green';
-    }
-    updateMetricCard('m-hct', hct.toFixed(1), hctLabel, hctClass);
-    if (hct > 52) { showHctAlert(hct); }
-    else { const el = document.getElementById('alert-hct'); if (el) el.style.display = 'none'; }
-  }
-  // Always persist labs locally so dashboard cards survive a page reload without Supabase
-  if (labData.date) {
-    const labsLog = lsGet('hrt_labs_log', []);
-    const labIdx = labsLog.findIndex(l => l.drawn_at === labData.date);
-    const localEntry = {
-      drawn_at: labData.date,
-      ...(labData.total_t ? { total_testosterone: parseFloat(labData.total_t) } : {}),
-      ...(labData.free_t  ? { free_testosterone:  parseFloat(labData.free_t)  } : {}),
-      ...(labData.e2      ? { estradiol:           parseFloat(labData.e2)      } : {}),
-      ...(labData.shbg    ? { shbg:                parseFloat(labData.shbg)    } : {}),
-      ...(labData.hct     ? { hematocrit:          parseFloat(labData.hct)     } : {}),
-      ...(labData.hgb     ? { hemoglobin:          parseFloat(labData.hgb)     } : {}),
-      ...(labData.psa     ? { psa:                 parseFloat(labData.psa)     } : {}),
-      ...(labData.lh      ? { lh:                  parseFloat(labData.lh)      } : {}),
-      ...(labData.ast     ? { ast:                 parseFloat(labData.ast)     } : {}),
-      ...(labData.alt     ? { alt:                 parseFloat(labData.alt)     } : {}),
-    };
-    if (labIdx >= 0) {
-      labsLog[labIdx] = { ...labsLog[labIdx], ...localEntry };
-    } else {
-      labsLog.unshift(localEntry);
-    }
-    labsLog.sort((a, b) => b.drawn_at.localeCompare(a.drawn_at));
-    localStorage.setItem('hrt_labs_log', JSON.stringify(labsLog));
+  const drawnAt = document.getElementById('lab-date').value;
+  if (!drawnAt) {
+    const s = document.getElementById('lab-status');
+    s.textContent = 'Please select a lab date.'; s.style.color = 'var(--red)'; s.style.display = 'block';
+    return;
   }
 
-  if (_supa && _supaUser && labData.date) {
-    // Fetch existing row so we don't clobber fields from a previous panel submission
-    const { data: existingLab } = await _supa.from('lab_results')
-      .select('*').eq('user_id', _supaUser.id).eq('drawn_at', labData.date).maybeSingle();
-    const labRow = {
-      user_id: _supaUser.id,
-      drawn_at: labData.date,
-      total_testosterone: labData.total_t ? parseFloat(labData.total_t) : (existingLab?.total_testosterone ?? null),
-      free_testosterone: labData.free_t  ? parseFloat(labData.free_t)  : (existingLab?.free_testosterone  ?? null),
-      estradiol:         labData.e2      ? parseFloat(labData.e2)      : (existingLab?.estradiol          ?? null),
-      shbg:              labData.shbg    ? parseFloat(labData.shbg)    : (existingLab?.shbg               ?? null),
-      hematocrit:        labData.hct     ? parseFloat(labData.hct)     : (existingLab?.hematocrit         ?? null),
-      hemoglobin:        labData.hgb     ? parseFloat(labData.hgb)     : (existingLab?.hemoglobin         ?? null),
-      psa:               labData.psa     ? parseFloat(labData.psa)     : (existingLab?.psa                ?? null),
-      lh:                labData.lh      ? parseFloat(labData.lh)      : (existingLab?.lh                 ?? null),
-      ast:               labData.ast     ? parseFloat(labData.ast)     : (existingLab?.ast                ?? null),
-      alt:               labData.alt     ? parseFloat(labData.alt)     : (existingLab?.alt                ?? null),
-    };
-    const { error: labErr } = await _supa.from('lab_results').upsert(labRow, { onConflict: 'user_id,drawn_at' });
-    if (labErr) {
-      console.error('[submitLabEntry] lab_results upsert failed:', labErr);
-      alert('Could not save labs to the server: ' + labErr.message + '\nValues shown on dashboard but NOT persisted.');
-    } else {
-      alert('Lab results saved to Supabase!');
-    }
-  } else {
-    alert('Lab values loaded into dashboard. Sign in to persist.');
+  // Collect filled fields
+  const submitted = [];
+  document.querySelectorAll('.lab-field').forEach(el => {
+    const v = el.value.trim();
+    if (v !== '') submitted.push({ marker_key: el.dataset.key, value: parseFloat(v) });
+  });
+  if (!submitted.length) {
+    const s = document.getElementById('lab-status');
+    s.textContent = 'No values entered.'; s.style.color = 'var(--amber)'; s.style.display = 'block';
+    return;
   }
+
+  // Persist to localStorage (always)
+  const stored = lsGet('hrt_lab_markers', []);
+  submitted.forEach(({ marker_key, value }) => {
+    const idx = stored.findIndex(r => r.drawn_at === drawnAt && r.marker_key === marker_key);
+    const row = { drawn_at: drawnAt, marker_key, value, lab_source: 'manual' };
+    if (idx >= 0) stored[idx] = row; else stored.push(row);
+  });
+  stored.sort((a, b) => b.drawn_at.localeCompare(a.drawn_at));
+  localStorage.setItem('hrt_lab_markers', JSON.stringify(stored));
+
+  // Update in-memory cache
+  if (!window._labMarkersCache) window._labMarkersCache = {};
+  if (!window._labMarkersCache[drawnAt]) window._labMarkersCache[drawnAt] = [];
+  submitted.forEach(({ marker_key, value }) => {
+    const cache = window._labMarkersCache[drawnAt];
+    const idx = cache.findIndex(r => r.marker_key === marker_key);
+    const row = { marker_key, value, lab_source: 'manual' };
+    if (idx >= 0) cache[idx] = row; else cache.push(row);
+  });
+
+  // Persist to Supabase (if signed in)
+  if (_supa && _supaUser) {
+    const rows = submitted.map(({ marker_key, value }) => ({
+      user_id: _supaUser.id, drawn_at: drawnAt, marker_key, value, lab_source: 'manual'
+    }));
+    const { error } = await _supa.from('lab_markers').upsert(rows, { onConflict: 'user_id,drawn_at,marker_key' });
+    if (error) console.error('[submitLabEntry] Supabase upsert failed:', error);
+  }
+
+  // Refresh dashboard + history
+  renderLabDashboardCards(window._labMarkersCache);
+  renderLabHistory();
+
+  // Clear form + show success
+  clearLabForm();
+  document.getElementById('lab-date').value = new Date().toISOString().split('T')[0];
+  const s = document.getElementById('lab-status');
+  s.textContent = '✓ Labs saved.'; s.style.color = 'var(--green)'; s.style.display = 'block';
+  setTimeout(() => { s.style.display = 'none'; }, 3000);
 }
 
 function handlePdfUpload(input) {
