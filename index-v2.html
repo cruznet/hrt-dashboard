@@ -920,9 +920,18 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
       </div>
 
       <div class="tab-panel active" id="labs-history">
+        <!-- Trend Charts -->
+        <div class="card" style="margin-bottom:14px;">
+          <div class="card-title">Trends</div>
+          <div id="lab-trend-charts" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;">
+            <div style="color:var(--text-muted);font-size:12px;padding:20px;text-align:center;grid-column:1/-1;">No lab history yet. Enter results in Manual Entry to see trends.</div>
+          </div>
+        </div>
+        <!-- History Table -->
         <div class="card">
-          <div id="labs-table-wrap">
-            <div style="color:var(--text-muted);font-size:13px;text-align:center;padding:30px;">No lab results yet. Upload a PDF or enter manually.</div>
+          <div class="card-title">Draw History <span style="font-size:11px;color:var(--text-muted);font-weight:400;">— click a row to edit</span></div>
+          <div id="labs-table-wrap" style="overflow-x:auto;">
+            <div style="color:var(--text-muted);font-size:13px;text-align:center;padding:30px;">No lab results yet.</div>
           </div>
         </div>
       </div>
@@ -1953,6 +1962,7 @@ function loadDemoData() {
     window._labMarkersCache[r.drawn_at].push(r);
   });
   renderLabDashboardCards(window._labMarkersCache);
+  renderLabHistory();
 }
 
 // ── Render vitals log → dashboard cards, deltas, sparklines, weight chart ──
@@ -2193,6 +2203,111 @@ function renderLabDashboardCards(cache) {
       }
     }
   });
+}
+
+// Core markers shown in history table columns (all profiles show these)
+const HISTORY_TABLE_MARKERS = [
+  'total_testosterone','estradiol','hematocrit','shbg','prolactin','alt','ast','igf1','hdl','ldl'
+];
+
+function renderLabHistory() {
+  const cache = window._labMarkersCache || {};
+  const profile = getProfile();
+  const dates = Object.keys(cache).sort((a, b) => b.localeCompare(a));
+
+  // ── Trend charts ──
+  const trendEl = document.getElementById('lab-trend-charts');
+  if (trendEl) {
+    const coreKeys = (PROFILE_DASHBOARD_CARDS[profile.focus] || PROFILE_DASHBOARD_CARDS.trt).slice(0, 4);
+    if (dates.length < 2) {
+      trendEl.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:20px;text-align:center;grid-column:1/-1;">Need at least 2 draw dates to show trends.</div>';
+    } else {
+      trendEl.innerHTML = coreKeys.map(key => `
+        <div>
+          <div style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:6px;">${MARKER_DEFINITIONS[key]?.label || key}</div>
+          <div class="chart-wrap" style="height:120px;"><canvas id="lab-trend-${key}"></canvas></div>
+        </div>`).join('');
+      const chronoDates = [...dates].reverse();
+      const shortLabels = chronoDates.map(d => { const [,m,day] = d.split('-'); return `${+m}/${+day}`; });
+      coreKeys.forEach(key => {
+        const def = MARKER_DEFINITIONS[key];
+        if (!def) return;
+        const vals = chronoDates.map(d => {
+          const row = (cache[d] || []).find(r => r.marker_key === key);
+          return row ? row.value : null;
+        });
+        if (vals.every(v => v == null)) return;
+        makeChart(`lab-trend-${key}`, 'line', shortLabels, [{
+          data: vals,
+          borderColor: 'var(--primary-bright)',
+          backgroundColor: 'transparent',
+          tension: 0.3,
+          spanGaps: true,
+          pointRadius: 3,
+        }], { plugins: { legend: { display: false } }, scales: { x: { ticks: { font: { size: 9 } } }, y: { ticks: { font: { size: 9 } } } } });
+      });
+    }
+  }
+
+  // ── History table ──
+  const wrap = document.getElementById('labs-table-wrap');
+  if (!wrap) return;
+  if (!dates.length) {
+    wrap.innerHTML = '<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:30px;">No lab results yet.</div>';
+    return;
+  }
+
+  const cols = HISTORY_TABLE_MARKERS.filter(key => dates.some(d => (cache[d] || []).find(r => r.marker_key === key)));
+  const badgeClass = { green: 'badge-green', amber: 'badge-amber', red: 'badge-red', muted: 'badge-muted' };
+
+  const thead = `<tr><th>Date</th>${cols.map(key => `<th>${MARKER_DEFINITIONS[key]?.label || key}</th>`).join('')}</tr>`;
+  const tbody = dates.map(date => {
+    const cells = cols.map(key => {
+      const row = (cache[date] || []).find(r => r.marker_key === key);
+      if (!row) return '<td style="color:var(--text-muted);">—</td>';
+      const def = MARKER_DEFINITIONS[key];
+      const cls = def ? classifyValue(row.value, def.ranges, profile.sex) : 'muted';
+      const display = Number.isInteger(row.value) ? row.value : parseFloat(row.value).toFixed(1);
+      return `<td><span class="metric-badge ${badgeClass[cls]}">${display}</span></td>`;
+    }).join('');
+    return `<tr onclick="loadLabDateForEdit('${date}')" style="cursor:pointer;">${`<td class="mono">${date}</td>`}${cells}</tr>`;
+  }).join('');
+
+  wrap.innerHTML = `<table class="data-table"><thead>${thead}</thead><tbody>${tbody}</tbody></table>`;
+}
+
+function loadLabDateForEdit(drawnAt) {
+  const cache = window._labMarkersCache || {};
+  const rows = cache[drawnAt] || [];
+
+  // Clear form, populate from cache
+  clearLabForm();
+  document.getElementById('lab-date').value = drawnAt;
+  rows.forEach(({ marker_key, value }) => {
+    const el = document.querySelector(`.lab-field[data-key="${marker_key}"]`);
+    if (el) el.value = value;
+  });
+  updateLabGroupCounts();
+
+  // Open group(s) that have data
+  ['hormonal','thyroid','cardiovascular','growth','general'].forEach(grp => {
+    const body = document.getElementById('grp-' + grp);
+    const icon = document.getElementById('grp-' + grp + '-icon');
+    if (!body) return;
+    const hasFilled = [...body.querySelectorAll('.lab-field')].some(el => el.value !== '');
+    if (hasFilled) {
+      body.style.display = 'block';
+      if (icon) icon.style.transform = 'rotate(180deg)';
+    }
+  });
+
+  // Show edit banner
+  const banner = document.getElementById('lab-edit-banner');
+  if (banner) { banner.textContent = `Editing draw date: ${drawnAt} — Save to update`; banner.style.display = 'block'; }
+
+  // Switch to Manual Entry tab
+  const btn = document.querySelector('.tab-btn[onclick*="labs-manual"]');
+  if (btn) switchTab(btn, 'labs-manual');
 }
 
 function renderLabMetrics(data) {
