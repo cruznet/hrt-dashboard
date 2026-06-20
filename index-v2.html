@@ -2442,7 +2442,6 @@ async function handlePdfUpload(input) {
 }
 
 async function parsePdf(file) {
-  // pdf.js extracts text page by page
   const pdfjsLib = window['pdfjs-dist/build/pdf'];
   if (!pdfjsLib) throw new Error('pdf.js not loaded');
   pdfjsLib.GlobalWorkerOptions.workerSrc =
@@ -2457,30 +2456,106 @@ async function parsePdf(file) {
     fullText += content.items.map(item => item.str).join(' ') + '\n';
   }
 
+  // Quest and LabCorp use verbose test names that differ from our short labels.
+  // Longer/more-specific aliases are listed first within each array.
+  const PDF_ALIASES = {
+    total_testosterone: ['testosterone, total, males', 'testosterone, total, lc', 'testosterone, total, ms', 'testosterone, total'],
+    free_testosterone:  ['testosterone, free'],
+    dht:                ['dihydrotestosterone'],
+    shbg:               ['sex hormone binding globulin', 'sex horm binding glob'],
+    dhea_s:             ['dhea sulfate', 'dhea-sulfate'],
+    fasting_insulin:    ['insulin'],
+    hba1c:              ['hemoglobin a1c', 'hb a1c'],
+    apob:               ['apolipoprotein b'],
+    igf1:               ['insulin-like growth factor', 'igf 1,', 'igf-1'],
+    free_t3:            ['t3, free', 'free t3'],
+    wbc:                ['white blood cell count'],
+    rbc:                ['red blood cell count'],
+    platelets:          ['platelet count', 'platelets'],
+    vitamin_d:          ['vitamin d, 25-oh, total,ia', 'vitamin d, 25-oh, total', 'vitamin d,25-oh,total', 'vitamin d, 25-hydroxy'],
+    hs_crp:             ['c-reactive protein, cardiac', 'c-reactive protein', 'hs crp'],
+    psa:                ['prostate specific ag', 'psa, total'],
+    ferritin:           ['ferritin'],
+    cortisol:           ['cortisol'],
+    estradiol:          ['estradiol'],
+    cystatin_c:         ['cystatin c'],
+    hemoglobin:         ['hemoglobin'],
+    hematocrit:         ['hematocrit'],
+    creatinine:         ['creatinine'],
+    triglycerides:      ['triglycerides'],
+    prolactin:          ['prolactin'],
+    tsh:                ['tsh'],
+    ggt:                ['ggt'],
+    hdl:                ['hdl cholesterol', 'hdl-c'],
+    ldl:                ['ldl-cholesterol'],
+    ast:                ['ast (sgot)', 'ast'],
+    alt:                ['alt (sgpt)', 'alt'],
+    lh:                 ['lh'],
+    fsh:                ['fsh'],
+  };
+
+  // Find label in text; returns {idx, len} or null.
+  // Short labels (<=4 chars) use word boundaries to avoid substring false matches
+  // (e.g. "ast" in "FASTING"). Skips occurrences followed by "(" (section headers
+  // like "TESTOSTERONE, FREE (DIALYSIS) AND TOTAL,MS") or by skipIfNext text.
+  function findLabelMatch(text, label, skipIfNext) {
+    const lcText = text.toLowerCase();
+    const lcLabel = label.toLowerCase();
+    const escaped = lcLabel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = lcLabel.length <= 4 ? new RegExp('\\b' + escaped + '\\b') : null;
+    let searchFrom = 0;
+    while (searchFrom < lcText.length) {
+      let idx, matchLen;
+      if (re) {
+        const m = re.exec(lcText.slice(searchFrom));
+        if (!m) return null;
+        idx = searchFrom + m.index;
+        matchLen = m[0].length;
+      } else {
+        idx = lcText.indexOf(lcLabel, searchFrom);
+        if (idx === -1) return null;
+        matchLen = lcLabel.length;
+      }
+      const after = lcText.slice(idx + matchLen, idx + matchLen + 6).trimStart();
+      if (after.startsWith('(') || (skipIfNext && after.startsWith(skipIfNext))) {
+        searchFrom = idx + 1;
+        continue;
+      }
+      return { idx, len: matchLen };
+    }
+    return null;
+  }
+
+  // Extract numeric value from text starting at `from` (i.e. after the matched label).
+  // Strips LabCorp footnote markers ("02", "A, 01", etc.) before matching.
+  // Handles "<N" and ">N" threshold values by dropping the operator.
+  function extractValue(text, from) {
+    const snippet = text.slice(from, from + 100)
+      .replace(/\b[A-Z],?\s*0[0-9]\b/g, ' ')
+      .replace(/\b0[0-9]\b(?!\.\d)/g, ' ');
+    const m = snippet.match(/([<>]?\d+\.?\d*)/);
+    if (!m) return null;
+    return parseFloat(m[1].replace(/[<>]/g, ''));
+  }
+
   const results = [];
   const seen = new Set();
 
-  // Strategy 1: match known order codes
+  // Strategy 1: match known order codes (rarely present in patient PDFs, kept as bonus)
   for (const [code, keys] of Object.entries(CODE_TO_MARKERS)) {
-    // Find the code in the text (LabCorp/Quest codes appear as standalone numbers)
-    const codeRegex = new RegExp(`\\b${code}\\b`);
+    const codeRegex = new RegExp('\\b' + code + '\\b');
     if (!codeRegex.test(fullText)) continue;
-
-    // For each marker_key this code can produce, look for the marker's label nearby
     keys.forEach(marker_key => {
       if (seen.has(marker_key)) return;
       const def = MARKER_DEFINITIONS[marker_key];
       if (!def) return;
-      // Look for a number near the marker label or code in the text
-      const labelVariants = [def.label, marker_key.replace(/_/g,' ')];
+      const labelVariants = [def.label, marker_key.replace(/_/g, ' ')];
       for (const lv of labelVariants) {
-        // Find numeric value: first decimal or integer after the label within 120 chars
-        const idx = fullText.toLowerCase().indexOf(lv.toLowerCase());
-        if (idx === -1) continue;
-        const snippet = fullText.slice(idx, idx + 120);
-        const numMatch = snippet.match(/(\d+\.?\d*)/);
-        if (numMatch) {
-          results.push({ marker_key, value: parseFloat(numMatch[1]), confidence: 'high' });
+        const match = findLabelMatch(fullText, lv);
+        if (!match) continue;
+        const value = extractValue(fullText, match.idx + match.len);
+        if (value !== null) {
+          results.push({ marker_key, value, confidence: 'high' });
           seen.add(marker_key);
           break;
         }
@@ -2488,17 +2563,27 @@ async function parsePdf(file) {
     });
   }
 
-  // Strategy 2: name-based fallback for unmatched markers
-  for (const [marker_key, def] of Object.entries(MARKER_DEFINITIONS)) {
+  // Strategy 2: alias + name-based matching for all unmatched markers.
+  // igf1 is processed first so "insulin-like growth factor" is claimed before
+  // fasting_insulin searches for "insulin". fasting_insulin skips matches
+  // followed by "-" (i.e. "insulin-like"). hemoglobin skips matches followed
+  // by "a1" (i.e. "hemoglobin a1c").
+  const orderedKeys = ['igf1', ...Object.keys(MARKER_DEFINITIONS).filter(k => k !== 'igf1')];
+  for (const marker_key of orderedKeys) {
     if (seen.has(marker_key)) continue;
-    const labelVariants = [def.label.toLowerCase(), marker_key.replace(/_/g,' ')];
+    const def = MARKER_DEFINITIONS[marker_key];
+    if (!def) continue;
+    const aliases = PDF_ALIASES[marker_key] || [];
+    const labelVariants = [...aliases, def.label, marker_key.replace(/_/g, ' ')];
+    const skipIfNext = marker_key === 'hemoglobin' ? 'a1'
+                     : marker_key === 'fasting_insulin' ? '-'
+                     : null;
     for (const lv of labelVariants) {
-      const idx = fullText.toLowerCase().indexOf(lv);
-      if (idx === -1) continue;
-      const snippet = fullText.slice(idx, idx + 80);
-      const numMatch = snippet.match(/(\d+\.?\d*)/);
-      if (numMatch) {
-        results.push({ marker_key, value: parseFloat(numMatch[1]), confidence: 'medium' });
+      const match = findLabelMatch(fullText, lv, skipIfNext);
+      if (!match) continue;
+      const value = extractValue(fullText, match.idx + match.len);
+      if (value !== null) {
+        results.push({ marker_key, value, confidence: 'medium' });
         seen.add(marker_key);
         break;
       }
