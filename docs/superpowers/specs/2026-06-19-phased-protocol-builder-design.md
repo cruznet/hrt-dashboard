@@ -68,6 +68,12 @@ Also adds SLU-PP-332 to the COMPOUNDS library.
 
 `unit` and `cat` are free strings — not locked to AAS or mg. Any compound from the full COMPOUNDS library is valid: AAS, Peptide, Insulin, SARM, Fat Loss, Support, Other. Units include mg, IU, mcg, etc. Picking a compound from the searchable dropdown pre-fills `cat`, `unit`, and `freq`; all three remain editable.
 
+`freq` options: ED, EOD, E3.5D, 2X/WK, Weekly, PWO. `pbFreqToInjectionsPerWeek()` must be extended to handle `PWO` — treat as ED (7x/week) for weekly total calculations, since pre-workout dosing is typically daily.
+
+### dose_change log entries
+
+`type: 'dose_change'` is written automatically when a phase is edited on a protocol with `status === 'active'`. It captures the compound name, old dose, and new dose. Editing phases on `planning` or `completed` protocols does not write log entries — only structural changes on live cycles are tracked.
+
 ### Backward compatibility
 
 On first load, existing protocols in localStorage are auto-migrated by `normalizeProtocol()`. Detection: if a compound has no `phases` array, wrap its current `dose` into a single phase `{ startWeek: 1, endWeek: cycleLengthWeeks || 12, dose: compound.dose }`. `cycleLengthWeeks` defaults to 12 if absent. `status` defaults to `'planning'`. `modificationLog` defaults to `[]`. No data loss, no user action required. Mirrors the existing `normalizeCompound()` pattern.
