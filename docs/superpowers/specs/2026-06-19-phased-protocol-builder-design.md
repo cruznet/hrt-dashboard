@@ -68,7 +68,27 @@ Also adds SLU-PP-332 to the COMPOUNDS library.
 
 `unit` and `cat` are free strings — not locked to AAS or mg. Any compound from the full COMPOUNDS library is valid: AAS, Peptide, Insulin, SARM, Fat Loss, Support, Other. Units include mg, IU, mcg, etc. Picking a compound from the searchable dropdown pre-fills `cat`, `unit`, and `freq`; all three remain editable.
 
-`freq` options: ED, EOD, E3.5D, 2X/WK, Weekly, PWO. `pbFreqToInjectionsPerWeek()` must be extended to handle `PWO` — treat as ED (7x/week) for weekly total calculations, since pre-workout dosing is typically daily.
+`freq` options fall into two categories:
+
+**Named frequencies** (existing + PWO):
+ED, EOD, E3.5D, 2X/WK, Weekly, PWO
+
+**Custom weekday schedule** (new):
+User picks specific days from a toggle row: `M T W T F S S`. Stored as a sorted array of day abbreviations:
+```js
+freq: ['Mon', 'Thu']          // every Monday and Thursday
+freq: ['Mon', 'Wed', 'Fri']   // MWF
+freq: ['Tue', 'Sat']          // twice weekly, specific days
+```
+
+In the compound phase UI, `freq` shows a dropdown with the named options plus a "Specific days…" option. Choosing "Specific days…" reveals the M T W T F S S day-picker inline.
+
+`pbFreqToInjectionsPerWeek()` is extended to handle all cases:
+- Array (custom days) → `freq.length`
+- `'PWO'` → 7 (treat as daily for weekly total)
+- Existing named strings → unchanged
+
+When `startDate` is set and the protocol is active, the Dashboard cycle card can derive "due today" by checking if today's weekday is in `freq`. Example: today is Thursday, `freq: ['Mon', 'Thu']` → Test E is due today.
 
 ### dose_change log entries
 
