@@ -975,7 +975,7 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
           </div>
         </div>
 
-        <div class="tab-panel" id="upload-csv" style="display:none;">
+        <div class="tab-panel" id="upload-csv">
           <div class="card" style="max-width:500px;">
             <div class="card-title">Upload CSV Results</div>
             <div class="form-group">
@@ -1958,8 +1958,8 @@ async function loadUserData() {
     });
     renderLabDashboardCards(window._labMarkersCache);
     renderLabHistory();
-    // Run migration if lab_results has data but lab_markers is empty
-    if ((labsRes.data?.length) && !(markersRes.data?.length)) {
+    // Migrate legacy lab_results once per device (idempotent upsert with localStorage guard)
+    if (labsRes.data?.length && !localStorage.getItem('hrt_migration_done')) {
       migrateLabResults(uid, labsRes.data);
     }
     // Store for chart rendering
@@ -2467,12 +2467,12 @@ async function parsePdf(file) {
     fasting_insulin:    ['insulin'],
     hba1c:              ['hemoglobin a1c', 'hb a1c'],
     apob:               ['apolipoprotein b'],
-    igf1:               ['insulin-like growth factor', 'igf 1,', 'igf-1'],
+    igf1:               ['insulin-like growth factor 1,', 'insulin-like growth factor i,', 'insulin-like growth factor 1', 'insulin-like growth factor i', 'insulin-like growth factor', 'igf-1,', 'igf 1,', 'igf-1'],
     free_t3:            ['t3, free', 'free t3'],
     wbc:                ['white blood cell count'],
     rbc:                ['red blood cell count'],
     platelets:          ['platelet count', 'platelets'],
-    vitamin_d:          ['vitamin d, 25-oh, total,ia', 'vitamin d, 25-oh, total', 'vitamin d,25-oh,total', 'vitamin d, 25-hydroxy'],
+    vitamin_d:          ['vitamin d, 25-oh, total, ia', 'vitamin d, 25-oh, total,ia', 'vitamin d, 25-oh, total', 'vitamin d,25-oh,total', 'vitamin d, 25-hydroxy', 'vitamin d,25-hydroxy', '25-hydroxyvitamin d'],
     hs_crp:             ['c-reactive protein, cardiac', 'c-reactive protein', 'hs crp'],
     psa:                ['prostate specific ag', 'psa, total'],
     ferritin:           ['ferritin'],
@@ -2533,7 +2533,8 @@ async function parsePdf(file) {
     const snippet = text.slice(from, from + 100)
       .replace(/\b[A-Z],?\s*0[0-9]\b/g, ' ')
       .replace(/\b0[0-9]\b(?!\.\d)/g, ' ');
-    const m = snippet.match(/([<>]?\d+\.?\d*)/);
+    // Negative lookahead: skip numbers followed by hyphen+letter (e.g. "25-OH", "25-Hydroxy")
+    const m = snippet.match(/([<>]?\d+\.?\d*)(?!-[a-zA-Z])/);
     if (!m) return null;
     return parseFloat(m[1].replace(/[<>]/g, ''));
   }
@@ -2628,17 +2629,17 @@ function showLabImportPreview(rows, source, drawnAt) {
 async function confirmLabImport(rows, source, drawnAt) {
   if (!drawnAt) { alert('Please set the draw date before confirming.'); return; }
 
-  // Read edited values from the preview inputs
+  // Read edited values from preview inputs; skip rows whose input is gone (second upload replaced the DOM)
   const finalRows = rows.map((r, i) => {
     const el = document.getElementById(`import-val-${i}`);
-    return { ...r, value: el ? parseFloat(el.value) : r.value };
-  }).filter(r => !isNaN(r.value));
+    return el ? { ...r, value: parseFloat(el.value) } : null;
+  }).filter(r => r !== null && !isNaN(r.value));
 
   // Persist to localStorage
   const stored = lsGet('hrt_lab_markers', []);
   finalRows.forEach(({ marker_key, value }) => {
     const idx = stored.findIndex(r => r.drawn_at === drawnAt && r.marker_key === marker_key);
-    const row = { drawn_at: drawnAt, marker_key, value, lab_source: source === 'pdf' ? 'labcorp_pdf' : 'csv' };
+    const row = { drawn_at: drawnAt, marker_key, value, lab_source: source };
     if (idx >= 0) stored[idx] = row; else stored.push(row);
   });
   stored.sort((a, b) => b.drawn_at.localeCompare(a.drawn_at));
@@ -2650,18 +2651,24 @@ async function confirmLabImport(rows, source, drawnAt) {
   finalRows.forEach(({ marker_key, value }) => {
     const cache = window._labMarkersCache[drawnAt];
     const idx = cache.findIndex(r => r.marker_key === marker_key);
-    const row = { marker_key, value, lab_source: source === 'pdf' ? 'labcorp_pdf' : 'csv' };
+    const row = { marker_key, value, lab_source: source };
     if (idx >= 0) cache[idx] = row; else cache.push(row);
   });
 
   // Supabase upsert
   if (_supa && _supaUser) {
     const supaRows = finalRows.map(({ marker_key, value }) => ({
-      user_id: _supaUser.id, drawn_at: drawnAt, marker_key, value,
-      lab_source: source === 'pdf' ? 'labcorp_pdf' : 'csv'
+      user_id: _supaUser.id, drawn_at: drawnAt, marker_key, value, lab_source: source
     }));
     const { error } = await _supa.from('lab_markers').upsert(supaRows, { onConflict: 'user_id,drawn_at,marker_key' });
-    if (error) console.error('[confirmLabImport] Supabase upsert failed:', error);
+    if (error) {
+      console.error('[confirmLabImport] Supabase upsert failed:', error);
+      renderLabDashboardCards(window._labMarkersCache);
+      renderLabHistory();
+      document.getElementById('lab-import-preview').style.display = 'none';
+      alert(`⚠ ${finalRows.length} markers saved locally but could not sync to cloud: ${error.message}`);
+      return;
+    }
   }
 
   renderLabDashboardCards(window._labMarkersCache);
@@ -2680,6 +2687,9 @@ function handleCsvUpload(input) {
     status.textContent = 'Set draw date before uploading.'; return;
   }
   status.style.display='block'; status.style.color='var(--amber)'; status.textContent='⏳ Parsing CSV…';
+  if (typeof Papa === 'undefined') {
+    status.style.color='var(--red)'; status.textContent='⚠ CSV parser not loaded yet. Wait a moment and try again.'; return;
+  }
   Papa.parse(file, {
     header: true,
     skipEmptyLines: true,
@@ -2706,8 +2716,33 @@ function parseCsv(rows) {
   for (const [key, def] of Object.entries(MARKER_DEFINITIONS)) {
     nameIndex[def.label.toLowerCase()] = key;
     nameIndex[key.replace(/_/g,' ')] = key;
-    // Common Quest/LabCorp CSV column name variants
     nameIndex[def.label.toLowerCase().replace(/[^a-z0-9]/g,'')] = key;
+  }
+  // Quest/LabCorp CSV column headers use inverted/verbose names not in MARKER_DEFINITIONS labels
+  const csvAliases = {
+    total_testosterone: ['testosterone, total, males', 'testosterone, total, lc', 'testosterone, total, ms', 'testosterone, total'],
+    free_testosterone:  ['testosterone, free (dialysis)', 'testosterone, free'],
+    dht:                ['dihydrotestosterone'],
+    shbg:               ['sex hormone binding globulin', 'sex horm binding glob'],
+    dhea_s:             ['dhea-sulfate', 'dhea sulfate', 'dehydroepiandrosterone sulfate'],
+    fasting_insulin:    ['insulin, total', 'insulin'],
+    hba1c:              ['hemoglobin a1c', 'hb a1c', 'glycated hemoglobin'],
+    apob:               ['apolipoprotein b'],
+    igf1:               ['insulin-like growth factor 1', 'insulin-like growth factor i', 'insulin-like growth factor', 'igf-1, serum', 'igf-1'],
+    free_t3:            ['triiodothyronine (t3), free', 't3, free', 'free t3'],
+    wbc:                ['white blood cell count', 'leukocytes', 'wbc (white blood cells)'],
+    rbc:                ['red blood cell count', 'erythrocytes', 'rbc (red blood cells)'],
+    platelets:          ['platelet count', 'thrombocytes'],
+    vitamin_d:          ['vitamin d, 25-oh, total, ia', 'vitamin d, 25-oh, total', 'vitamin d, 25-hydroxy', '25-hydroxyvitamin d'],
+    hs_crp:             ['c-reactive protein, cardiac', 'c-reactive protein, high sensitivity', 'c-reactive protein'],
+    psa:                ['prostate specific ag, total', 'prostate specific antigen', 'psa, total'],
+    hdl:                ['hdl cholesterol', 'hdl-cholesterol'],
+    ldl:                ['ldl cholesterol', 'ldl-cholesterol'],
+    ast:                ['ast (sgot)', 'aspartate aminotransferase'],
+    alt:                ['alt (sgpt)', 'alanine aminotransferase'],
+  };
+  for (const [key, aliases] of Object.entries(csvAliases)) {
+    aliases.forEach(alias => { nameIndex[alias.toLowerCase()] = key; });
   }
 
   const results = [];
@@ -2754,12 +2789,22 @@ async function migrateLabResults(userId, legacyRows) {
       }
     }
   }
-  if (!rows.length) return;
+  if (!rows.length) { localStorage.setItem('hrt_migration_done', '1'); return; }
   const { error } = await _supa.from('lab_markers').upsert(rows, { onConflict: 'user_id,drawn_at,marker_key' });
   if (error) { console.error('[migrateLabResults] failed:', error); return; }
+  localStorage.setItem('hrt_migration_done', '1');
   console.log(`[migrateLabResults] migrated ${rows.length} rows from lab_results → lab_markers`);
-  // Reload to pick up migrated data
-  await loadUserData();
+  // Update cache directly — do NOT call loadUserData() (would re-trigger migration check)
+  if (!window._labMarkersCache) window._labMarkersCache = {};
+  rows.forEach(r => {
+    if (!window._labMarkersCache[r.drawn_at]) window._labMarkersCache[r.drawn_at] = [];
+    const cache = window._labMarkersCache[r.drawn_at];
+    const idx = cache.findIndex(c => c.marker_key === r.marker_key);
+    const entry = { marker_key: r.marker_key, value: r.value, lab_source: r.lab_source };
+    if (idx >= 0) cache[idx] = entry; else cache.push(entry);
+  });
+  renderLabDashboardCards(window._labMarkersCache);
+  renderLabHistory();
 }
 
 function renderLabMetrics(data) {
@@ -2808,6 +2853,9 @@ function renderLabMetrics(data) {
   }
 }
 
+// Parse a YYYY-MM-DD string as local midnight (new Date('YYYY-MM-DD') parses as UTC, off by 1 day in US timezones)
+function parseLocalDate(s) { return new Date(s + 'T12:00:00'); }
+
 function renderRealCharts() {
   const labs = window._labHistory || [];
   const weights = window._weightHistory || [];
@@ -2816,7 +2864,7 @@ function renderRealCharts() {
   if (labs.length > 1) {
     const labsSorted = [...labs].reverse();
     const labels = labsSorted.map(l => {
-      const d = new Date(l.drawn_at);
+      const d = parseLocalDate(l.drawn_at);
       return d.toLocaleDateString('en-US', { month:'short', day:'numeric' });
     });
     const tData = labsSorted.map(l => l.total_testosterone != null ? Math.round(parseFloat(l.total_testosterone)) : null);
@@ -2830,7 +2878,7 @@ function renderRealCharts() {
   if (weights.length > 1) {
     const wSorted = [...weights].filter(w => w.weight_lbs).reverse().slice(-8);
     const wLabels = wSorted.map(w => {
-      const d = new Date(w.date);
+      const d = parseLocalDate(w.date);
       return d.toLocaleDateString('en-US', { month:'short', day:'numeric' });
     });
     const wData = wSorted.map(w => parseFloat(w.weight_lbs).toFixed(1));
@@ -2842,7 +2890,7 @@ function renderRealCharts() {
 }
 
 function renderLastEntry(entry) {
-  const d = new Date(entry.date);
+  const d = parseLocalDate(entry.date);
   document.getElementById('last-entry').innerHTML = `<span style="color:var(--text-secondary);">${d.toLocaleDateString()} — Entry logged</span>`;
 }
 
@@ -3042,8 +3090,8 @@ async function submitLog() {
       notes: entry.notes || null
     };
     const bpParts = entry.bp ? entry.bp.split('/') : [];
-    metricsRow.bp_systolic    = bpParts.length === 2 ? parseInt(bpParts[0])        : null;
-    metricsRow.bp_diastolic   = bpParts.length === 2 ? parseInt(bpParts[1])        : null;
+    metricsRow.bp_systolic    = bpParts.length >= 1 && bpParts[0] ? parseInt(bpParts[0]) : null;
+    metricsRow.bp_diastolic   = bpParts.length === 2             ? parseInt(bpParts[1]) : null;
     metricsRow.fasting_glucose = entry.glucose       ? parseFloat(entry.glucose)   : null;
     const { error: metricsErr } = await _supa.from('daily_metrics').upsert(metricsRow, { onConflict: 'user_id,date' });
     if (metricsErr) console.error('[submitLog] daily_metrics upsert failed:', metricsErr);
@@ -3104,14 +3152,14 @@ function renderVitalsCharts(logs) {
   // Use last 14 entries, oldest first for left→right time flow
   const recent = [...logs].reverse().slice(-14);
   const labels = recent.map(l => {
-    const d = new Date(l.date);
+    const d = parseLocalDate(l.date);
     return d.toLocaleDateString('en-US', { month:'short', day:'numeric' });
   });
 
   // Blood Pressure chart — systolic + diastolic lines
   const bpEntries = recent.filter(l => l.bp && l.bp.includes('/'));
   const bpLabels = bpEntries.map(l => {
-    const d = new Date(l.date);
+    const d = parseLocalDate(l.date);
     return d.toLocaleDateString('en-US', { month:'short', day:'numeric' });
   });
   if (bpEntries.length >= 2) {
@@ -3137,7 +3185,7 @@ function renderVitalsCharts(logs) {
   // Glucose chart
   const glucEntries = recent.filter(l => l.glucose);
   const glucLabels = glucEntries.map(l => {
-    const d = new Date(l.date);
+    const d = parseLocalDate(l.date);
     return d.toLocaleDateString('en-US', { month:'short', day:'numeric' });
   });
   if (glucEntries.length >= 2) {

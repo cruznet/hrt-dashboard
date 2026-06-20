@@ -340,6 +340,7 @@ ALTER TABLE workouts                     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE workout_sets                 ENABLE ROW LEVEL SECURITY;
 ALTER TABLE compound_library             ENABLE ROW LEVEL SECURITY;
 ALTER TABLE injection_sites              ENABLE ROW LEVEL SECURITY;
+ALTER TABLE lab_results                  ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users own profile"
   ON profiles FOR ALL USING (auth.uid() = id);
@@ -351,6 +352,8 @@ CREATE POLICY "Users own daily_metrics"
   ON daily_metrics FOR ALL USING (auth.uid() = user_id);
 CREATE POLICY "Users own labs"
   ON labs FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "Users own lab_results"
+  ON lab_results FOR ALL USING (auth.uid() = user_id);
 CREATE POLICY "Users own protocols"
   ON protocols FOR ALL USING (auth.uid() = user_id);
 CREATE POLICY "Users own healthkit"
