@@ -1359,6 +1359,9 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
                   <option>EPO (Erythropoietin)</option>
                   <option>Meldonium</option>
                 </optgroup>
+                <optgroup label="── Research / Metabolic ──">
+                  <option>SLU-PP-332</option>
+                </optgroup>
               </select>
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:4px;">
@@ -3711,6 +3714,8 @@ const COMPOUNDS = [
   { name: 'Rosuvastatin', cat: 'Support (Lipids)', hl: '19 hrs', dose: '5–40mg/day', ai: 'No', dht: 'No' },
   { name: 'Ezetimibe', cat: 'Support (Lipids)', hl: '22 hrs', dose: '10mg/day', ai: 'No', dht: 'No' },
   { name: 'Bempedoic Acid', cat: 'Support (Lipids)', hl: '21 hrs', dose: '180mg/day', ai: 'No', dht: 'No' },
+  // ── Research / Metabolic ──
+  { name: 'SLU-PP-332', cat: 'Research/Metabolic', hl: '~4 hrs', dose: '10–50mg/day', ai: 'No', dht: 'No', note: 'ERRα/γ agonist — exercise mimetic, research compound' },
 ];
 
 function renderCompoundsTable(filter='') {
