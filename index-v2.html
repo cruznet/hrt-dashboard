@@ -3497,6 +3497,16 @@ function pbAddCompound() {
     freq,
     phases: [{ startWeek, endWeek, dose }]
   });
+  // Log addition if protocol is active
+  if (pbState.status === 'active') {
+    pbState.modificationLog.push({
+      week: pbCurrentCycleWeek(pbState.startDate),
+      type: 'addition',
+      compound: name,
+      note: `${dose}${unit} ${Array.isArray(freq) ? freq.join(',') : freq} starting week ${startWeek}`,
+      ts: Date.now()
+    });
+  }
   document.getElementById('pb-add-select').value = '';
   document.getElementById('pb-dose').value = '';
   document.getElementById('pb-dose-hint').textContent = '';
@@ -3590,7 +3600,48 @@ function renderProtocolTimeline() {
   </table>`;
 }
 
-function renderProtocolLog() {}
+const _pbLogIcons = {
+  addition:        { icon: '+', color: 'var(--green)' },
+  removal:         { icon: '×', color: 'var(--red)' },
+  dose_change:     { icon: '↕', color: 'var(--amber)' },
+  cycle_extended:  { icon: '→', color: 'var(--primary-bright)' },
+  cycle_shortened: { icon: '←', color: 'var(--amber)' },
+  note:            { icon: '✎', color: 'var(--text-muted)' }
+};
+
+function renderProtocolLog() {
+  const el = document.getElementById('pb-log-list');
+  if (!el) return;
+  const log = [...(pbState.modificationLog || [])].sort((a, b) => b.ts - a.ts);
+  if (!log.length) {
+    el.innerHTML = '<div style="color:var(--text-muted);font-size:12px;">No modifications recorded yet.</div>';
+    return;
+  }
+  el.innerHTML = log.map(entry => {
+    const meta   = _pbLogIcons[entry.type] || { icon: '•', color: 'var(--text-muted)' };
+    const date   = entry.ts ? new Date(entry.ts).toLocaleDateString() : '';
+    const label  = entry.compound ? `<strong style="color:var(--text-primary);">${entry.compound}</strong>` : '';
+    const noteEl = entry.note ? `<span style="color:var(--text-secondary);"> — ${entry.note}</span>` : '';
+    return `<div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border);">
+      <span style="font-size:14px;color:${meta.color};min-width:18px;text-align:center;">${meta.icon}</span>
+      <div style="flex:1;font-size:12px;">
+        <span style="color:var(--text-muted);">Wk ${entry.week || '?'}</span>
+        <span style="color:var(--text-muted);margin:0 6px;">·</span>
+        ${label}${noteEl}
+      </div>
+      <span style="font-size:11px;color:var(--text-muted);white-space:nowrap;">${date}</span>
+    </div>`;
+  }).join('');
+}
+
+function pbAddNote() {
+  const week = parseInt(prompt('At which week?', pbCurrentCycleWeek(pbState.startDate)));
+  if (!week || isNaN(week)) return;
+  const note = prompt('Note:');
+  if (!note) return;
+  pbState.modificationLog.push({ week, type: 'note', compound: '', note: note.trim(), ts: Date.now() });
+  renderProtocolLog();
+}
 
 function pbRender() {
   const list = document.getElementById('pb-compounds-list');
