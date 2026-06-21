@@ -3367,7 +3367,12 @@ async function submitLabEntry() {
 // handlePdfUpload, parsePdf, showLabImportPreview, confirmLabImport defined after renderReferenceRanges
 
 // ── Protocol Builder ──
-let pbState = { name: '', phase: 'cruise', weeks: 16, compounds: [] };
+let pbState = {
+  name: '', phase: 'cruise', cycleLengthWeeks: 16,
+  startDate: '', status: 'planning', exp: 'intermediate',
+  notes: '', compounds: [], modificationLog: []
+};
+let _pbRemoveTargetIndex = -1;
 const PB_COLORS = ['var(--primary-bright)','var(--teal)','var(--purple)','var(--green)','var(--amber)','var(--red)'];
 
 function pbFreqToInjectionsPerWeek(freq) {
@@ -3388,99 +3393,176 @@ function pbFreqToInjectionsPerWeek(freq) {
 }
 
 function pbUpdateDoseHint() {
-  const hint    = document.getElementById('pb-dose-hint');
-  const weekly  = parseFloat(document.getElementById('pb-dose').value);
-  const unit    = document.getElementById('pb-unit').value;
-  const freq    = document.getElementById('pb-freq').value;
+  const hint  = document.getElementById('pb-dose-hint');
+  const dose  = parseFloat(document.getElementById('pb-dose').value);
+  const unit  = document.getElementById('pb-unit').value;
+  const freq  = pbGetCurrentFreq();
   if (!hint) return;
-  if (!weekly || isNaN(weekly)) {
-    hint.textContent = 'Enter your weekly total — per-injection dose will be calculated.';
-    hint.style.color = 'var(--text-muted)';
-    return;
+  if (!dose || isNaN(dose)) { hint.textContent = 'Enter per-injection dose.'; return; }
+  const weekly = phaseWeeklyTotal({ dose }, freq);
+  const freqLabel = Array.isArray(freq) ? freq.join(', ') : freq;
+  hint.innerHTML = `→ <span style="color:var(--primary-bright);font-family:var(--font-data);">${weekly}${unit}/wk</span> at ${freqLabel}`;
+}
+
+function pbSwitchTab(tab) {
+  ['builder','timeline','log'].forEach(t => {
+    document.getElementById(`pb-panel-${t}`).style.display = t === tab ? '' : 'none';
+    document.getElementById(`pb-tab-${t}`).classList.toggle('pb-tab-active', t === tab);
+  });
+  if (tab === 'timeline') renderProtocolTimeline();
+  if (tab === 'log')      renderProtocolLog();
+}
+
+function pbOnFreqChange() {
+  const val = document.getElementById('pb-freq').value;
+  const picker = document.getElementById('pb-day-picker');
+  picker.style.display = val === 'custom-days' ? '' : 'none';
+  if (val !== 'custom-days') {
+    document.querySelectorAll('.pb-day-btn').forEach(b => b.classList.remove('selected'));
   }
-  const injectionsPerWeek = pbFreqToInjectionsPerWeek(freq);
-  const perInjection = weekly / injectionsPerWeek;
-  const rounded = Number.isInteger(perInjection) ? perInjection : perInjection.toFixed(1);
-  hint.innerHTML = `→ <span style="color:var(--primary-bright);font-family:var(--font-data);">${rounded}${unit}</span> per injection at ${freq}`;
-  hint.style.color = 'var(--text-muted)';
+  pbUpdateDoseHint();
+}
+
+function pbToggleDay(btn) {
+  btn.classList.toggle('selected');
+  pbUpdateDoseHint();
+}
+
+function pbGetSelectedDays() {
+  return [...document.querySelectorAll('.pb-day-btn.selected')].map(b => b.dataset.day);
+}
+
+function pbGetCurrentFreq() {
+  const sel = document.getElementById('pb-freq').value;
+  if (sel === 'custom-days') {
+    const days = pbGetSelectedDays();
+    return days.length ? days : 'ED';
+  }
+  return sel;
+}
+
+function pbOnCompoundSelect() {
+  const name = document.getElementById('pb-add-select').value;
+  if (!name) return;
+  const match = COMPOUNDS.find(c => c.name === name);
+  if (!match) return;
+  // Pre-fill unit from COMPOUNDS library
+  const unitEl = document.getElementById('pb-unit');
+  if (match.dose) {
+    const unitGuess = match.dose.includes('IU') ? 'IU' : match.dose.includes('mcg') ? 'mcg' : 'mg';
+    if ([...unitEl.options].some(o => o.value === unitGuess)) unitEl.value = unitGuess;
+  }
+}
+
+function pbOnWeeksChange() {
+  const weeks = parseInt(document.getElementById('pb-cycle-weeks').value) || 16;
+  pbState.cycleLengthWeeks = weeks;
+  // Sync end-week default
+  const endWk = document.getElementById('pb-end-week');
+  if (endWk && parseInt(endWk.value) > weeks) endWk.value = weeks;
 }
 
 function pbAddCompound() {
-  const name   = document.getElementById('pb-add-select').value;
-  const weekly = parseFloat(document.getElementById('pb-dose').value);
-  const unit   = document.getElementById('pb-unit').value;
-  const freq   = document.getElementById('pb-freq').value;
-  if (!name || !weekly) return;
-  const injectionsPerWeek = pbFreqToInjectionsPerWeek(freq);
-  const perInjection = parseFloat((weekly / injectionsPerWeek).toFixed(1));
-  pbState.compounds.push({ name, weeklyDose: weekly, dose: perInjection, unit, freq, weeks: parseInt(document.getElementById('pb-weeks').value) || 16 });
+  const name      = document.getElementById('pb-add-select').value;
+  const unit      = document.getElementById('pb-unit').value;
+  const freq      = pbGetCurrentFreq();
+  const dose      = parseFloat(document.getElementById('pb-dose').value);
+  const startWeek = parseInt(document.getElementById('pb-start-week').value) || 1;
+  const endWeek   = parseInt(document.getElementById('pb-end-week').value) || pbState.cycleLengthWeeks;
+  if (!name || !dose) return;
+  const match = COMPOUNDS.find(c => c.name === name);
+  pbState.compounds.push({
+    name,
+    cat: match?.cat || '',
+    unit,
+    freq,
+    phases: [{ startWeek, endWeek, dose }]
+  });
   document.getElementById('pb-add-select').value = '';
   document.getElementById('pb-dose').value = '';
-  document.getElementById('pb-dose-hint').textContent = 'Enter your weekly total — per-injection dose will be calculated.';
+  document.getElementById('pb-dose-hint').textContent = '';
   pbRender();
 }
 
-function pbRemoveCompound(i) {
-  pbState.compounds.splice(i, 1); pbRender();
+function pbAddPhase(ci) {
+  const c = pbState.compounds[ci];
+  const lastPhase = c.phases[c.phases.length - 1];
+  const newStart = Math.min(lastPhase.endWeek + 1, pbState.cycleLengthWeeks);
+  c.phases.push({ startWeek: newStart, endWeek: pbState.cycleLengthWeeks, dose: lastPhase.dose });
+  pbRender();
 }
 
-function pbRender() {
-  const totalWeeks = parseInt(document.getElementById('pb-weeks').value) || 16;
-  // Compound list
-  const list = document.getElementById('pb-compounds-list');
-  list.innerHTML = pbState.compounds.length ? pbState.compounds.map((c,i) => {
-    const perInj = c.dose;
-    const weekly = parseFloat((perInj * pbFreqToInjectionsPerWeek(c.freq)).toFixed(2));
-    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:var(--bg-deep);border-radius:var(--radius);margin-bottom:6px;">
-      <span style="font-size:12px;color:${PB_COLORS[i%PB_COLORS.length]};">${c.name}</span>
-      <span style="font-size:11px;font-family:var(--font-data);color:var(--text-secondary);">${perInj}${c.unit} ${c.freq||''} <span style="color:var(--text-muted);">(${weekly}${c.unit}/wk)</span></span>
-      <button onclick="pbRemoveCompound(${i})" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:13px;"><i class="ti ti-x"></i></button>
-    </div>`;
-  }).join('') : '<div style="font-size:12px;color:var(--text-muted);">No compounds added.</div>';
+function pbRemovePhase(ci, pi) {
+  if (pbState.compounds[ci].phases.length <= 1) return; // must keep at least one phase
+  pbState.compounds[ci].phases.splice(pi, 1);
+  pbRender();
+}
 
-  // Gantt
-  const gantt = document.getElementById('pb-gantt');
+function pbOpenRemoveModal(ci) {
+  _pbRemoveTargetIndex = ci;
+  const name = pbState.compounds[ci].name;
+  document.getElementById('pb-remove-modal-title').textContent = `Remove "${name}" from this protocol?`;
+  document.getElementById('pb-remove-week').value = pbState.cycleLengthWeeks;
+  document.getElementById('pb-remove-reason').value = '';
+  document.getElementById('pb-remove-modal').style.display = 'flex';
+}
+
+function pbCloseRemoveModal() {
+  document.getElementById('pb-remove-modal').style.display = 'none';
+  _pbRemoveTargetIndex = -1;
+}
+
+function pbConfirmRemove() {
+  const ci = _pbRemoveTargetIndex;
+  if (ci < 0 || ci >= pbState.compounds.length) { pbCloseRemoveModal(); return; }
+  const week   = parseInt(document.getElementById('pb-remove-week').value) || pbState.cycleLengthWeeks;
+  const reason = document.getElementById('pb-remove-reason').value.trim();
+  const name   = pbState.compounds[ci].name;
+  pbState.modificationLog.push({ week, type: 'removal', compound: name, note: reason, ts: Date.now() });
+  pbState.compounds.splice(ci, 1);
+  pbCloseRemoveModal();
+  pbRender();
+}
+
+function renderProtocolTimeline() {}
+function renderProtocolLog() {}
+
+function pbRender() {
+  const list = document.getElementById('pb-compounds-list');
+  if (!list) return;
   if (!pbState.compounds.length) {
-    gantt.innerHTML = '<div style="color:var(--text-muted);font-size:12px;">Add compounds to see the chart.</div>';
-    document.getElementById('pb-volume-table').innerHTML = '';
+    list.innerHTML = '<div style="color:var(--text-muted);font-size:12px;">No compounds added yet.</div>';
     return;
   }
-  // Week headers
-  const wks = Array.from({length:Math.min(totalWeeks,20)},(_,i)=>i+1);
-  let html = `<div style="display:flex;margin-bottom:4px;">
-    <div style="width:100px;flex-shrink:0;"></div>
-    <div style="flex:1;display:flex;">${wks.map(w=>`<div style="flex:1;text-align:center;font-size:9px;color:var(--text-muted);font-family:var(--font-data);">${w}</div>`).join('')}</div>
-  </div>`;
-  pbState.compounds.forEach((c,i) => {
-    const color = PB_COLORS[i % PB_COLORS.length];
-    const pct = (c.weeks / totalWeeks * 100).toFixed(1);
-    html += `<div style="display:flex;align-items:center;margin-bottom:5px;">
-      <div style="width:100px;flex-shrink:0;font-size:10px;color:var(--text-secondary);text-align:right;padding-right:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.name.split(' ')[0]}</div>
-      <div style="flex:1;background:rgba(255,255,255,0.04);border-radius:3px;height:20px;position:relative;">
-        <div style="position:absolute;left:0;top:0;width:${pct}%;height:20px;background:${color}22;border:0.5px solid ${color}66;border-radius:3px;display:flex;align-items:center;padding:0 6px;">
-          <span style="font-size:9px;color:${color};font-family:var(--font-data);white-space:nowrap;">${c.dose} ${c.unit} ${c.freq||''}</span>
+  list.innerHTML = pbState.compounds.map((c, ci) => {
+    const freqLabel = Array.isArray(c.freq) ? c.freq.join(', ') : c.freq;
+    const phasesHtml = c.phases.map((ph, pi) => {
+      const weekly = phaseWeeklyTotal(ph, c.freq);
+      return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:12px;">
+        <span style="color:var(--text-muted);min-width:28px;">Wk</span>
+        <input type="number" value="${ph.startWeek}" min="1" max="${pbState.cycleLengthWeeks}" style="width:52px;" class="form-input" style="padding:3px 6px;font-size:12px;" onchange="pbState.compounds[${ci}].phases[${pi}].startWeek=parseInt(this.value)||1">
+        <span style="color:var(--text-muted);">–</span>
+        <input type="number" value="${ph.endWeek}" min="1" max="${pbState.cycleLengthWeeks}" style="width:52px;" class="form-input" onchange="pbState.compounds[${ci}].phases[${pi}].endWeek=parseInt(this.value)||1">
+        <input type="number" value="${ph.dose}" min="0" step="0.1" style="width:70px;" class="form-input" onchange="pbState.compounds[${ci}].phases[${pi}].dose=parseFloat(this.value)||0;pbRender()" placeholder="dose">
+        <span style="color:var(--text-muted);">${c.unit}</span>
+        <span style="color:var(--text-muted);font-size:11px;">(${weekly}${c.unit}/wk)</span>
+        ${c.phases.length > 1 ? `<button onclick="pbRemovePhase(${ci},${pi})" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;padding:0;">×</button>` : ''}
+      </div>`;
+    }).join('');
+    return `<div style="border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <div>
+          <span style="font-size:13px;font-weight:600;color:var(--text-primary);">${c.name}</span>
+          <span style="margin-left:8px;font-size:11px;color:var(--text-muted);">${freqLabel}</span>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button class="btn-secondary" style="font-size:11px;padding:3px 10px;" onclick="pbAddPhase(${ci})">+ Phase</button>
+          <button class="btn-secondary" style="font-size:11px;padding:3px 10px;color:var(--red);border-color:var(--red);" onclick="pbOpenRemoveModal(${ci})">Remove</button>
         </div>
       </div>
+      ${phasesHtml}
     </div>`;
-  });
-  gantt.innerHTML = html;
-
-  // Volume table
-  const vol = document.getElementById('pb-volume-table');
-  vol.innerHTML = `<table class="data-table"><thead><tr><th>Compound</th><th>Per Injection</th><th>Weekly Total</th><th>Frequency</th><th>Duration</th></tr></thead><tbody>
-    ${pbState.compounds.map((c,i) => {
-      const perInj = c.dose;
-      const injectionsPerWeek = pbFreqToInjectionsPerWeek(c.freq);
-      const weekly = parseFloat((perInj * injectionsPerWeek).toFixed(2));
-      return `<tr>
-        <td style="color:${PB_COLORS[i%PB_COLORS.length]};">${c.name}</td>
-        <td class="mono">${perInj} ${c.unit}</td>
-        <td class="mono">${weekly} ${c.unit}/wk</td>
-        <td class="mono">${c.freq || '—'}</td>
-        <td class="mono">${c.weeks} wks</td>
-      </tr>`;
-    }).join('')}
-  </tbody></table>`;
+  }).join('');
 }
 
 // ── My Protocols page ──
@@ -3567,32 +3649,33 @@ function editProtocol(index) {
   const p = saved[index];
   if (!p) return;
 
-  // Pre-fill builder fields
-  document.getElementById('pb-name').value  = p.name  || '';
-  document.getElementById('pb-phase').value = p.phase || 'trt';
-  document.getElementById('pb-weeks').value = p.weeks || '';
-  document.getElementById('pb-exp').value   = p.exp   || 'beginner';
-  document.getElementById('pb-notes').value = p.notes || '';
+  document.getElementById('pb-name').value              = p.name || '';
+  document.getElementById('pb-phase').value             = p.phase || 'cruise';
+  document.getElementById('pb-cycle-weeks').value       = p.cycleLengthWeeks || p.weeks || 16;
+  document.getElementById('pb-cycle-start-date').value  = p.startDate || '';
+  document.getElementById('pb-cycle-status').value      = p.status || 'planning';
+  document.getElementById('pb-exp').value               = p.exp || 'intermediate';
+  document.getElementById('pb-notes').value             = p.notes || '';
 
-  // Load compounds (normalize old format)
-  pbState.compounds = (p.compounds || []).map(c => normalizeCompound(c));
+  pbState.cycleLengthWeeks = p.cycleLengthWeeks || parseInt(p.weeks) || 16;
+  pbState.startDate        = p.startDate || '';
+  pbState.status           = p.status || 'planning';
+  pbState.compounds        = p.compounds || [];
+  pbState.modificationLog  = p.modificationLog || [];
   pbEditIndex = index;
 
   pbRender();
   nav('builder');
-
-  // Show a banner so user knows they're editing
+  pbSwitchTab('builder');
   const st = document.getElementById('pb-save-status');
-  st.textContent = `Editing "${p.name}" — save to update.`;
-  st.style.display = 'block';
-  st.style.color = 'var(--amber)';
+  if (st) { st.textContent = `Editing "${p.name}" — save to update.`; st.style.color = 'var(--amber)'; st.style.display = 'block'; }
 }
 
 function _pbDoSave() {
   const protocol = {
     name: document.getElementById('pb-name').value || 'Untitled Protocol',
     phase: document.getElementById('pb-phase').value,
-    weeks: document.getElementById('pb-weeks').value,
+    cycleLengthWeeks: parseInt(document.getElementById('pb-cycle-weeks').value) || 16,
     exp: document.getElementById('pb-exp').value,
     notes: document.getElementById('pb-notes').value,
     compounds: pbState.compounds,
@@ -3659,7 +3742,11 @@ function pbExportJson() {
   a.download = 'protocol.json'; a.click();
 }
 
-function pbReset() { pbState.compounds = []; pbRender(); }
+function pbReset() {
+  pbState = { name:'', phase:'cruise', cycleLengthWeeks:16, startDate:'', status:'planning', exp:'intermediate', notes:'', compounds:[], modificationLog:[] };
+  pbEditIndex = -1;
+  pbRender();
+}
 
 // ── Compounds library ──
 const COMPOUNDS = [
