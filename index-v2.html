@@ -2998,6 +2998,12 @@ function nav(page) {
   }
 }
 
+function pbCurrentCycleWeek(startDate) {
+  if (!startDate) return 1;
+  const days = Math.max(0, (Date.now() - Date.parse(startDate)) / 86400000);
+  return Math.floor(days / 7) + 1;
+}
+
 function renderCycleProgress(protocol) {
   const label  = document.getElementById('cycle-label');
   const pct    = document.getElementById('cycle-pct');
@@ -3456,10 +3462,23 @@ function pbOnCompoundSelect() {
 
 function pbOnWeeksChange() {
   const weeks = parseInt(document.getElementById('pb-cycle-weeks').value) || 16;
+  const old   = pbState.cycleLengthWeeks;
   pbState.cycleLengthWeeks = weeks;
-  // Sync end-week default
+  if (weeks > old && pbState.compounds.length) {
+    const extend = confirm(`Extend all currently running compounds from week ${old} to week ${weeks}?`);
+    if (extend) {
+      pbState.compounds.forEach(c => {
+        const last = c.phases[c.phases.length - 1];
+        if (last.endWeek === old) last.endWeek = weeks;
+      });
+      pbState.modificationLog.push({ week: pbCurrentCycleWeek(pbState.startDate), type: 'cycle_extended', compound: '', note: `Cycle extended ${old}wk → ${weeks}wk`, ts: Date.now() });
+    }
+  } else if (weeks < old && pbState.compounds.some(c => c.phases.some(ph => ph.endWeek > weeks))) {
+    alert(`⚠ Some compound phases extend past week ${weeks}. Review them in the Builder.`);
+  }
   const endWk = document.getElementById('pb-end-week');
   if (endWk && parseInt(endWk.value) > weeks) endWk.value = weeks;
+  pbRender();
 }
 
 function pbAddCompound() {
@@ -3657,6 +3676,8 @@ function editProtocol(index) {
   document.getElementById('pb-exp').value               = p.exp || 'intermediate';
   document.getElementById('pb-notes').value             = p.notes || '';
 
+  pbState.name             = p.name || '';
+  pbState.phase            = p.phase || 'cruise';
   pbState.cycleLengthWeeks = p.cycleLengthWeeks || parseInt(p.weeks) || 16;
   pbState.startDate        = p.startDate || '';
   pbState.status           = p.status || 'planning';
@@ -3672,17 +3693,51 @@ function editProtocol(index) {
 }
 
 function _pbDoSave() {
+  const cycleLengthWeeks = parseInt(document.getElementById('pb-cycle-weeks').value) || 16;
+  const startDate        = document.getElementById('pb-cycle-start-date').value || '';
+  const status           = document.getElementById('pb-cycle-status').value || 'planning';
+  const savedAt          = pbEditIndex >= 0
+    ? (lsGet('hrt_protocols', []).map(normalizeProtocol)[pbEditIndex]?.saved_at || new Date().toISOString())
+    : new Date().toISOString();
+
+  // Detect dose changes on active protocols
+  let modLog = [...pbState.modificationLog];
+  if (pbEditIndex >= 0 && status === 'active') {
+    const prev = normalizeProtocol(lsGet('hrt_protocols', [])[pbEditIndex]);
+    if (prev) {
+      pbState.compounds.forEach(c => {
+        const prevC = (prev.compounds || []).find(pc => pc.name === c.name);
+        if (!prevC) return;
+        c.phases.forEach((ph, pi) => {
+          const prevPh = prevC.phases[pi];
+          if (prevPh && prevPh.dose !== ph.dose) {
+            modLog.push({
+              week: pbCurrentCycleWeek(startDate),
+              type: 'dose_change',
+              compound: c.name,
+              note: `${prevPh.dose}${c.unit} → ${ph.dose}${c.unit}`,
+              ts: Date.now()
+            });
+          }
+        });
+      });
+    }
+  }
+
   const protocol = {
     name: document.getElementById('pb-name').value || 'Untitled Protocol',
     phase: document.getElementById('pb-phase').value,
-    cycleLengthWeeks: parseInt(document.getElementById('pb-cycle-weeks').value) || 16,
+    cycleLengthWeeks,
+    weeks: String(cycleLengthWeeks),   // keep for backward compat
+    startDate,
+    status,
     exp: document.getElementById('pb-exp').value,
     notes: document.getElementById('pb-notes').value,
     compounds: pbState.compounds,
-    saved_at: pbEditIndex >= 0
-      ? (lsGet('hrt_protocols', [])[pbEditIndex]?.saved_at || new Date().toISOString())
-      : new Date().toISOString()
+    modificationLog: modLog,
+    saved_at: savedAt
   };
+
   const saved = lsGet('hrt_protocols', []);
   if (pbEditIndex >= 0 && pbEditIndex < saved.length) {
     saved.splice(pbEditIndex, 1, protocol);
@@ -3691,13 +3746,14 @@ function _pbDoSave() {
   }
   localStorage.setItem('hrt_protocols', JSON.stringify(saved));
 
-  // If this was the active protocol, refresh it
+  // Refresh active protocol if this one is active
   const active = localStorage.getItem('hrt_active_protocol');
   if (active === protocol.saved_at) {
     localStorage.setItem('hrt_active_protocol_data', JSON.stringify(protocol));
     renderUpcoming();
   }
 
+  pbState.modificationLog = modLog;
   pbEditIndex = -1;
   return protocol;
 }
