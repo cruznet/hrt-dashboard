@@ -639,6 +639,7 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
             </div>
             <div style="font-size:11px;font-family:var(--font-data);color:var(--teal);margin-top:3px;" id="ss-label">—</div>
           </div>
+          <div id="cycle-active-compounds" style="margin-top:10px;"></div>
         </div>
 
         <!-- Upcoming doses -->
@@ -3004,53 +3005,101 @@ function pbCurrentCycleWeek(startDate) {
   return Math.floor(days / 7) + 1;
 }
 
-function renderCycleProgress(protocol) {
-  const label  = document.getElementById('cycle-label');
-  const pct    = document.getElementById('cycle-pct');
-  const bar    = document.getElementById('cycle-bar');
-  const ssBar  = document.getElementById('ss-bar');
-  const ssLbl  = document.getElementById('ss-label');
+function renderCycleProgress(rawProtocol) {
+  const label = document.getElementById('cycle-label');
+  const pct   = document.getElementById('cycle-pct');
+  const bar   = document.getElementById('cycle-bar');
+  const ssBar = document.getElementById('ss-bar');
+  const ssLbl = document.getElementById('ss-label');
   if (!label) return;
 
-  if (!protocol || !protocol.saved_at) {
+  if (!rawProtocol || !rawProtocol.saved_at) {
     label.textContent = '—'; pct.textContent = '—';
-    bar.style.width = '0%'; ssBar.style.width = '0%'; ssLbl.textContent = '—';
+    if (bar) bar.style.width = '0%';
+    if (ssBar) ssBar.style.width = '0%';
+    if (ssLbl) ssLbl.textContent = '—';
     return;
   }
 
-  const totalWeeks = parseFloat(protocol.weeks) || 0;
-  const start = new Date(protocol.saved_at);
-  const now   = new Date();
-  const daysDone = Math.max(0, (now - start) / 86400000);
-  const weeksDone = daysDone / 7;
-
-  const currentWeek = Math.floor(weeksDone) + 1;
-  const progressPct = totalWeeks > 0 ? Math.min(100, Math.round((weeksDone / totalWeeks) * 100)) : 0;
+  const protocol     = normalizeProtocol(rawProtocol);
+  const totalWeeks   = protocol.cycleLengthWeeks || parseInt(protocol.weeks) || 0;
+  const startDate    = protocol.startDate || protocol.saved_at;
+  const currentWeek  = Math.min(pbCurrentCycleWeek(startDate), totalWeeks || 9999);
+  const progressPct  = totalWeeks > 0 ? Math.min(100, Math.round(((currentWeek - 1) / totalWeeks) * 100)) : 0;
 
   label.textContent = totalWeeks > 0 ? `Week ${currentWeek} of ${totalWeeks}` : `Week ${currentWeek}`;
   pct.textContent   = totalWeeks > 0 ? `${progressPct}%` : '—';
-  bar.style.width   = `${progressPct}%`;
+  if (bar) bar.style.width = `${progressPct}%`;
 
-  // Steady state: ~4 half-lives (matches Dose Calculator "DAYS TO SS (4× t½)" label).
+  // Steady state bar (unchanged logic)
   const halfLives = (protocol.compounds || []).map(c => {
-    const name = (c.name || '').toLowerCase();
-    if (name.includes('cypionate')) return 8;
-    if (name.includes('enanthate')) return 4.5;
-    if (name.includes('propionate')) return 2;
-    if (name.includes('undecanoate')) return 21;
-    if (name.includes('decanoate') || name.includes('deca')) return 15;
-    if (name.includes('boldenone') || name.includes('eq')) return 14;
-    if (name.includes('primobolan') || name.includes('methenolone')) return 10;
-    if (name.includes('masteron')) return 10;
-    if (name.includes('trenbolone enanthate') || name.includes('tren-e')) return 5.5;
-    if (name.includes('trenbolone acetate') || name.includes('tren-a')) return 3;
-    return 7; // default
+    const n = (c.name || '').toLowerCase();
+    if (n.includes('cypionate')) return 8;
+    if (n.includes('enanthate')) return 4.5;
+    if (n.includes('propionate')) return 2;
+    if (n.includes('undecanoate')) return 21;
+    if (n.includes('decanoate') || n.includes('deca')) return 15;
+    if (n.includes('boldenone') || n.includes('eq')) return 14;
+    if (n.includes('primobolan') || n.includes('methenolone')) return 10;
+    if (n.includes('masteron')) return 10;
+    if (n.includes('trenbolone enanthate') || n.includes('tren-e')) return 5.5;
+    if (n.includes('trenbolone acetate') || n.includes('tren-a')) return 3;
+    return 7;
   });
   const longestHL = halfLives.length ? Math.max(...halfLives) : 7;
-  const ssDays = longestHL * 4; // ~4 half-lives to steady state
-  const ssPct  = Math.min(100, Math.round((daysDone / ssDays) * 100));
+  const daysDone  = Math.max(0, (Date.now() - Date.parse(startDate)) / 86400000);
+  const ssPct     = Math.min(100, Math.round((daysDone / (longestHL * 4)) * 100));
   if (ssBar) ssBar.style.width  = `${ssPct}%`;
   if (ssLbl) ssLbl.textContent  = `${ssPct}% steady state`;
+
+  // Active compounds this week + "due today"
+  const cycleCard = document.getElementById('cycle-active-compounds');
+  if (!cycleCard || !protocol.compounds.length) return;
+  const todayDay = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date().getDay()];
+  const { rows } = buildWeekGrid(protocol.compounds, totalWeeks || currentWeek);
+  const activeThisWeek = rows.filter(r => r.cells[currentWeek - 1] !== null);
+
+  if (!activeThisWeek.length) { cycleCard.innerHTML = ''; return; }
+
+  const activeHtml = activeThisWeek.map(r => {
+    const dose      = r.cells[currentWeek - 1];
+    const freqLabel = Array.isArray(r.freq) ? r.freq.join(', ') : r.freq;
+    const dueToday  = Array.isArray(r.freq) && r.freq.includes(todayDay);
+    return `<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;">
+      <span style="color:var(--text-secondary);">${r.name}${dueToday ? ' <span style="font-size:10px;color:var(--green);">● today</span>' : ''}</span>
+      <span style="font-family:var(--font-data);color:var(--primary-bright);">${dose}${r.unit}</span>
+      <span style="color:var(--text-muted);">${freqLabel}</span>
+    </div>`;
+  }).join('');
+
+  // Upcoming changes (next 2 weeks)
+  const upcoming = [];
+  protocol.compounds.forEach(c => {
+    c.phases.forEach((ph, pi) => {
+      const nextPh = c.phases[pi + 1];
+      if (nextPh && nextPh.startWeek > currentWeek && nextPh.startWeek <= currentWeek + 2) {
+        const diff = nextPh.startWeek - currentWeek;
+        upcoming.push(`${c.name} → ${nextPh.dose}${c.unit} — Wk ${nextPh.startWeek} (${diff} wk${diff > 1 ? 's' : ''})`);
+      }
+      if (ph.startWeek > currentWeek && ph.startWeek <= currentWeek + 2 && pi === 0) {
+        const diff = ph.startWeek - currentWeek;
+        upcoming.push(`${c.name} starts ${ph.dose}${c.unit} — Wk ${ph.startWeek} (${diff} wk${diff > 1 ? 's' : ''})`);
+      }
+    });
+  });
+
+  const upcomingHtml = upcoming.length
+    ? `<div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border);">
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em;">Upcoming</div>
+        ${upcoming.map(u => `<div style="font-size:11px;color:var(--text-secondary);">→ ${u}</div>`).join('')}
+      </div>`
+    : '';
+
+  cycleCard.innerHTML = `
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;">Active this week</div>
+    ${activeHtml}
+    ${upcomingHtml}
+  `;
 }
 
 function toggleSidebar() {
