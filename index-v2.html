@@ -3326,6 +3326,7 @@ let pbState = { name: '', phase: 'cruise', weeks: 16, compounds: [] };
 const PB_COLORS = ['var(--primary-bright)','var(--teal)','var(--purple)','var(--green)','var(--amber)','var(--red)'];
 
 function pbFreqToInjectionsPerWeek(freq) {
+  if (Array.isArray(freq)) return freq.length;
   const f = (freq || '').toUpperCase().trim();
   if (f === 'ED')       return 7;
   if (f === 'EOD')      return 3.5;
@@ -3337,6 +3338,7 @@ function pbFreqToInjectionsPerWeek(freq) {
   if (f === 'WEEKLY')   return 1;
   if (f === 'BI-WKLY')  return 0.5;
   if (f === 'MONTHLY')  return 7 / 30;
+  if (f === 'PWO')      return 7;
   return 1;
 }
 
@@ -3439,7 +3441,7 @@ function pbRender() {
 // ── My Protocols page ──
 function renderProtocolsPage() {
   const container = document.getElementById('protocols-list');
-  const saved = lsGet('hrt_protocols', []);
+  const saved = lsGet('hrt_protocols', []).map(normalizeProtocol);
   const active = localStorage.getItem('hrt_active_protocol');
 
   if (!saved.length) {
@@ -3484,7 +3486,7 @@ function renderProtocolsPage() {
 }
 
 function setActiveProtocol(index) {
-  const saved = lsGet('hrt_protocols', []);
+  const saved = lsGet('hrt_protocols', []).map(normalizeProtocol);
   const p = saved[index];
   if (!p) return;
   localStorage.setItem('hrt_active_protocol', p.saved_at);
@@ -3516,7 +3518,7 @@ function deleteProtocol(index) {
 let pbEditIndex = -1;
 
 function editProtocol(index) {
-  const saved = lsGet('hrt_protocols', []);
+  const saved = lsGet('hrt_protocols', []).map(normalizeProtocol);
   const p = saved[index];
   if (!p) return;
 
@@ -3802,6 +3804,34 @@ function normalizeCompound(c) {
     }
   }
   return { name, dose, unit: unit || '', freq: freq || '', weeks };
+}
+
+function normalizeProtocol(p) {
+  if (!p) return p;
+  const weeks = parseInt(p.cycleLengthWeeks || p.weeks) || 12;
+  const compounds = (p.compounds || []).map(c => {
+    if (Array.isArray(c.phases)) return c;
+    const dose = parseFloat(c.perInjection || c.dose) || 0;
+    return {
+      name: c.name || '',
+      cat: c.cat || '',
+      unit: c.unit || '',
+      freq: c.freq || 'Weekly',
+      phases: [{ startWeek: 1, endWeek: weeks, dose }]
+    };
+  });
+  return {
+    ...p,
+    cycleLengthWeeks: weeks,
+    startDate: p.startDate || '',
+    status: p.status || 'planning',
+    compounds,
+    modificationLog: p.modificationLog || []
+  };
+}
+
+function phaseWeeklyTotal(phase, freq) {
+  return parseFloat((phase.dose * pbFreqToInjectionsPerWeek(freq)).toFixed(2));
 }
 
 // ── Lab Marker Definitions ──

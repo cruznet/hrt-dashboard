@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head><title>Protocol Logic Tests</title>
+<style>
+  body { font-family: monospace; padding: 20px; background: #0f1117; color: #f1f5f9; }
+  .pass { color: #10B981; } .fail { color: #EF4444; }
+  h2 { color: #6366F1; margin-top: 24px; }
+</style>
+</head>
+<body>
+<h1>Protocol Logic Tests</h1>
+<div id="results"></div>
+<script>
+const results = document.getElementById('results');
+let passed = 0, failed = 0;
+function assert(label, actual, expected) {
+  const ok = JSON.stringify(actual) === JSON.stringify(expected);
+  if (ok) passed++; else failed++;
+  results.innerHTML += `<div class="${ok ? 'pass' : 'fail'}">${ok ? '✓' : '✗'} ${label}${ok ? '' : ` — expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`}</div>`;
+}
+function section(name) { results.innerHTML += `<h2>${name}</h2>`; }
+</script>
+<!-- paste functions under test here during development -->
+<script>
+// ── pbFreqToInjectionsPerWeek ──
+function pbFreqToInjectionsPerWeek(freq) {
+  if (Array.isArray(freq)) return freq.length;
+  const f = (freq || '').toUpperCase().trim();
+  if (f === 'ED')       return 7;
+  if (f === 'EOD')      return 3.5;
+  if (f === 'E3D')      return 7 / 3;
+  if (f === 'E3.5D' || f === '2X/WK') return 2;
+  if (f === 'E4D')      return 7 / 4;
+  if (f === 'E5D')      return 7 / 5;
+  if (f === '3X/WK')   return 3;
+  if (f === 'WEEKLY')   return 1;
+  if (f === 'BI-WKLY')  return 0.5;
+  if (f === 'MONTHLY')  return 7 / 30;
+  if (f === 'PWO')      return 7;
+  return 1;
+}
+
+section('pbFreqToInjectionsPerWeek');
+assert('ED → 7',                       pbFreqToInjectionsPerWeek('ED'), 7);
+assert('EOD → 3.5',                    pbFreqToInjectionsPerWeek('EOD'), 3.5);
+assert('E3.5D → 2',                    pbFreqToInjectionsPerWeek('E3.5D'), 2);
+assert('Weekly → 1',                   pbFreqToInjectionsPerWeek('Weekly'), 1);
+assert('PWO → 7',                      pbFreqToInjectionsPerWeek('PWO'), 7);
+assert('array [Mon,Thu] → 2',          pbFreqToInjectionsPerWeek(['Mon','Thu']), 2);
+assert('array [Mon,Wed,Fri] → 3',      pbFreqToInjectionsPerWeek(['Mon','Wed','Fri']), 3);
+assert('empty string → 1',             pbFreqToInjectionsPerWeek(''), 1);
+assert('null → 1',                     pbFreqToInjectionsPerWeek(null), 1);
+
+// ── normalizeProtocol ──
+function normalizeProtocol(p) {
+  if (!p) return p;
+  const weeks = parseInt(p.cycleLengthWeeks || p.weeks) || 12;
+  const compounds = (p.compounds || []).map(c => {
+    if (Array.isArray(c.phases)) return c;
+    const dose = parseFloat(c.perInjection || c.dose) || 0;
+    return {
+      name: c.name || '',
+      cat: c.cat || '',
+      unit: c.unit || '',
+      freq: c.freq || 'Weekly',
+      phases: [{ startWeek: 1, endWeek: weeks, dose }]
+    };
+  });
+  return {
+    ...p,
+    cycleLengthWeeks: weeks,
+    startDate: p.startDate || '',
+    status: p.status || 'planning',
+    compounds,
+    modificationLog: p.modificationLog || []
+  };
+}
+
+section('normalizeProtocol — migration');
+const old = { name: 'Test', weeks: '12', saved_at: '2026-01-01', phase: 'blast',
+  compounds: [{ name: 'Test E', dose: 100, unit: 'mg', freq: 'E3.5D', perInjection: 100 }] };
+const migrated = normalizeProtocol(old);
+assert('cycleLengthWeeks set from weeks',  migrated.cycleLengthWeeks, 12);
+assert('status defaults to planning',       migrated.status, 'planning');
+assert('modificationLog defaults to []',    migrated.modificationLog, []);
+assert('compound gains phases array',       Array.isArray(migrated.compounds[0].phases), true);
+assert('phase startWeek = 1',              migrated.compounds[0].phases[0].startWeek, 1);
+assert('phase endWeek = cycleLengthWeeks', migrated.compounds[0].phases[0].endWeek, 12);
+assert('phase dose from perInjection',     migrated.compounds[0].phases[0].dose, 100);
+
+section('normalizeProtocol — already new shape');
+const newP = { name: 'N', cycleLengthWeeks: 16, status: 'active', startDate: '2026-06-01',
+  compounds: [{ name: 'Primo', cat: 'AAS', unit: 'mg', freq: 'Weekly',
+    phases: [{ startWeek: 1, endWeek: 16, dose: 200 }] }],
+  modificationLog: [] };
+const noop = normalizeProtocol(newP);
+assert('new shape passes through unchanged', noop.compounds[0].phases[0].dose, 200);
+assert('cycleLengthWeeks preserved',         noop.cycleLengthWeeks, 16);
+
+// ── phaseWeeklyTotal ──
+function phaseWeeklyTotal(phase, freq) {
+  return parseFloat((phase.dose * pbFreqToInjectionsPerWeek(freq)).toFixed(2));
+}
+
+section('phaseWeeklyTotal');
+assert('100mg E3.5D → 200mg/wk',  phaseWeeklyTotal({ dose: 100 }, 'E3.5D'), 200);
+assert('6IU ED → 42IU/wk',        phaseWeeklyTotal({ dose: 6 }, 'ED'), 42);
+assert('50mg Mon,Thu → 100mg/wk', phaseWeeklyTotal({ dose: 50 }, ['Mon','Thu']), 100);
+
+// ── summary ──
+results.innerHTML += `<h2 style="color:${failed ? '#EF4444' : '#10B981'}">${passed} passed, ${failed} failed</h2>`;
+</script>
+</body>
+</html>
