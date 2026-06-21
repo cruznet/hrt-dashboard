@@ -3022,6 +3022,14 @@ function renderCycleProgress(rawProtocol) {
   }
 
   const protocol     = normalizeProtocol(rawProtocol);
+
+  // Guard: cycle card requires active status + startDate
+  const cycleCard = document.getElementById('cycle-active-compounds');
+  if (protocol.status !== 'active' || !protocol.startDate) {
+    if (cycleCard) cycleCard.innerHTML = '';
+    return;
+  }
+
   const totalWeeks   = protocol.cycleLengthWeeks || parseInt(protocol.weeks) || 0;
   const startDate    = protocol.startDate || protocol.saved_at;
   const currentWeek  = Math.min(pbCurrentCycleWeek(startDate), totalWeeks || 9999);
@@ -3053,8 +3061,7 @@ function renderCycleProgress(rawProtocol) {
   if (ssLbl) ssLbl.textContent  = `${ssPct}% steady state`;
 
   // Active compounds this week + "due today"
-  const cycleCard = document.getElementById('cycle-active-compounds');
-  if (!cycleCard || !protocol.compounds.length) return;
+  if (!protocol.compounds.length) return;
   const todayDay = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date().getDay()];
   const { rows } = buildWeekGrid(protocol.compounds, totalWeeks || currentWeek);
   const activeThisWeek = rows.filter(r => r.cells[currentWeek - 1] !== null);
@@ -3065,8 +3072,9 @@ function renderCycleProgress(rawProtocol) {
     const dose      = r.cells[currentWeek - 1];
     const freqLabel = Array.isArray(r.freq) ? r.freq.join(', ') : r.freq;
     const dueToday  = Array.isArray(r.freq) && r.freq.includes(todayDay);
+    const escapedName = String(r.name).replace(/</g, '&lt;').replace(/>/g, '&gt;');
     return `<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;">
-      <span style="color:var(--text-secondary);">${r.name}${dueToday ? ' <span style="font-size:10px;color:var(--green);">● today</span>' : ''}</span>
+      <span style="color:var(--text-secondary);">${escapedName}${dueToday ? ' <span style="font-size:10px;color:var(--green);">● today</span>' : ''}</span>
       <span style="font-family:var(--font-data);color:var(--primary-bright);">${dose}${r.unit}</span>
       <span style="color:var(--text-muted);">${freqLabel}</span>
     </div>`;
