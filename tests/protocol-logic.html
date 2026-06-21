@@ -107,6 +107,36 @@ assert('100mg E3.5D → 200mg/wk',  phaseWeeklyTotal({ dose: 100 }, 'E3.5D'), 20
 assert('6IU ED → 42IU/wk',        phaseWeeklyTotal({ dose: 6 }, 'ED'), 42);
 assert('50mg Mon,Thu → 100mg/wk', phaseWeeklyTotal({ dose: 50 }, ['Mon','Thu']), 100);
 
+// ── buildWeekGrid ──
+function buildWeekGrid(compounds, totalWeeks) {
+  const weeks = Array.from({ length: totalWeeks }, (_, i) => i + 1);
+  const rows = compounds.map(c => ({
+    name: c.name,
+    unit: c.unit,
+    freq: c.freq,
+    cells: weeks.map(w => {
+      const ph = (c.phases || []).find(p => w >= p.startWeek && w <= p.endWeek);
+      return ph ? String(ph.dose) : null;
+    })
+  }));
+  return { weeks, rows };
+}
+
+section('buildWeekGrid');
+const compounds = [
+  { name: 'Test E', unit: 'mg', freq: 'E3.5D', phases: [{ startWeek:1, endWeek:5, dose:200 },{ startWeek:6, endWeek:12, dose:150 }] },
+  { name: 'Anavar', unit: 'mg', freq: 'ED', phases: [{ startWeek:9, endWeek:12, dose:50 }] }
+];
+const grid = buildWeekGrid(compounds, 12);
+assert('grid has 12 week columns',        grid.weeks.length, 12);
+assert('Test E week 1 = 200',             grid.rows[0].cells[0], '200');
+assert('Test E week 5 = 200',             grid.rows[0].cells[4], '200');
+assert('Test E week 6 = 150',             grid.rows[0].cells[5], '150');
+assert('Test E week 12 = 150',            grid.rows[0].cells[11], '150');
+assert('Anavar week 8 = null (inactive)', grid.rows[1].cells[7], null);
+assert('Anavar week 9 = 50',             grid.rows[1].cells[8], '50');
+assert('Anavar week 12 = 50',            grid.rows[1].cells[11], '50');
+
 // ── summary ──
 results.innerHTML += `<h2 style="color:${failed ? '#EF4444' : '#10B981'}">${passed} passed, ${failed} failed</h2>`;
 </script>

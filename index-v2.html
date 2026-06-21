@@ -3543,7 +3543,53 @@ function pbConfirmRemove() {
   pbRender();
 }
 
-function renderProtocolTimeline() {}
+function buildWeekGrid(compounds, totalWeeks) {
+  const weeks = Array.from({ length: totalWeeks }, (_, i) => i + 1);
+  const rows = compounds.map(c => ({
+    name: c.name,
+    unit: c.unit,
+    freq: c.freq,
+    cells: weeks.map(w => {
+      const ph = (c.phases || []).find(p => w >= p.startWeek && w <= p.endWeek);
+      return ph ? String(ph.dose) : null;
+    })
+  }));
+  return { weeks, rows };
+}
+
+function renderProtocolTimeline() {
+  const el = document.getElementById('pb-timeline-grid');
+  if (!el) return;
+  if (!pbState.compounds.length) {
+    el.innerHTML = '<div style="color:var(--text-muted);font-size:12px;">Build a protocol in the Builder tab to see the timeline.</div>';
+    return;
+  }
+  const { weeks, rows } = buildWeekGrid(pbState.compounds, pbState.cycleLengthWeeks || 12);
+  const thStyle = 'padding:5px 10px;font-size:11px;font-weight:600;color:var(--text-muted);text-align:center;white-space:nowrap;';
+  const nameStyle = 'padding:6px 10px;font-size:12px;color:var(--text-secondary);font-weight:500;white-space:nowrap;';
+  const activeStyle = 'padding:5px 8px;font-size:11px;font-family:var(--font-data);background:var(--primary-dim);color:var(--primary-bright);border-radius:3px;text-align:center;';
+  const emptyStyle  = 'padding:5px 8px;font-size:11px;color:var(--text-muted);text-align:center;';
+
+  const headerCells = weeks.map(w => `<th style="${thStyle}">Wk${w}</th>`).join('');
+  const bodyRows = rows.map(r => {
+    const freqLabel = Array.isArray(r.freq) ? r.freq.join(',') : r.freq;
+    const cells = r.cells.map(v =>
+      v !== null
+        ? `<td style="${activeStyle}">${v}${r.unit}</td>`
+        : `<td style="${emptyStyle}">—</td>`
+    ).join('');
+    return `<tr>
+      <td style="${nameStyle}">${r.name}<br><span style="font-size:10px;color:var(--text-muted);">${freqLabel}</span></td>
+      ${cells}
+    </tr>`;
+  }).join('');
+
+  el.innerHTML = `<table style="border-collapse:collapse;min-width:100%;">
+    <thead><tr><th style="${thStyle};text-align:left;">Compound</th>${headerCells}</tr></thead>
+    <tbody>${bodyRows}</tbody>
+  </table>`;
+}
+
 function renderProtocolLog() {}
 
 function pbRender() {
