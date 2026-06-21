@@ -460,6 +460,11 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
 .lab-group-header { display:flex; align-items:center; gap:8px; padding:10px 14px; cursor:pointer; font-size:13px; font-weight:500; background:var(--card-bg); user-select:none; }
 .lab-group-header:hover { background:var(--hover); }
 .lab-group-body { padding:14px; border-top:1px solid var(--border); }
+.pb-tab { background:none;border:none;border-bottom:2px solid transparent;color:var(--text-muted);cursor:pointer;font-size:13px;font-weight:500;padding:8px 18px;transition:color .15s,border-color .15s; }
+.pb-tab:hover { color:var(--text-secondary); }
+.pb-tab.pb-tab-active { color:var(--primary-bright);border-bottom-color:var(--primary-bright); }
+.pb-day-btn { background:var(--bg-card);border:1px solid var(--border);border-radius:4px;color:var(--text-secondary);cursor:pointer;font-size:12px;padding:4px 10px;transition:all .15s; }
+.pb-day-btn.selected { background:var(--primary-dim);border-color:var(--primary-border);color:var(--primary-bright); }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js" defer></script>
@@ -1205,225 +1210,262 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
     <!-- ── PROTOCOL BUILDER PAGE ── -->
     <section class="page" id="page-builder">
       <div class="section-heading">Protocol Builder</div>
-      <div class="grid-1-2">
-        <div>
-          <div class="card" style="margin-bottom:14px;">
-            <div class="card-title">Protocol Details</div>
-            <div class="form-group">
-              <label class="form-label">Protocol Name</label>
-              <input type="text" class="form-input" id="pb-name" placeholder="e.g. Summer Lean Bulk 2026">
-            </div>
-            <div class="form-row">
+
+      <!-- Tab bar -->
+      <div style="display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:18px;">
+        <button id="pb-tab-builder" class="pb-tab pb-tab-active" onclick="pbSwitchTab('builder')">Builder</button>
+        <button id="pb-tab-timeline" class="pb-tab" onclick="pbSwitchTab('timeline')">Timeline</button>
+        <button id="pb-tab-log" class="pb-tab" onclick="pbSwitchTab('log')">Log</button>
+      </div>
+
+      <!-- ── BUILDER TAB ── -->
+      <div id="pb-panel-builder">
+        <div class="grid-1-2">
+          <div>
+            <div class="card" style="margin-bottom:14px;">
+              <div class="card-title">Cycle Settings</div>
               <div class="form-group">
-                <label class="form-label">Phase</label>
-                <select class="form-select" id="pb-phase">
-                  <option value="cruise">Cruise / TRT</option>
-                  <option value="bulk">Bulk</option>
-                  <option value="cut">Cut</option>
-                  <option value="rebound">Rebound / PCT</option>
+                <label class="form-label">Protocol Name</label>
+                <input type="text" class="form-input" id="pb-name" placeholder="e.g. Summer Lean Bulk 2026">
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Phase</label>
+                  <select class="form-select" id="pb-phase">
+                    <option value="cruise">Cruise / TRT</option>
+                    <option value="bulk">Bulk</option>
+                    <option value="cut">Cut</option>
+                    <option value="rebound">Rebound / PCT</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Total Weeks</label>
+                  <input type="number" class="form-input" id="pb-cycle-weeks" value="16" min="1" max="52" oninput="pbOnWeeksChange()">
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Start Date <span style="color:var(--text-muted);font-size:11px;">(optional)</span></label>
+                  <input type="date" class="form-input" id="pb-cycle-start-date">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Status</label>
+                  <select class="form-select" id="pb-cycle-status">
+                    <option value="planning">Planning</option>
+                    <option value="active">Active</option>
+                    <option value="completed">Completed</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Experience Level</label>
+                  <select class="form-select" id="pb-exp">
+                    <option value="beginner">Beginner</option>
+                    <option value="intermediate" selected>Intermediate</option>
+                    <option value="advanced">Advanced</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Notes</label>
+                <textarea class="form-input" id="pb-notes" rows="2" placeholder="Goals, context, diet strategy..."></textarea>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-title">Add Compound</div>
+              <div class="form-group">
+                <label class="form-label">Compound</label>
+                <select class="form-select" id="pb-add-select" onchange="pbOnCompoundSelect()">
+                  <option value="">Select to add...</option>
+                  <optgroup label="── Testosterone ──">
+                    <option>Testosterone Suspension</option>
+                    <option>Testosterone Propionate</option>
+                    <option>Testosterone Phenylpropionate</option>
+                    <option>Testosterone Enanthate</option>
+                    <option>Testosterone Cypionate</option>
+                    <option>Sustanon (Mixed Esters)</option>
+                    <option>Testosterone Undecanoate</option>
+                  </optgroup>
+                  <optgroup label="── 19-nor ──">
+                    <option>Nandrolone Phenylpropionate (NPP)</option>
+                    <option>Nandrolone Decanoate (Deca)</option>
+                    <option>Trenbolone Acetate</option>
+                    <option>Trenbolone Enanthate</option>
+                    <option>Trenbolone Hexahydrobenzylcarbonate (Parabolan)</option>
+                  </optgroup>
+                  <optgroup label="── Anabolics / Injectables ──">
+                    <option>Boldenone Undecylenate (EQ)</option>
+                    <option>Boldenone Cypionate</option>
+                    <option>DHB (Dihydroboldenone Cypionate)</option>
+                    <option>Masteron Propionate</option>
+                    <option>Masteron Enanthate</option>
+                    <option>Primobolan (Methenolone E)</option>
+                    <option>Stanozolol Depot (Winstrol Inj)</option>
+                  </optgroup>
+                  <optgroup label="── Orals ──">
+                    <option>Methandrostenolone (Dianabol)</option>
+                    <option>Oxandrolone (Anavar)</option>
+                    <option>Stanozolol (Winstrol Oral)</option>
+                    <option>Oxymetholone (Anadrol)</option>
+                    <option>Turinabol</option>
+                    <option>Fluoxymesterone (Halotestin)</option>
+                    <option>Mesterolone (Proviron)</option>
+                    <option>Primobolan Oral (Methenolone Acetate)</option>
+                  </optgroup>
+                  <optgroup label="── AI / SERM ──">
+                    <option>Anastrozole</option>
+                    <option>Exemestane</option>
+                    <option>Letrozole</option>
+                    <option>HCG</option>
+                    <option>Enclomiphene</option>
+                  </optgroup>
+                  <optgroup label="── Peptides / GH ──">
+                    <option>Growth Hormone (rHGH)</option>
+                    <option>BPC-157</option>
+                    <option>TB-500</option>
+                  </optgroup>
+                  <optgroup label="── GLP-1 ──">
+                    <option>Semaglutide</option>
+                    <option>Tirzepatide</option>
+                    <option>Retatrutide</option>
+                  </optgroup>
+                  <optgroup label="── SARMs ──">
+                    <option>Ostarine (MK-2866)</option>
+                    <option>Ligandrol (LGD-4033)</option>
+                    <option>RAD-140 (Testolone)</option>
+                    <option>YK-11</option>
+                    <option>Andarine (S4)</option>
+                    <option>S23</option>
+                  </optgroup>
+                  <optgroup label="── Research / Metabolic ──">
+                    <option>SLU-PP-332</option>
+                  </optgroup>
                 </select>
               </div>
-              <div class="form-group">
-                <label class="form-label">Duration (weeks)</label>
-                <input type="number" class="form-input" id="pb-weeks" value="16" min="1" max="52">
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Unit</label>
+                  <select class="form-select" id="pb-unit">
+                    <option value="mg">mg</option>
+                    <option value="IU">IU</option>
+                    <option value="mcg">mcg</option>
+                    <option value="mL">mL</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Frequency</label>
+                  <select class="form-select" id="pb-freq" onchange="pbOnFreqChange()">
+                    <option value="ED">ED (daily)</option>
+                    <option value="EOD">EOD</option>
+                    <option value="E3D">E3D</option>
+                    <option value="E3.5D" selected>E3.5D</option>
+                    <option value="E4D">E4D</option>
+                    <option value="E5D">E5D</option>
+                    <option value="2x/wk">2x/wk</option>
+                    <option value="3x/wk">3x/wk</option>
+                    <option value="Weekly">Weekly</option>
+                    <option value="Bi-Wkly">Bi-Weekly</option>
+                    <option value="Monthly">Monthly</option>
+                    <option value="PWO">PWO</option>
+                    <option value="custom-days">Specific days…</option>
+                  </select>
+                </div>
               </div>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Experience Level</label>
-              <select class="form-select" id="pb-exp">
-                <option value="beginner">Beginner</option>
-                <option value="intermediate" selected>Intermediate</option>
-                <option value="advanced">Advanced</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Notes</label>
-              <textarea class="form-input" id="pb-notes" rows="2" placeholder="Goals, context, diet strategy..."></textarea>
+              <!-- Weekday picker — hidden unless "Specific days…" chosen -->
+              <div id="pb-day-picker" style="display:none;margin-bottom:10px;">
+                <label class="form-label">Select days</label>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                  <button type="button" class="pb-day-btn" data-day="Mon" onclick="pbToggleDay(this)">Mon</button>
+                  <button type="button" class="pb-day-btn" data-day="Tue" onclick="pbToggleDay(this)">Tue</button>
+                  <button type="button" class="pb-day-btn" data-day="Wed" onclick="pbToggleDay(this)">Wed</button>
+                  <button type="button" class="pb-day-btn" data-day="Thu" onclick="pbToggleDay(this)">Thu</button>
+                  <button type="button" class="pb-day-btn" data-day="Fri" onclick="pbToggleDay(this)">Fri</button>
+                  <button type="button" class="pb-day-btn" data-day="Sat" onclick="pbToggleDay(this)">Sat</button>
+                  <button type="button" class="pb-day-btn" data-day="Sun" onclick="pbToggleDay(this)">Sun</button>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Start Week</label>
+                  <input type="number" class="form-input" id="pb-start-week" value="1" min="1">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">End Week</label>
+                  <input type="number" class="form-input" id="pb-end-week" value="16" min="1">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Dose (per injection)</label>
+                  <input type="number" class="form-input" id="pb-dose" placeholder="200" step="0.1" oninput="pbUpdateDoseHint()">
+                </div>
+              </div>
+              <div id="pb-dose-hint" style="font-size:11px;color:var(--text-muted);margin-bottom:8px;min-height:16px;"></div>
+              <button class="btn-primary" style="width:100%;" onclick="pbAddCompound()">Add to Protocol</button>
             </div>
           </div>
 
-          <div class="card">
-            <div class="card-title">Compounds</div>
-            <div id="pb-compounds-list" style="margin-bottom:10px;"></div>
-            <div class="form-group">
-              <label class="form-label">Add Compound</label>
-              <select class="form-select" id="pb-add-select">
-                <option value="">Select to add...</option>
-                <optgroup label="── Testosterone ──">
-                  <option>Testosterone Suspension</option>
-                  <option>Testosterone Propionate</option>
-                  <option>Testosterone Phenylpropionate</option>
-                  <option>Testosterone Enanthate</option>
-                  <option>Testosterone Cypionate</option>
-                  <option>Sustanon (Mixed Esters)</option>
-                  <option>Testosterone Undecanoate</option>
-                </optgroup>
-                <optgroup label="── 19-nor ──">
-                  <option>Nandrolone Phenylpropionate (NPP)</option>
-                  <option>Nandrolone Decanoate (Deca)</option>
-                  <option>Trenbolone Acetate</option>
-                  <option>Trenbolone Enanthate</option>
-                  <option>Trenbolone Hexahydrobenzylcarbonate (Parabolan)</option>
-                </optgroup>
-                <optgroup label="── Anabolics / Injectables ──">
-                  <option>Boldenone Undecylenate (EQ)</option>
-                  <option>Boldenone Cypionate</option>
-                  <option>DHB (Dihydroboldenone Cypionate)</option>
-                  <option>Masteron Propionate</option>
-                  <option>Masteron Enanthate</option>
-                  <option>Primobolan (Methenolone E)</option>
-                  <option>Stanozolol Depot (Winstrol Inj)</option>
-                </optgroup>
-                <optgroup label="── Orals ──">
-                  <option>Methandrostenolone (Dianabol)</option>
-                  <option>Oxandrolone (Anavar)</option>
-                  <option>Stanozolol (Winstrol Oral)</option>
-                  <option>Oxymetholone (Anadrol)</option>
-                  <option>Turinabol</option>
-                  <option>Fluoxymesterone (Halotestin)</option>
-                  <option>Mesterolone (Proviron)</option>
-                  <option>Primobolan Oral (Methenolone Acetate)</option>
-                </optgroup>
-                <optgroup label="── SARMs ──">
-                  <option>Ostarine (MK-2866)</option>
-                  <option>Ligandrol (LGD-4033)</option>
-                  <option>RAD-140 (Testolone)</option>
-                  <option>YK-11</option>
-                  <option>Andarine (S4)</option>
-                  <option>S23</option>
-                  <option>Cardarine (GW-501516)</option>
-                  <option>SR9009 (Stenabolic)</option>
-                </optgroup>
-                <optgroup label="── AI / SERM ──">
-                  <option>Anastrozole</option>
-                  <option>Exemestane</option>
-                  <option>Letrozole</option>
-                  <option>HCG</option>
-                  <option>Enclomiphene</option>
-                </optgroup>
-                <optgroup label="── GH / Peptides ──">
-                  <option>Growth Hormone (rHGH)</option>
-                  <option>MK-677 (Ibutamoren)</option>
-                  <option>Ipamorelin</option>
-                  <option>GHRP-2</option>
-                  <option>GHRP-6</option>
-                  <option>CJC-1295 DAC</option>
-                  <option>CJC-1295 No DAC (Mod GRF 1-29)</option>
-                  <option>Tesamorelin</option>
-                  <option>Sermorelin</option>
-                  <option>BPC-157</option>
-                  <option>TB-500</option>
-                  <option>IGF-1 LR3</option>
-                  <option>IGF-1 DES</option>
-                  <option>PEG-MGF</option>
-                </optgroup>
-                <optgroup label="── GLP-1 / Weight Loss ──">
-                  <option>Semaglutide</option>
-                  <option>Tirzepatide</option>
-                  <option>Retatrutide</option>
-                </optgroup>
-                <optgroup label="── Fat Loss ──">
-                  <option>Clenbuterol</option>
-                  <option>Albuterol (Salbutamol)</option>
-                  <option>Ephedrine</option>
-                  <option>Yohimbine</option>
-                  <option>T3 (Liothyronine)</option>
-                  <option>T4 (Levothyroxine)</option>
-                </optgroup>
-                <optgroup label="── Insulin ──">
-                  <option>Insulin (Humalog / Lispro)</option>
-                  <option>Insulin (Novolog / Aspart)</option>
-                  <option>Insulin (Apidra / Glulisine)</option>
-                  <option>Novolin R / Humulin R</option>
-                  <option>NPH Insulin</option>
-                  <option>Lantus (Glargine)</option>
-                  <option>Levemir (Detemir)</option>
-                  <option>Tresiba (Degludec)</option>
-                  <option>Metformin</option>
-                </optgroup>
-                <optgroup label="── Support: Blood Pressure ──">
-                  <option>Losartan</option>
-                  <option>Telmisartan</option>
-                  <option>Nebivolol</option>
-                </optgroup>
-                <optgroup label="── Support: Cardiovascular ──">
-                  <option>Cialis (Tadalafil)</option>
-                  <option>Viagra (Sildenafil)</option>
-                </optgroup>
-                <optgroup label="── Support: Lipids ──">
-                  <option>Rosuvastatin</option>
-                  <option>Ezetimibe</option>
-                  <option>Bempedoic Acid</option>
-                </optgroup>
-                <optgroup label="── Other ──">
-                  <option>EPO (Erythropoietin)</option>
-                  <option>Meldonium</option>
-                </optgroup>
-                <optgroup label="── Research / Metabolic ──">
-                  <option>SLU-PP-332</option>
-                </optgroup>
-              </select>
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:4px;">
-              <div class="form-group" style="margin:0;">
-                <label class="form-label">Weekly Total</label>
-                <input type="number" class="form-input" id="pb-dose" placeholder="200" oninput="pbUpdateDoseHint()">
-              </div>
-              <div class="form-group" style="margin:0;">
-                <label class="form-label">Unit</label>
-                <select class="form-select" id="pb-unit" onchange="pbUpdateDoseHint()">
-                  <option value="mg">mg</option>
-                  <option value="IU">IU</option>
-                  <option value="mcg">mcg</option>
-                  <option value="mL">mL</option>
-                </select>
-              </div>
-              <div class="form-group" style="margin:0;">
-                <label class="form-label">Frequency</label>
-                <select class="form-select" id="pb-freq" onchange="pbUpdateDoseHint()">
-                  <option value="ED">ED (daily)</option>
-                  <option value="EOD">EOD</option>
-                  <option value="E3D">E3D</option>
-                  <option value="E3.5D" selected>E3.5D</option>
-                  <option value="E4D">E4D</option>
-                  <option value="E5D">E5D</option>
-                  <option value="2x/wk">2x/wk</option>
-                  <option value="3x/wk">3x/wk</option>
-                  <option value="Weekly">Weekly</option>
-                  <option value="Bi-Wkly">Bi-Weekly</option>
-                  <option value="Monthly">Monthly</option>
-                </select>
+          <div>
+            <div class="card" style="margin-bottom:14px;">
+              <div class="card-title">Compounds</div>
+              <div id="pb-compounds-list" style="min-height:60px;">
+                <div style="color:var(--text-muted);font-size:12px;">No compounds added yet.</div>
               </div>
             </div>
-            <div id="pb-dose-hint" style="font-size:11px;color:var(--text-muted);margin-bottom:8px;min-height:16px;">Enter your weekly total — per-injection dose will be calculated.</div>
-            <button class="btn-primary" style="width:100%;" onclick="pbAddCompound()">Add to Protocol</button>
+
+            <div class="card">
+              <div class="card-title">Actions</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button class="btn-primary" onclick="pbSave()">Save Protocol</button>
+                <button class="btn-secondary" onclick="pbSaveAndActivate()" style="color:var(--teal);border-color:var(--teal);">Set Active</button>
+                <button class="btn-secondary" onclick="pbExportJson()">Export JSON</button>
+                <button class="btn-secondary" onclick="pbReset()">Reset</button>
+              </div>
+              <div id="pb-save-status" style="font-size:12px;color:var(--green);margin-top:8px;display:none;"></div>
+            </div>
           </div>
         </div>
+      </div>
 
-        <div>
-          <div class="card" style="margin-bottom:14px;">
-            <div class="card-title">Protocol Gantt Chart</div>
-            <div id="pb-gantt" style="min-height:80px;">
-              <div style="color:var(--text-muted);font-size:12px;">Add compounds to see the chart.</div>
-            </div>
+      <!-- ── TIMELINE TAB ── -->
+      <div id="pb-panel-timeline" style="display:none;">
+        <div class="card">
+          <div class="card-title">Week-by-Week Timeline</div>
+          <div id="pb-timeline-grid" style="overflow-x:auto;">
+            <div style="color:var(--text-muted);font-size:12px;">Build a protocol in the Builder tab to see the timeline.</div>
           </div>
+        </div>
+      </div>
 
-          <div class="card" style="margin-bottom:14px;">
-            <div class="card-title">Weekly Volume</div>
-            <div id="pb-volume-table">
-              <div style="color:var(--text-muted);font-size:12px;">Add compounds to see weekly volume.</div>
-            </div>
+      <!-- ── LOG TAB ── -->
+      <div id="pb-panel-log" style="display:none;">
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <div class="card-title" style="margin:0;">Modification Log</div>
+            <button class="btn-secondary" style="font-size:12px;padding:5px 12px;" onclick="pbAddNote()">+ Add Note</button>
           </div>
+          <div id="pb-log-list">
+            <div style="color:var(--text-muted);font-size:12px;">No modifications recorded yet.</div>
+          </div>
+        </div>
+      </div>
 
-          <div class="card">
-            <div class="card-title">Actions</div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;">
-              <button class="btn-primary" onclick="pbSave()">Save Protocol</button>
-              <button class="btn-secondary" onclick="pbSaveAndActivate()" style="color:var(--teal);border-color:var(--teal);">Set Active</button>
-              <button class="btn-secondary" onclick="pbExportJson()">Export JSON</button>
-              <button class="btn-secondary" onclick="pbReset()">Reset</button>
-            </div>
-            <div id="pb-save-status" style="font-size:12px;color:var(--green);margin-top:8px;display:none;"></div>
+      <!-- ── REMOVE COMPOUND MODAL ── -->
+      <div id="pb-remove-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center;">
+        <div class="card" style="width:360px;max-width:90vw;">
+          <div class="card-title">Remove Compound</div>
+          <p id="pb-remove-modal-title" style="font-size:13px;color:var(--text-secondary);margin-bottom:14px;"></p>
+          <div class="form-group">
+            <label class="form-label">At which week?</label>
+            <input type="number" class="form-input" id="pb-remove-week" min="1" placeholder="e.g. 6">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Reason</label>
+            <textarea class="form-input" id="pb-remove-reason" rows="2" placeholder="e.g. High BP, side effects..."></textarea>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:12px;">
+            <button class="btn-primary" style="background:var(--red);border-color:var(--red);" onclick="pbConfirmRemove()">Remove</button>
+            <button class="btn-secondary" onclick="pbCloseRemoveModal()">Cancel</button>
           </div>
         </div>
       </div>
