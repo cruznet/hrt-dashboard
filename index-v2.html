@@ -3872,7 +3872,7 @@ function printProtocol(index) {
 
   const compoundRows = (p.compounds || []).map(c => {
     const freqLabel = Array.isArray(c.freq) ? c.freq.join(', ') : (c.freq || '');
-    const phases = (c.phases || []).map(ph => `Wk${ph.startWeek}–${ph.endWeek}: ${ph.dose}${c.unit}`).join(' · ');
+    const phases = (c.phases || []).map(ph => `Wk${escHtml(String(ph.startWeek))}–${escHtml(String(ph.endWeek))}: ${escHtml(String(ph.dose))}${escHtml(c.unit)}`).join(' · ');
     return `<tr><td>${escHtml(c.name)}</td><td>${escHtml(c.cat || '')}</td><td>${escHtml(freqLabel)}</td><td>${phases || '—'}</td></tr>`;
   }).join('') || '<tr><td colspan="4" style="color:#888;font-style:italic;">No compounds</td></tr>';
 
@@ -3903,7 +3903,7 @@ function printProtocol(index) {
     planning:  { bg: '#eff6ff', fg: '#1e40af' }
   };
   const sc = statusColors[p.status] || statusColors.planning;
-  const dateRange = p.startDate ? `Start: ${p.startDate}` : 'No start date set';
+  const dateRange = p.startDate ? `Start: ${escHtml(String(p.startDate))}` : 'No start date set';
   const generatedDate = new Date().toLocaleDateString();
 
   const html = `<!DOCTYPE html>
@@ -3925,7 +3925,7 @@ function printProtocol(index) {
 </head>
 <body>
   <h1>${escHtml(p.name)} <span style="display:inline-block;padding:2px 10px;border-radius:4px;font-size:12px;font-weight:600;background:${sc.bg};color:${sc.fg};">${statusLabel}</span></h1>
-  <div class="meta">${totalWeeks} weeks · ${dateRange} · Generated ${generatedDate}</div>
+  <div class="meta">${escHtml(String(totalWeeks))} weeks · ${dateRange} · Generated ${generatedDate}</div>
 
   <h2>Compounds &amp; Phases</h2>
   <table>
