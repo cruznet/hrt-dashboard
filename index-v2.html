@@ -3027,13 +3027,18 @@ function renderCycleProgress(rawProtocol) {
   const cycleCard = document.getElementById('cycle-active-compounds');
   if (protocol.status !== 'active' || !protocol.startDate) {
     if (cycleCard) cycleCard.innerHTML = '';
+    if (label) { label.textContent = '—'; }
+    if (pct) { pct.textContent = '—'; }
+    if (bar) { bar.style.width = '0%'; }
+    if (ssBar) { ssBar.style.width = '0%'; }
+    if (ssLbl) { ssLbl.textContent = '—'; }
     return;
   }
 
   const totalWeeks   = protocol.cycleLengthWeeks || parseInt(protocol.weeks) || 0;
   const startDate    = protocol.startDate || protocol.saved_at;
   const currentWeek  = Math.min(pbCurrentCycleWeek(startDate), totalWeeks || 9999);
-  const progressPct  = totalWeeks > 0 ? Math.min(100, Math.round(((currentWeek - 1) / totalWeeks) * 100)) : 0;
+  const progressPct  = totalWeeks > 0 ? Math.min(100, Math.round((currentWeek / totalWeeks) * 100)) : 0;
 
   label.textContent = totalWeeks > 0 ? `Week ${currentWeek} of ${totalWeeks}` : `Week ${currentWeek}`;
   pct.textContent   = totalWeeks > 0 ? `${progressPct}%` : '—';
@@ -3520,9 +3525,10 @@ function pbOnCompoundSelect() {
 function pbOnWeeksChange() {
   const weeks = parseInt(document.getElementById('pb-cycle-weeks').value) || 16;
   const old   = pbState.cycleLengthWeeks;
-  pbState.cycleLengthWeeks = weeks;
+  // Don't set pbState.cycleLengthWeeks yet — wait for confirm
   if (weeks > old && pbState.compounds.length) {
     const extend = confirm(`Extend all currently running compounds from week ${old} to week ${weeks}?`);
+    pbState.cycleLengthWeeks = weeks; // set after confirm (user clicked OK or Cancel)
     if (extend) {
       pbState.compounds.forEach(c => {
         const last = c.phases[c.phases.length - 1];
@@ -3531,7 +3537,10 @@ function pbOnWeeksChange() {
       pbState.modificationLog.push({ week: pbCurrentCycleWeek(pbState.startDate), type: 'cycle_extended', compound: '', note: `Cycle extended ${old}wk → ${weeks}wk`, ts: Date.now() });
     }
   } else if (weeks < old && pbState.compounds.some(c => c.phases.some(ph => ph.endWeek > weeks))) {
+    pbState.cycleLengthWeeks = weeks;
     alert(`⚠ Some compound phases extend past week ${weeks}. Review them in the Builder.`);
+  } else {
+    pbState.cycleLengthWeeks = weeks;
   }
   const endWk = document.getElementById('pb-end-week');
   if (endWk && parseInt(endWk.value) > weeks) endWk.value = weeks;
@@ -3666,6 +3675,10 @@ const _pbLogIcons = {
   note:            { icon: '✎', color: 'var(--text-muted)' }
 };
 
+function escHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 function renderProtocolLog() {
   const el = document.getElementById('pb-log-list');
   if (!el) return;
@@ -3677,12 +3690,12 @@ function renderProtocolLog() {
   el.innerHTML = log.map(entry => {
     const meta   = _pbLogIcons[entry.type] || { icon: '•', color: 'var(--text-muted)' };
     const date   = entry.ts ? new Date(entry.ts).toLocaleDateString() : '';
-    const label  = entry.compound ? `<strong style="color:var(--text-primary);">${entry.compound}</strong>` : '';
-    const noteEl = entry.note ? `<span style="color:var(--text-secondary);"> — ${entry.note}</span>` : '';
+    const label  = entry.compound ? `<strong style="color:var(--text-primary);">${escHtml(entry.compound)}</strong>` : '';
+    const noteEl = entry.note ? `<span style="color:var(--text-secondary);"> — ${escHtml(entry.note)}</span>` : '';
     return `<div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border);">
       <span style="font-size:14px;color:${meta.color};min-width:18px;text-align:center;">${meta.icon}</span>
       <div style="flex:1;font-size:12px;">
-        <span style="color:var(--text-muted);">Wk ${entry.week || '?'}</span>
+        <span style="color:var(--text-muted);">Wk ${escHtml(String(entry.week || '?'))}</span>
         <span style="color:var(--text-muted);margin:0 6px;">·</span>
         ${label}${noteEl}
       </div>
@@ -4146,6 +4159,10 @@ function normalizeCompound(c) {
       unit = parts[0];
       freq = parts.slice(1).join(' ');
     }
+  }
+  // Phased compound: dose lives in phases[0], not top-level
+  if (dose === undefined && Array.isArray(c.phases) && c.phases.length > 0) {
+    dose = c.phases[0].dose;
   }
   return { name, dose, unit: unit || '', freq: freq || '', weeks };
 }
