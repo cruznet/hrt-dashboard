@@ -1206,6 +1206,34 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
     <section class="page" id="page-protocols">
       <div class="section-heading">My Protocols</div>
       <div id="protocols-list"></div>
+
+      <!-- Close-out modal: shown when switching away from an active protocol -->
+      <div id="pb-close-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center;">
+        <div class="card" style="width:380px;max-width:90vw;">
+          <div class="card-title">Before switching — how did this protocol end?</div>
+          <p id="pb-close-modal-name" style="font-size:13px;color:var(--text-secondary);margin-bottom:14px;"></p>
+          <div class="form-group" style="margin-bottom:14px;">
+            <label class="form-label">How did it end?</label>
+            <div style="display:flex;gap:8px;">
+              <button id="pb-close-btn-completed" class="btn-primary" style="flex:1;" onclick="pbSetCloseStatus('completed')">Completed</button>
+              <button id="pb-close-btn-abandoned" class="btn-secondary" style="flex:1;" onclick="pbSetCloseStatus('abandoned')">Abandoned</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Week ended (optional)</label>
+            <input type="number" class="form-input" id="pb-close-week" min="1" placeholder="e.g. 12">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Reason / notes (optional)</label>
+            <textarea class="form-input" id="pb-close-note" rows="2" placeholder="e.g. Coach adjustment, side effects..."></textarea>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:12px;">
+            <button class="btn-primary" onclick="pbConfirmSwitch()">Confirm &amp; Switch</button>
+            <button class="btn-secondary" onclick="pbSkipSwitch()">Skip — just switch</button>
+            <button class="btn-secondary" onclick="pbCancelSwitch()">Cancel</button>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- ── PROTOCOL BUILDER PAGE ── -->
@@ -3441,6 +3469,8 @@ let pbState = {
   notes: '', compounds: [], modificationLog: []
 };
 let _pbRemoveTargetIndex = -1;
+let _pbPendingSwitch = null;   // { newIndex } while close-out modal is open
+let _pbCloseStatus = 'completed'; // 'completed' | 'abandoned'
 const PB_COLORS = ['var(--primary-bright)','var(--teal)','var(--purple)','var(--green)','var(--amber)','var(--red)'];
 
 function pbFreqToInjectionsPerWeek(freq) {
@@ -3605,6 +3635,22 @@ function pbOpenRemoveModal(ci) {
 function pbCloseRemoveModal() {
   document.getElementById('pb-remove-modal').style.display = 'none';
   _pbRemoveTargetIndex = -1;
+}
+
+function pbSetCloseStatus(val) {
+  _pbCloseStatus = val;
+  const btnC = document.getElementById('pb-close-btn-completed');
+  const btnA = document.getElementById('pb-close-btn-abandoned');
+  if (!btnC || !btnA) return;
+  btnC.className = val === 'completed' ? 'btn-primary' : 'btn-secondary';
+  btnA.className = val === 'abandoned' ? 'btn-primary' : 'btn-secondary';
+  btnC.style.flex = '1';
+  btnA.style.flex = '1';
+}
+
+function pbCancelSwitch() {
+  _pbPendingSwitch = null;
+  document.getElementById('pb-close-modal').style.display = 'none';
 }
 
 function pbConfirmRemove() {
