@@ -3772,13 +3772,19 @@ function renderProtocolsPage() {
       return `<span class="pill pill-primary" style="font-size:11px;">${c.name} ${c.dose}${c.unit} ${c.freq}</span>`;
     }).join(' ');
     const savedDate = new Date(p.saved_at).toLocaleDateString();
+    const status = p.status || 'planning';
+    const statusBadgeHtml = isActive
+      ? '<span style="margin-left:8px;font-size:11px;background:rgba(16,185,129,0.12);color:var(--green);border:1px solid rgba(16,185,129,0.3);padding:2px 8px;border-radius:4px;">Active</span>'
+      : status === 'completed'
+        ? '<span style="margin-left:8px;font-size:11px;background:var(--primary-dim);color:var(--primary-bright);border:1px solid var(--primary-border);padding:2px 8px;border-radius:4px;">Completed</span>'
+        : status === 'abandoned'
+          ? '<span style="margin-left:8px;font-size:11px;background:rgba(100,116,139,0.12);color:var(--text-muted);border:1px solid var(--border);padding:2px 8px;border-radius:4px;">Abandoned</span>'
+          : '<span style="margin-left:8px;font-size:11px;background:rgba(99,102,241,0.08);color:var(--text-secondary);border:1px solid var(--border);padding:2px 8px;border-radius:4px;">Planning</span>';
     return `
     <div class="card" style="margin-bottom:12px;border:1px solid ${isActive ? 'var(--primary-border)' : 'var(--border)'}">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;">
         <div>
-          <div style="font-size:15px;font-weight:600;color:var(--text-primary);margin-bottom:4px;">${p.name}
-            ${isActive ? '<span style="margin-left:8px;font-size:11px;background:var(--primary-dim);color:var(--primary-bright);border:1px solid var(--primary-border);padding:2px 8px;border-radius:4px;">Active</span>' : ''}
-          </div>
+          <div style="font-size:15px;font-weight:600;color:var(--text-primary);margin-bottom:4px;">${escHtml(p.name)}${statusBadgeHtml}</div>
           <div style="display:flex;gap:16px;font-size:12px;color:var(--text-label);">
             <span>Phase: <span style="color:${phaseColor};text-transform:capitalize;">${p.phase || '—'}</span></span>
             <span>Duration: <span style="color:var(--text-secondary);">${p.weeks ? p.weeks+' weeks' : '—'}</span></span>
