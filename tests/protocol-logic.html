@@ -137,6 +137,52 @@ assert('Anavar week 8 = null (inactive)', grid.rows[1].cells[7], null);
 assert('Anavar week 9 = 50',             grid.rows[1].cells[8], '50');
 assert('Anavar week 12 = 50',            grid.rows[1].cells[11], '50');
 
+section('cycle_closed log entries');
+
+// Copy in the updated _pbLogIcons and renderProtocolLog support logic for test
+const _pbLogIconsTest = {
+  addition:        { icon: '+', color: 'var(--green)' },
+  removal:         { icon: '×', color: 'var(--red)' },
+  dose_change:     { icon: '↕', color: 'var(--amber)' },
+  cycle_extended:  { icon: '→', color: 'var(--primary-bright)' },
+  cycle_shortened: { icon: '←', color: 'var(--amber)' },
+  cycle_closed:    { icon: '✓', color: 'var(--green)' },
+  note:            { icon: '✎', color: 'var(--text-muted)' }
+};
+
+function getLogMeta(entry) {
+  let meta = _pbLogIconsTest[entry.type] || { icon: '•', color: 'var(--text-muted)' };
+  if (entry.type === 'cycle_closed' && entry.closed_as === 'abandoned') {
+    meta = { icon: '✓', color: 'var(--text-muted)' };
+  }
+  return meta;
+}
+
+function getLogLabel(entry) {
+  if (entry.type === 'cycle_closed') {
+    return entry.closed_as === 'abandoned' ? 'Cycle abandoned' : 'Cycle completed';
+  }
+  return entry.compound || '';
+}
+
+assert('cycle_closed icon is ✓',
+  _pbLogIconsTest['cycle_closed'].icon, '✓');
+
+assert('cycle_closed completed → green color',
+  getLogMeta({ type: 'cycle_closed', closed_as: 'completed' }).color, 'var(--green)');
+
+assert('cycle_closed abandoned → muted color',
+  getLogMeta({ type: 'cycle_closed', closed_as: 'abandoned' }).color, 'var(--text-muted)');
+
+assert('cycle_closed completed label',
+  getLogLabel({ type: 'cycle_closed', closed_as: 'completed' }), 'Cycle completed');
+
+assert('cycle_closed abandoned label',
+  getLogLabel({ type: 'cycle_closed', closed_as: 'abandoned' }), 'Cycle abandoned');
+
+assert('unknown type falls back to bullet icon',
+  (function() { let m = _pbLogIconsTest['unknown_type'] || { icon: '•', color: 'var(--text-muted)' }; return m.icon; })(), '•');
+
 // ── summary ──
 results.innerHTML += `<h2 style="color:${failed ? '#EF4444' : '#10B981'}">${passed} passed, ${failed} failed</h2>`;
 </script>

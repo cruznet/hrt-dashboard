@@ -3672,6 +3672,7 @@ const _pbLogIcons = {
   dose_change:     { icon: '↕', color: 'var(--amber)' },
   cycle_extended:  { icon: '→', color: 'var(--primary-bright)' },
   cycle_shortened: { icon: '←', color: 'var(--amber)' },
+  cycle_closed:    { icon: '✓', color: 'var(--green)' },
   note:            { icon: '✎', color: 'var(--text-muted)' }
 };
 
@@ -3688,14 +3689,24 @@ function renderProtocolLog() {
     return;
   }
   el.innerHTML = log.map(entry => {
-    const meta   = _pbLogIcons[entry.type] || { icon: '•', color: 'var(--text-muted)' };
+    let meta = _pbLogIcons[entry.type] || { icon: '•', color: 'var(--text-muted)' };
+    if (entry.type === 'cycle_closed' && entry.closed_as === 'abandoned') {
+      meta = { icon: '✓', color: 'var(--text-muted)' };
+    }
     const date   = entry.ts ? new Date(entry.ts).toLocaleDateString() : '';
-    const label  = entry.compound ? `<strong style="color:var(--text-primary);">${escHtml(entry.compound)}</strong>` : '';
+    let label;
+    if (entry.type === 'cycle_closed') {
+      const closedLabel = entry.closed_as === 'abandoned' ? 'Cycle abandoned' : 'Cycle completed';
+      label = `<strong style="color:var(--text-primary);">${closedLabel}</strong>`;
+    } else {
+      label = entry.compound ? `<strong style="color:var(--text-primary);">${escHtml(entry.compound)}</strong>` : '';
+    }
     const noteEl = entry.note ? `<span style="color:var(--text-secondary);"> — ${escHtml(entry.note)}</span>` : '';
+    const weekStr = entry.week != null ? `Wk ${escHtml(String(entry.week))}` : 'Wk —';
     return `<div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border);">
       <span style="font-size:14px;color:${meta.color};min-width:18px;text-align:center;">${meta.icon}</span>
       <div style="flex:1;font-size:12px;">
-        <span style="color:var(--text-muted);">Wk ${escHtml(String(entry.week || '?'))}</span>
+        <span style="color:var(--text-muted);">${weekStr}</span>
         <span style="color:var(--text-muted);margin:0 6px;">·</span>
         ${label}${noteEl}
       </div>
