@@ -232,6 +232,7 @@ section('Protocol switching — _pbCloseOutOld logic');
   assert('cycle_closed log entry week', updated[0].modificationLog[0].week, 12);
   assert('cycle_closed log entry note', updated[0].modificationLog[0].note, 'Full cycle done');
   assert('hrt_active_protocol cleared after close-out', localStorage.getItem('hrt_active_protocol'), null);
+  assert('hrt_active_protocol_data cleared after close-out', localStorage.getItem('hrt_active_protocol_data'), null);
 
   // Test abandoned / skip path
   localStorage.setItem('hrt_protocols', JSON.stringify([{

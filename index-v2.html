@@ -1229,7 +1229,7 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
           </div>
           <div style="display:flex;gap:8px;margin-top:12px;">
             <button class="btn-primary" onclick="pbConfirmSwitch()">Confirm &amp; Switch</button>
-            <button class="btn-secondary" onclick="pbSkipSwitch()">Skip — just switch</button>
+            <button class="btn-secondary" onclick="pbSkipSwitch()" title="Marks old protocol as Abandoned without capturing details">Skip — mark abandoned</button>
             <button class="btn-secondary" onclick="pbCancelSwitch()">Cancel</button>
           </div>
         </div>
@@ -3856,7 +3856,7 @@ function renderProtocolsPage() {
           <button class="btn-secondary" style="font-size:12px;padding:5px 12px;color:var(--red);border-color:var(--red);" onclick="deleteProtocol(${i})">Delete</button>
         </div>
       </div>
-      ${p.notes ? `<div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;font-style:italic;">${p.notes}</div>` : ''}
+      ${p.notes ? `<div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;font-style:italic;">${escHtml(p.notes)}</div>` : ''}
       <div style="display:flex;flex-wrap:wrap;gap:6px;">${compounds || '<span style="color:var(--text-muted);font-size:12px;">No compounds added</span>'}</div>
     </div>`;
   }).join('');
@@ -3888,8 +3888,8 @@ function printProtocol(index) {
     ? log.map(e => {
         const typeLabel = e.type === 'cycle_closed'
           ? (e.closed_as === 'abandoned' ? 'Abandoned' : 'Completed')
-          : e.type.replace(/_/g, ' ');
-        const week = e.week != null ? `Wk ${e.week}` : '—';
+          : escHtml(e.type.replace(/_/g, ' '));
+        const week = e.week != null ? `Wk ${escHtml(String(e.week))}` : '—';
         const date = e.ts ? new Date(e.ts).toLocaleDateString() : '';
         return `<tr><td>${week}</td><td>${typeLabel}</td><td>${escHtml(e.compound || '')}</td><td>${escHtml(e.note || '')}</td><td>${date}</td></tr>`;
       }).join('')
