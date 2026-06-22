@@ -183,6 +183,80 @@ assert('cycle_closed abandoned label',
 assert('unknown type falls back to bullet icon',
   (function() { let m = _pbLogIconsTest['unknown_type'] || { icon: '•', color: 'var(--text-muted)' }; return m.icon; })(), '•');
 
+section('Protocol switching — _pbCloseOutOld logic');
+
+// Set up localStorage with a fake active protocol
+(function() {
+  function lsGet(key, fallback) {
+    const raw = localStorage.getItem(key);
+    if (raw == null) return fallback;
+    try { return JSON.parse(raw); } catch(e) { return fallback; }
+  }
+
+  const fakeProtocol = {
+    saved_at: 'test-saved-at-001',
+    name: 'Test Cycle',
+    status: 'active',
+    cycleLengthWeeks: 12,
+    startDate: '2026-01-01',
+    compounds: [],
+    modificationLog: []
+  };
+  localStorage.setItem('hrt_protocols', JSON.stringify([fakeProtocol]));
+  localStorage.setItem('hrt_active_protocol', 'test-saved-at-001');
+
+  // Copy _pbCloseOutOld logic inline for testing (since it reads from localStorage)
+  function testCloseOutOld(closedAs, week, note) {
+    const currentSavedAt = localStorage.getItem('hrt_active_protocol');
+    if (!currentSavedAt) return;
+    const allRaw = lsGet('hrt_protocols', []);
+    const idx = allRaw.findIndex(p => p.saved_at === currentSavedAt);
+    if (idx === -1) return;
+    const p = normalizeProtocol(allRaw[idx]);
+    p.status = closedAs;
+    p.modificationLog = p.modificationLog || [];
+    p.modificationLog.push({ type: 'cycle_closed', closed_as: closedAs, week: week || null, note: note || '', ts: Date.now() });
+    allRaw[idx] = p;
+    localStorage.setItem('hrt_protocols', JSON.stringify(allRaw));
+    localStorage.removeItem('hrt_active_protocol');
+    localStorage.removeItem('hrt_active_protocol_data');
+  }
+
+  testCloseOutOld('completed', 12, 'Full cycle done');
+
+  const updated = lsGet('hrt_protocols', []);
+  assert('close-out sets status to completed', updated[0].status, 'completed');
+  assert('close-out pushes cycle_closed log entry', updated[0].modificationLog.length, 1);
+  assert('cycle_closed log entry has correct type', updated[0].modificationLog[0].type, 'cycle_closed');
+  assert('cycle_closed log entry closed_as completed', updated[0].modificationLog[0].closed_as, 'completed');
+  assert('cycle_closed log entry week', updated[0].modificationLog[0].week, 12);
+  assert('cycle_closed log entry note', updated[0].modificationLog[0].note, 'Full cycle done');
+  assert('hrt_active_protocol cleared after close-out', localStorage.getItem('hrt_active_protocol'), null);
+
+  // Test abandoned / skip path
+  localStorage.setItem('hrt_protocols', JSON.stringify([{
+    saved_at: 'test-saved-at-002',
+    name: 'Test Cycle 2',
+    status: 'active',
+    cycleLengthWeeks: 16,
+    startDate: null,
+    compounds: [],
+    modificationLog: []
+  }]));
+  localStorage.setItem('hrt_active_protocol', 'test-saved-at-002');
+
+  testCloseOutOld('abandoned', null, '');
+  const updated2 = lsGet('hrt_protocols', []);
+  assert('skip close-out sets status to abandoned', updated2[0].status, 'abandoned');
+  assert('skip close-out week is null when no startDate', updated2[0].modificationLog[0].week, null);
+  assert('skip close-out note is empty string', updated2[0].modificationLog[0].note, '');
+
+  // Clean up test data
+  localStorage.removeItem('hrt_protocols');
+  localStorage.removeItem('hrt_active_protocol');
+  localStorage.removeItem('hrt_active_protocol_data');
+})();
+
 // ── summary ──
 results.innerHTML += `<h2 style="color:${failed ? '#EF4444' : '#10B981'}">${passed} passed, ${failed} failed</h2>`;
 </script>

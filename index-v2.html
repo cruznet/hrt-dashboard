@@ -3862,13 +3862,31 @@ function renderProtocolsPage() {
 }
 
 function setActiveProtocol(index) {
+  const currentSavedAt = localStorage.getItem('hrt_active_protocol');
+  if (currentSavedAt) {
+    const allSaved = lsGet('hrt_protocols', []).map(normalizeProtocol);
+    const current = allSaved.find(p => p.saved_at === currentSavedAt);
+    if (current && current.status === 'active') {
+      _pbPendingSwitch = { newIndex: index };
+      _pbCloseStatus = 'completed';
+      pbSetCloseStatus('completed');
+      document.getElementById('pb-close-modal-name').textContent = current.name;
+      document.getElementById('pb-close-week').value = current.startDate ? pbCurrentCycleWeek(current.startDate) : '';
+      document.getElementById('pb-close-note').value = '';
+      document.getElementById('pb-close-modal').style.display = 'flex';
+      return;
+    }
+  }
+  _doSwitch(index);
+}
+
+function _doSwitch(newIndex) {
   const saved = lsGet('hrt_protocols', []).map(normalizeProtocol);
-  const p = saved[index];
+  const p = saved[newIndex];
   if (!p) return;
   localStorage.setItem('hrt_active_protocol', p.saved_at);
   localStorage.setItem('hrt_active_protocol_data', JSON.stringify(p));
   renderProtocolsPage();
-  // Update dashboard protocol display if visible
   const pills = (p.compounds || []).map(raw => {
     const c = normalizeCompound(raw);
     return `<span class="pill pill-primary">${c.name} ${c.dose}${c.unit} ${c.freq}</span>`;
@@ -3878,6 +3896,47 @@ function setActiveProtocol(index) {
   renderCycleProgress(p);
   renderUpcoming();
   updateTopbarBadge();
+}
+
+function _pbCloseOutOld(closedAs, week, note) {
+  const currentSavedAt = localStorage.getItem('hrt_active_protocol');
+  if (!currentSavedAt) return;
+  const allRaw = lsGet('hrt_protocols', []);
+  const idx = allRaw.findIndex(p => p.saved_at === currentSavedAt);
+  if (idx === -1) return;
+  const p = normalizeProtocol(allRaw[idx]);
+  p.status = closedAs;
+  p.modificationLog = p.modificationLog || [];
+  p.modificationLog.push({ type: 'cycle_closed', closed_as: closedAs, week: week || null, note: note || '', ts: Date.now() });
+  allRaw[idx] = p;
+  localStorage.setItem('hrt_protocols', JSON.stringify(allRaw));
+  localStorage.removeItem('hrt_active_protocol');
+  localStorage.removeItem('hrt_active_protocol_data');
+}
+
+function pbConfirmSwitch() {
+  if (!_pbPendingSwitch) return;
+  const week = parseInt(document.getElementById('pb-close-week').value) || null;
+  const note = document.getElementById('pb-close-note').value.trim();
+  _pbCloseOutOld(_pbCloseStatus, week, note);
+  const newIndex = _pbPendingSwitch.newIndex;
+  _pbPendingSwitch = null;
+  document.getElementById('pb-close-modal').style.display = 'none';
+  _doSwitch(newIndex);
+}
+
+function pbSkipSwitch() {
+  if (!_pbPendingSwitch) return;
+  const currentSavedAt = localStorage.getItem('hrt_active_protocol');
+  const current = currentSavedAt
+    ? lsGet('hrt_protocols', []).map(normalizeProtocol).find(p => p.saved_at === currentSavedAt)
+    : null;
+  const week = current ? (pbCurrentCycleWeek(current.startDate) || null) : null;
+  _pbCloseOutOld('abandoned', week, '');
+  const newIndex = _pbPendingSwitch.newIndex;
+  _pbPendingSwitch = null;
+  document.getElementById('pb-close-modal').style.display = 'none';
+  _doSwitch(newIndex);
 }
 
 function deleteProtocol(index) {
