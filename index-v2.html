@@ -3975,7 +3975,14 @@ function setActiveProtocol(index) {
 }
 
 function _doSwitch(newIndex) {
-  const saved = lsGet('hrt_protocols', []).map(normalizeProtocol);
+  const allRaw = lsGet('hrt_protocols', []);
+  if (allRaw[newIndex]) {
+    const updated = normalizeProtocol(allRaw[newIndex]);
+    updated.status = 'active';
+    allRaw[newIndex] = updated;
+    localStorage.setItem('hrt_protocols', JSON.stringify(allRaw));
+  }
+  const saved = allRaw.map(normalizeProtocol);
   const p = saved[newIndex];
   if (!p) return;
   localStorage.setItem('hrt_active_protocol', p.saved_at);
