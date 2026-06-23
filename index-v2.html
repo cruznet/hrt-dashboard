@@ -3033,6 +3033,41 @@ function pbCurrentCycleWeek(startDate) {
   return Math.floor(days / 7) + 1;
 }
 
+function isDueToday(freq, startDate) {
+  const todayDay = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date().getDay()];
+  if (Array.isArray(freq)) return freq.includes(todayDay);
+
+  const f = (freq || '').toUpperCase().trim();
+  if (f === 'ED' || f === 'PWO') return true;
+  if (!startDate) return false;
+
+  const start = new Date(startDate);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  start.setHours(0, 0, 0, 0);
+  const daysSinceStart = Math.round((today - start) / 86400000);
+  const startDay = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][start.getDay()];
+
+  if (f === 'EOD')   return daysSinceStart % 2 === 0;
+  if (f === 'E3D')   return daysSinceStart % 3 === 0;
+  if (f === 'E4D')   return daysSinceStart % 4 === 0;
+  if (f === 'E5D')   return daysSinceStart % 5 === 0;
+  if (f === 'E3.5D' || f === '2X/WK') {
+    const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const si = days.indexOf(startDay);
+    return todayDay === startDay || todayDay === days[(si + 3) % 7];
+  }
+  if (f === '3X/WK') {
+    const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const si = days.indexOf(startDay);
+    return todayDay === startDay || todayDay === days[(si + 2) % 7] || todayDay === days[(si + 4) % 7];
+  }
+  if (f === 'WEEKLY')   return todayDay === startDay;
+  if (f === 'BI-WKLY')  return todayDay === startDay && daysSinceStart % 14 === 0;
+  if (f === 'MONTHLY')  return new Date().getDate() === start.getDate();
+  return false;
+}
+
 function renderCycleProgress(rawProtocol) {
   const label = document.getElementById('cycle-label');
   const pct   = document.getElementById('cycle-pct');
