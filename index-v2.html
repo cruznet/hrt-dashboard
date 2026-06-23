@@ -4046,7 +4046,10 @@ function deleteProtocol(index) {
   const active = localStorage.getItem('hrt_active_protocol');
   saved.splice(index, 1);
   localStorage.setItem('hrt_protocols', JSON.stringify(saved));
-  if (active === p?.saved_at) localStorage.removeItem('hrt_active_protocol');
+  if (active === p?.saved_at) {
+    localStorage.removeItem('hrt_active_protocol');
+    localStorage.removeItem('hrt_active_protocol_data');
+  }
   renderProtocolsPage();
 }
 
@@ -4173,6 +4176,15 @@ function pbSaveAndActivate() {
     return;
   }
   const protocol = _pbDoSave();
+  // Force status='active' regardless of what the dropdown had — _pbDoSave() reads
+  // the dropdown which may still say 'planning', which would break the close-out modal.
+  const allRaw = lsGet('hrt_protocols', []);
+  const idx = allRaw.findIndex(p => p.saved_at === protocol.saved_at);
+  if (idx !== -1) {
+    allRaw[idx].status = 'active';
+    localStorage.setItem('hrt_protocols', JSON.stringify(allRaw));
+  }
+  protocol.status = 'active';
   localStorage.setItem('hrt_active_protocol', protocol.saved_at);
   localStorage.setItem('hrt_active_protocol_data', JSON.stringify(protocol));
   renderCycleProgress(protocol);
