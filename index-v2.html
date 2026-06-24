@@ -3172,9 +3172,8 @@ function renderCycleProgress(rawProtocol) {
   if (ssBar) ssBar.style.width  = `${ssPct}%`;
   if (ssLbl) ssLbl.textContent  = `${ssPct}% steady state`;
 
-  // Active compounds this week + "due today"
+  // Active compounds this week + timing
   if (!protocol.compounds.length) return;
-  const todayDay = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date().getDay()];
   const { rows } = buildWeekGrid(protocol.compounds, totalWeeks || currentWeek);
   const activeThisWeek = rows.filter(r => r.cells[currentWeek - 1] !== null);
 
@@ -3183,30 +3182,54 @@ function renderCycleProgress(rawProtocol) {
   const activeHtml = activeThisWeek.map(r => {
     const dose      = r.cells[currentWeek - 1];
     const freqLabel = Array.isArray(r.freq) ? r.freq.join(', ') : r.freq;
-    const dueToday  = Array.isArray(r.freq) && r.freq.includes(todayDay);
+    const dueToday  = isDueToday(r.freq, protocol.startDate);
+    const daysUntil = daysUntilNextDose(r.freq, protocol.startDate);
+    const f         = Array.isArray(r.freq) ? '' : (r.freq || '').toUpperCase().trim();
+    const isEveryDay = f === 'ED' || f === 'PWO';
     const escapedName = String(r.name).replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    return `<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;">
-      <span style="color:var(--text-secondary);">${escapedName}${dueToday ? ' <span style="font-size:10px;color:var(--green);">● today</span>' : ''}</span>
-      <span style="font-family:var(--font-data);color:var(--primary-bright);">${dose}${r.unit}</span>
-      <span style="color:var(--text-muted);">${freqLabel}</span>
+    let timingLine = '';
+    if (isEveryDay) {
+      timingLine = `<div style="font-size:11px;color:var(--text-muted);">Every day</div>`;
+    } else if (dueToday) {
+      timingLine = `<div style="font-size:11px;color:var(--green);">Due today</div>`;
+    } else if (daysUntil === 1) {
+      timingLine = `<div style="font-size:11px;color:var(--text-muted);">Next dose tomorrow</div>`;
+    } else if (daysUntil !== null) {
+      timingLine = `<div style="font-size:11px;color:var(--text-muted);">Next dose in ${daysUntil} days</div>`;
+    }
+    return `<div style="margin-bottom:4px;">
+      <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;">
+        <span style="color:var(--text-secondary);">${escapedName}</span>
+        <span style="font-family:var(--font-data);color:var(--primary-bright);">${dose}${r.unit}</span>
+        <span style="color:var(--text-muted);">${freqLabel}</span>
+      </div>
+      ${timingLine}
     </div>`;
   }).join('');
 
-  // Upcoming changes (next 2 weeks)
+  // Upcoming changes (next 4 weeks)
   const upcoming = [];
   protocol.compounds.forEach(c => {
     c.phases.forEach((ph, pi) => {
       const nextPh = c.phases[pi + 1];
-      if (nextPh && nextPh.startWeek > currentWeek && nextPh.startWeek <= currentWeek + 2) {
+      if (nextPh && nextPh.startWeek > currentWeek && nextPh.startWeek <= currentWeek + 4) {
         const diff = nextPh.startWeek - currentWeek;
         upcoming.push(`${c.name} → ${nextPh.dose}${c.unit} — Wk ${nextPh.startWeek} (${diff} wk${diff > 1 ? 's' : ''})`);
       }
-      if (ph.startWeek > currentWeek && ph.startWeek <= currentWeek + 2 && pi === 0) {
+      if (ph.startWeek > currentWeek && ph.startWeek <= currentWeek + 4 && pi === 0) {
         const diff = ph.startWeek - currentWeek;
         upcoming.push(`${c.name} starts ${ph.dose}${c.unit} — Wk ${ph.startWeek} (${diff} wk${diff > 1 ? 's' : ''})`);
       }
     });
   });
+
+  // Cycle-end banner (last 3 weeks)
+  const weeksLeft = totalWeeks - currentWeek;
+  const cycleEndBanner = (totalWeeks > 0 && weeksLeft >= 0 && weeksLeft <= 3)
+    ? `<div style="margin:8px 0;padding:6px 10px;background:rgba(251,191,36,0.1);border-radius:6px;font-size:11px;color:var(--amber);">
+        Cycle ends ${weeksLeft === 0 ? 'this week' : 'in ' + weeksLeft + ' week' + (weeksLeft > 1 ? 's' : '')} — consider planning your next protocol
+      </div>`
+    : '';
 
   const upcomingHtml = upcoming.length
     ? `<div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border);">
@@ -3218,6 +3241,7 @@ function renderCycleProgress(rawProtocol) {
   cycleCard.innerHTML = `
     <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;">Active this week</div>
     ${activeHtml}
+    ${cycleEndBanner}
     ${upcomingHtml}
   `;
 }
