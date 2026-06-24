@@ -322,6 +322,57 @@ section('isDueToday');
   assert('unknown freq → false',                         isDueToday('BIMONTHLY', todayStr), false);
 })();
 
+// ── daysUntilNextDose ──
+function daysUntilNextDose(freq, startDate) {
+  const f = Array.isArray(freq) ? '' : (freq || '').toUpperCase().trim();
+  if (f === 'ED' || f === 'PWO') return null;
+  for (let d = 0; d <= 6; d++) {
+    const candidate = new Date();
+    candidate.setHours(0, 0, 0, 0);
+    candidate.setDate(candidate.getDate() + d);
+    const cDay = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][candidate.getDay()];
+    if (Array.isArray(freq)) { if (freq.includes(cDay)) return d; continue; }
+    if (!startDate) continue;
+    const start = new Date(startDate);
+    start.setHours(0, 0, 0, 0);
+    const daysSince = Math.round((candidate - start) / 86400000);
+    const startDay  = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][start.getDay()];
+    if (f === 'EOD'  && daysSince % 2 === 0) return d;
+    if (f === 'E3D'  && daysSince % 3 === 0) return d;
+    if (f === 'E4D'  && daysSince % 4 === 0) return d;
+    if (f === 'E5D'  && daysSince % 5 === 0) return d;
+    if (f === 'E3.5D' || f === '2X/WK') {
+      const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+      const si = days.indexOf(startDay);
+      if (cDay === startDay || cDay === days[(si + 3) % 7]) return d; continue;
+    }
+    if (f === '3X/WK') {
+      const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+      const si = days.indexOf(startDay);
+      if (cDay === startDay || cDay === days[(si+2)%7] || cDay === days[(si+4)%7]) return d; continue;
+    }
+    if (f === 'WEEKLY'  && cDay === startDay) return d;
+    if (f === 'BI-WKLY' && cDay === startDay && daysSince % 14 === 0) return d;
+    if (f === 'MONTHLY' && candidate.getDate() === start.getDate()) return d;
+  }
+  return null;
+}
+
+section('daysUntilNextDose');
+(function() {
+  const todayStr     = new Date().toISOString().split('T')[0];
+  const yesterdayStr = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+  const todayDay     = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date().getDay()];
+
+  assert('ED → null (every day, no countdown)',          daysUntilNextDose('ED', todayStr), null);
+  assert('PWO → null',                                   daysUntilNextDose('PWO', todayStr), null);
+  assert('EOD startDate=today → 0 (due today)',          daysUntilNextDose('EOD', todayStr), 0);
+  assert('EOD startDate=yesterday → 1 (due tomorrow)',   daysUntilNextDose('EOD', yesterdayStr), 1);
+  assert('Weekly startDate=today (same weekday) → 0',   daysUntilNextDose('Weekly', todayStr), 0);
+  assert('array [todayDay] → 0',                        daysUntilNextDose([todayDay], todayStr), 0);
+  assert('named freq no startDate → null',              daysUntilNextDose('EOD', ''), null);
+})();
+
 // ── summary ──
 results.innerHTML += `<h2 style="color:${failed ? '#EF4444' : '#10B981'}">${passed} passed, ${failed} failed</h2>`;
 </script>
