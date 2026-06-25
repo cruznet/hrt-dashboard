@@ -1709,7 +1709,7 @@ function renderVitalsToCards() {
   const logs = lsGet('hrt_vitals_log', []);
   // logs are sorted newest-first
   if (!logs.length) {
-    ['m-weight','m-bp','m-glucose'].forEach(id =>
+    ['m-weight','m-bp','m-glucose','m-mood'].forEach(id =>
       updateMetricCard(id, '—', 'No data', 'badge-muted'));
     return;
   }
@@ -1748,23 +1748,14 @@ function renderVitalsToCards() {
     }
   }
 
-  // ── Mood & Energy sparklines (last 7 entries with values) ──
-  const moodLogs   = logs.filter(l => l.mood   && parseInt(l.mood)   > 0).slice(0, 7).reverse();
-  const energyLogs = logs.filter(l => l.energy && parseInt(l.energy) > 0).slice(0, 7).reverse();
-  const hasMoodEnergy = moodLogs.length > 0 || energyLogs.length > 0;
-
-  if (hasMoodEnergy) {
-    document.getElementById('mood-energy-row').style.display = 'block';
-    renderSparkline('mood-sparkline',   moodLogs.map(l => parseInt(l.mood)),   10, 'var(--purple)');
-    renderSparkline('energy-sparkline', energyLogs.map(l => parseInt(l.energy)), 10, 'var(--amber)');
-  }
-
-  // ── Log streak ──
-  const streak = calcLogStreak(logs);
-  const streakEl = document.getElementById('log-streak-display');
-  if (streakEl) {
-    streakEl.textContent = streak;
-    if (hasMoodEnergy || streak > 0) document.getElementById('mood-energy-row').style.display = 'block';
+  // ── Mood ──
+  const moodLogs = logs.filter(l => l.mood && parseInt(l.mood) > 0);
+  if (moodLogs.length) {
+    const latestMood = parseInt(moodLogs[0].mood);
+    const prevMood   = moodLogs.length > 1 ? parseInt(moodLogs[1].mood) : null;
+    const moodBadge  = latestMood >= 8 ? ['Good','badge-green'] : latestMood >= 5 ? ['Fair','badge-amber'] : ['Low','badge-red'];
+    updateMetricCard('m-mood', `${latestMood}/10`, moodBadge[0], moodBadge[1]);
+    if (prevMood !== null) setDelta('m-mood-delta', latestMood, prevMood, '/10', false);
   }
 
   // ── Weight chart from local data ──

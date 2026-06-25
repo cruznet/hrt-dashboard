@@ -425,5 +425,42 @@ section('buildWeekStrip');
 // ── summary ──
 results.innerHTML += `<h2 style="color:${failed ? '#EF4444' : '#10B981'}">${passed} passed, ${failed} failed</h2>`;
 </script>
+<script>
+// ── Mood extraction logic ──
+function extractLatestMood(logs) {
+  const moodLogs = logs.filter(l => l.mood && parseInt(l.mood) > 0);
+  if (!moodLogs.length) return null;
+  return parseInt(moodLogs[0].mood);
+}
+
+section('Mood extraction');
+(function() {
+  assert('empty logs → null',
+    extractLatestMood([]), null);
+  assert('single entry with mood returns its value',
+    extractLatestMood([{ mood: '7' }]), 7);
+  assert('picks first (newest) entry when multiple have mood',
+    extractLatestMood([{ mood: '8', date: '2026-06-10' }, { mood: '5', date: '2026-06-09' }]), 8);
+  assert('skips entries without mood field',
+    extractLatestMood([{ weight: '150' }, { mood: '6' }]), 6);
+  assert('ignores mood: "0" (zero is falsy after parseInt check)',
+    extractLatestMood([{ mood: '0' }, { mood: '9' }]), 9);
+  assert('badge is "Good" for mood >= 8',
+    (function() {
+      const v = extractLatestMood([{ mood: '8' }]);
+      return v >= 8 ? 'Good' : v >= 5 ? 'Fair' : 'Low';
+    })(), 'Good');
+  assert('badge is "Fair" for mood = 6',
+    (function() {
+      const v = extractLatestMood([{ mood: '6' }]);
+      return v >= 8 ? 'Good' : v >= 5 ? 'Fair' : 'Low';
+    })(), 'Fair');
+  assert('badge is "Low" for mood = 3',
+    (function() {
+      const v = extractLatestMood([{ mood: '3' }]);
+      return v >= 8 ? 'Good' : v >= 5 ? 'Fair' : 'Low';
+    })(), 'Low');
+})();
+</script>
 </body>
 </html>
