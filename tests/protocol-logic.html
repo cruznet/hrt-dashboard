@@ -422,10 +422,6 @@ section('buildWeekStrip');
     buildWeekStrip(11, 10).includes('Wk 11'), false);
 })();
 
-// ── summary ──
-results.innerHTML += `<h2 style="color:${failed ? '#EF4444' : '#10B981'}">${passed} passed, ${failed} failed</h2>`;
-</script>
-<script>
 // ── Mood extraction logic ──
 function extractLatestMood(logs) {
   const moodLogs = logs.filter(l => l.mood && parseInt(l.mood) > 0);
@@ -461,6 +457,9 @@ section('Mood extraction');
       return v >= 8 ? 'Good' : v >= 5 ? 'Fair' : 'Low';
     })(), 'Low');
 })();
+
+// ── summary ──
+results.innerHTML += `<h2 style="color:${failed ? '#EF4444' : '#10B981'}">${passed} passed, ${failed} failed</h2>`;
 </script>
 </body>
 </html>
