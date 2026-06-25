@@ -265,7 +265,8 @@ function isDueToday(freq, startDate) {
   const f = (freq || '').toUpperCase().trim();
   if (f === 'ED' || f === 'PWO') return true;
   if (!startDate) return false;
-  const start = new Date(startDate);
+  const [sy, sm, sd] = startDate.split('-').map(Number);
+  const start = new Date(sy, sm - 1, sd);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   start.setHours(0, 0, 0, 0);
@@ -320,6 +321,10 @@ section('isDueToday');
   assert('array excludes todayDay → false',              isDueToday([notTodayDay], todayStr), false);
   assert('named freq no startDate → false',              isDueToday('EOD', ''), false);
   assert('unknown freq → false',                         isDueToday('BIMONTHLY', todayStr), false);
+  // Timezone regression: 2026-06-22 is a known Monday — local-time parsing must yield Mon
+  const isMonday = new Date().getDay() === 1;
+  assert('Weekly 2026-06-22 (known Monday) returns true iff today is Monday [timezone regression]',
+    isDueToday('Weekly', '2026-06-22'), isMonday);
 })();
 
 // ── daysUntilNextDose ──
@@ -333,7 +338,8 @@ function daysUntilNextDose(freq, startDate) {
     const cDay = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][candidate.getDay()];
     if (Array.isArray(freq)) { if (freq.includes(cDay)) return d; continue; }
     if (!startDate) continue;
-    const start = new Date(startDate);
+    const [sy, sm, sd] = startDate.split('-').map(Number);
+    const start = new Date(sy, sm - 1, sd);
     start.setHours(0, 0, 0, 0);
     const daysSince = Math.round((candidate - start) / 86400000);
     const startDay  = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][start.getDay()];
@@ -371,6 +377,11 @@ section('daysUntilNextDose');
   assert('Weekly startDate=today (same weekday) → 0',   daysUntilNextDose('Weekly', todayStr), 0);
   assert('array [todayDay] → 0',                        daysUntilNextDose([todayDay], todayStr), 0);
   assert('named freq no startDate → null',              daysUntilNextDose('EOD', ''), null);
+  // Timezone regression: 2026-06-22 is a known Monday — local-time parsing must yield Mon
+  const isMonday = new Date().getDay() === 1;
+  const wkResult = daysUntilNextDose('Weekly', '2026-06-22');
+  assert('Weekly 2026-06-22 (known Monday) returns 0 on Mondays, >0 otherwise [timezone regression]',
+    wkResult === 0, isMonday);
 })();
 
 // ── summary ──

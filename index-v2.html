@@ -3041,7 +3041,8 @@ function isDueToday(freq, startDate) {
   if (f === 'ED' || f === 'PWO') return true;
   if (!startDate) return false;
 
-  const start = new Date(startDate);
+  const [sy, sm, sd] = startDate.split('-').map(Number);
+  const start = new Date(sy, sm - 1, sd);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   start.setHours(0, 0, 0, 0);
@@ -3084,7 +3085,8 @@ function daysUntilNextDose(freq, startDate) {
     }
 
     if (!startDate) continue;
-    const start = new Date(startDate);
+    const [sy, sm, sd] = startDate.split('-').map(Number);
+    const start = new Date(sy, sm - 1, sd);
     start.setHours(0, 0, 0, 0);
     const daysSince = Math.round((candidate - start) / 86400000);
     const startDay  = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][start.getDay()];
@@ -3214,11 +3216,11 @@ function renderCycleProgress(rawProtocol) {
       const nextPh = c.phases[pi + 1];
       if (nextPh && nextPh.startWeek > currentWeek && nextPh.startWeek <= currentWeek + 4) {
         const diff = nextPh.startWeek - currentWeek;
-        upcoming.push(`${c.name} → ${nextPh.dose}${c.unit} — Wk ${nextPh.startWeek} (${diff} wk${diff > 1 ? 's' : ''})`);
+        upcoming.push(`${escHtml(c.name)} → ${escHtml(String(nextPh.dose))}${escHtml(c.unit)} — Wk ${nextPh.startWeek} (${diff} wk${diff > 1 ? 's' : ''})`);
       }
       if (ph.startWeek > currentWeek && ph.startWeek <= currentWeek + 4 && pi === 0) {
         const diff = ph.startWeek - currentWeek;
-        upcoming.push(`${c.name} starts ${ph.dose}${c.unit} — Wk ${ph.startWeek} (${diff} wk${diff > 1 ? 's' : ''})`);
+        upcoming.push(`${escHtml(c.name)} starts ${escHtml(String(ph.dose))}${escHtml(c.unit)} — Wk ${ph.startWeek} (${diff} wk${diff > 1 ? 's' : ''})`);
       }
     });
   });
@@ -3800,11 +3802,11 @@ function renderProtocolTimeline() {
     const freqLabel = Array.isArray(r.freq) ? r.freq.join(',') : r.freq;
     const cells = r.cells.map(v =>
       v !== null
-        ? `<td style="${activeStyle}">${v}${r.unit}</td>`
+        ? `<td style="${activeStyle}">${escHtml(String(v))}${escHtml(r.unit)}</td>`
         : `<td style="${emptyStyle}">—</td>`
     ).join('');
     return `<tr>
-      <td style="${nameStyle}">${r.name}<br><span style="font-size:10px;color:var(--text-muted);">${freqLabel}</span></td>
+      <td style="${nameStyle}">${escHtml(r.name)}<br><span style="font-size:10px;color:var(--text-muted);">${escHtml(freqLabel)}</span></td>
       ${cells}
     </tr>`;
   }).join('');
@@ -3929,7 +3931,7 @@ function renderProtocolsPage() {
     const phaseColor = p.phase === 'blast' ? 'var(--red)' : p.phase === 'cruise' ? 'var(--primary-bright)' : p.phase === 'trt' ? 'var(--green)' : 'var(--text-label)';
     const compounds = (p.compounds || []).map(raw => {
       const c = normalizeCompound(raw);
-      return `<span class="pill pill-primary" style="font-size:11px;">${c.name} ${c.dose}${c.unit} ${c.freq}</span>`;
+      return `<span class="pill pill-primary" style="font-size:11px;">${escHtml(c.name)} ${escHtml(String(c.dose))}${escHtml(c.unit)} ${escHtml(String(c.freq))}</span>`;
     }).join(' ');
     const savedDate = new Date(p.saved_at).toLocaleDateString();
     const status = p.status || 'planning';
@@ -4093,7 +4095,7 @@ function _doSwitch(newIndex) {
   renderProtocolsPage();
   const pills = (p.compounds || []).map(raw => {
     const c = normalizeCompound(raw);
-    return `<span class="pill pill-primary">${c.name} ${c.dose}${c.unit} ${c.freq}</span>`;
+    return `<span class="pill pill-primary">${escHtml(c.name)} ${escHtml(String(c.dose))}${escHtml(c.unit)} ${escHtml(String(c.freq))}</span>`;
   }).join(' ');
   const pd = document.getElementById('protocol-display');
   if (pd) pd.innerHTML = `<div style="margin-bottom:8px;">${pills}</div>`;
