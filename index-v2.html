@@ -2065,7 +2065,7 @@ function loadDemoData() {
       p = JSON.parse(activeData);
       const pills = (p.compounds || []).map(raw => {
         const c = normalizeCompound(raw);
-        return `<span class="pill pill-primary">${c.name} ${c.dose}${c.unit} ${c.freq}</span>`;
+        return `<span class="pill pill-primary">${escHtml(String(c.name))} ${escHtml(String(c.dose))}${escHtml(String(c.unit))} ${escHtml(String(c.freq))}</span>`;
       }).join(' ');
       if (pd && pills) pd.innerHTML = `<div style="margin-bottom:8px;">${pills}</div>`;
     } catch(e) { console.error('[loadDemoData] protocol pills render failed:', e); }
@@ -3017,7 +3017,7 @@ function nav(page) {
         const p = JSON.parse(activeData);
         const pills = (p.compounds || []).map(raw => {
           const c = normalizeCompound(raw);
-          return `<span class="pill pill-primary">${c.name} ${c.dose}${c.unit} ${c.freq}</span>`;
+          return `<span class="pill pill-primary">${escHtml(String(c.name))} ${escHtml(String(c.dose))}${escHtml(String(c.unit))} ${escHtml(String(c.freq))}</span>`;
         }).join(' ');
         const pd = document.getElementById('protocol-display');
         if (pd && pills) pd.innerHTML = `<div style="margin-bottom:8px;">${pills}</div>`;
