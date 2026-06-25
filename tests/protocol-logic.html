@@ -418,6 +418,8 @@ section('buildWeekStrip');
     buildWeekStrip(1, 0), '<div style="display:flex;gap:3px;align-items:flex-end;padding:2px 0;"></div>');
   assert('contains "Wk 12" label when currentWeek=12',
     buildWeekStrip(12, 12).includes('Wk 12'), true);
+  assert('currentWeek beyond totalWeeks shows no label (caller must clamp)',
+    buildWeekStrip(11, 10).includes('Wk 11'), false);
 })();
 
 // ── summary ──

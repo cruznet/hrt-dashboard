@@ -2070,8 +2070,8 @@ function renderCycleProgress(rawProtocol) {
     if (bar) bar.style.width = '0%';
     if (ssBar) ssBar.style.width = '0%';
     if (ssLbl) ssLbl.textContent = '—';
-    const _ws2 = document.getElementById('cycle-week-strip');
-    if (_ws2) _ws2.style.display = 'none';
+    const weekStripEl = document.getElementById('cycle-week-strip');
+    if (weekStripEl) weekStripEl.style.display = 'none';
     return;
   }
 
@@ -2086,8 +2086,8 @@ function renderCycleProgress(rawProtocol) {
     if (bar) { bar.style.width = '0%'; }
     if (ssBar) { ssBar.style.width = '0%'; }
     if (ssLbl) { ssLbl.textContent = '—'; }
-    const _ws = document.getElementById('cycle-week-strip');
-    if (_ws) _ws.style.display = 'none';
+    const weekStripEl = document.getElementById('cycle-week-strip');
+    if (weekStripEl) weekStripEl.style.display = 'none';
     return;
   }
 
@@ -2102,7 +2102,7 @@ function renderCycleProgress(rawProtocol) {
 
   const weekStripEl = document.getElementById('cycle-week-strip');
   if (weekStripEl) {
-    if (protocol.startDate && totalWeeks > 0) {
+    if (totalWeeks > 0) {
       weekStripEl.innerHTML = buildWeekStrip(currentWeek, totalWeeks);
       weekStripEl.style.display = 'block';
     } else {
