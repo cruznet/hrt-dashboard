@@ -556,32 +556,8 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
     <!-- ── DASHBOARD PAGE ── -->
     <section class="page active" id="page-dashboard">
 
-      <!-- Alerts -->
-      <div class="alert-warn" id="alert-hct" style="display:none;">
-        <i class="ti ti-alert-triangle" style="font-size:15px;"></i>
-        <strong id="alert-hct-text">HCT elevated</strong> — Consider phlebotomy before week 10. Monitor closely.
-      </div>
-
       <!-- Metric cards -->
       <div class="metrics-grid" id="metrics-grid">
-        <div class="metric-card mc-gold">
-          <div class="metric-label">Total Testosterone</div>
-          <div class="metric-value" id="m-total-t">—</div>
-          <div class="metric-unit">ng/dL</div>
-          <span class="metric-badge badge-muted" id="m-total-t-badge">No data</span>
-        </div>
-        <div class="metric-card mc-teal">
-          <div class="metric-label">Estradiol (E2)</div>
-          <div class="metric-value" id="m-e2">—</div>
-          <div class="metric-unit">pg/mL</div>
-          <span class="metric-badge badge-muted" id="m-e2-badge">No data</span>
-        </div>
-        <div class="metric-card mc-green">
-          <div class="metric-label">Hematocrit</div>
-          <div class="metric-value" id="m-hct">—</div>
-          <div class="metric-unit">%</div>
-          <span class="metric-badge badge-muted" id="m-hct-badge">No data</span>
-        </div>
         <div class="metric-card mc-amber">
           <div class="metric-label">Weight</div>
           <div class="metric-value" id="m-weight">—</div>
@@ -1755,16 +1731,10 @@ function renderVitalsToCards() {
   const logs = lsGet('hrt_vitals_log', []);
   // logs are sorted newest-first
   if (!logs.length) {
-    ['m-total-t','m-e2','m-hct','m-weight','m-bp','m-glucose'].forEach(id =>
+    ['m-weight','m-bp','m-glucose'].forEach(id =>
       updateMetricCard(id, '—', 'No data', 'badge-muted'));
     return;
   }
-
-  // Lab-derived cards (T, E2, Hct) stay as-is from Supabase; only reset if truly empty
-  ['m-total-t','m-e2','m-hct'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el && el.textContent === '—') updateMetricCard(id, '—', 'No labs yet', 'badge-muted');
-  });
 
   // ── Weight ──
   const weightLogs = logs.filter(l => l.weight && parseFloat(l.weight) > 0);
