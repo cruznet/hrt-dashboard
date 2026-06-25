@@ -197,9 +197,9 @@ body {
 
 /* ── Metric cards ── */
 .metrics-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 10px; margin-bottom: 16px;
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
 }
 .metric-card {
   background: var(--bg-card);
@@ -209,6 +209,8 @@ body {
   padding: 10px 12px;
   cursor: default;
   transition: background var(--transition);
+  flex: 1;
+  min-width: 0;
 }
 .metric-card:hover { background: var(--bg-card-hover); }
 .metric-label { font-size: 9px; color: var(--text-label); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
@@ -579,10 +581,16 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
           <span class="metric-badge badge-muted" id="m-glucose-badge">No data</span>
           <div class="metric-delta" id="m-glucose-delta"></div>
         </div>
+        <div class="metric-card mc-teal">
+          <div class="metric-label">Mood</div>
+          <div class="metric-value" id="m-mood">—</div>
+          <div class="metric-unit">/10</div>
+          <span class="metric-badge badge-muted" id="m-mood-badge">No data</span>
+          <div class="metric-delta" id="m-mood-delta"></div>
+        </div>
       </div>
 
-      <div class="grid-2-1" style="margin-bottom:14px;">
-        <!-- Active protocol card -->
+      <div style="margin-bottom:14px;">
         <div class="card">
           <div class="card-title">Active Protocol</div>
           <div id="protocol-display">
@@ -597,6 +605,7 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
           <div class="progress-wrap">
             <div class="progress-bar" id="cycle-bar" style="width:0%;background:var(--primary);"></div>
           </div>
+          <div id="cycle-week-strip" style="overflow-x:auto;margin:8px 0;display:none;"></div>
           <div style="margin-top:10px;">
             <div style="font-size:10px;color:var(--text-muted);margin-bottom:3px;">Steady State</div>
             <div class="progress-wrap">
@@ -605,37 +614,6 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
             <div style="font-size:11px;font-family:var(--font-data);color:var(--teal);margin-top:3px;" id="ss-label">—</div>
           </div>
           <div id="cycle-active-compounds" style="margin-top:10px;"></div>
-        </div>
-
-        <!-- Upcoming doses -->
-        <div class="card">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-            <div class="card-title" style="margin:0;">Upcoming</div>
-            <span id="adherence-badge" class="metric-badge badge-muted" style="display:none;"></span>
-          </div>
-          <div id="upcoming-list" style="font-size:12px;color:var(--text-muted);">
-            Log a protocol to see upcoming doses.
-          </div>
-          <hr class="divider">
-          <div class="card-title">Last Entry</div>
-          <div id="last-entry" style="font-size:12px;color:var(--text-muted);">No entries yet.</div>
-          <div id="mood-energy-row" style="display:none;margin-top:10px;">
-            <div style="display:flex;gap:14px;">
-              <div style="flex:1;">
-                <div style="font-size:10px;color:var(--text-muted);margin-bottom:4px;">MOOD (7d)</div>
-                <div id="mood-sparkline" style="display:flex;gap:2px;align-items:flex-end;height:24px;"></div>
-              </div>
-              <div style="flex:1;">
-                <div style="font-size:10px;color:var(--text-muted);margin-bottom:4px;">ENERGY (7d)</div>
-                <div id="energy-sparkline" style="display:flex;gap:2px;align-items:flex-end;height:24px;"></div>
-              </div>
-              <div style="flex:1;">
-                <div style="font-size:10px;color:var(--text-muted);margin-bottom:4px;">LOG STREAK</div>
-                <div id="log-streak-display" style="font-size:18px;font-family:var(--font-data);color:var(--primary-bright);">—</div>
-                <div style="font-size:10px;color:var(--text-muted);">days</div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 
