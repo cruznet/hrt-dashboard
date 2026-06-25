@@ -384,6 +384,42 @@ section('daysUntilNextDose');
     wkResult === 0, isMonday);
 })();
 
+// ── buildWeekStrip ──
+function buildWeekStrip(currentWeek, totalWeeks) {
+  const squares = [];
+  for (let w = 1; w <= totalWeeks; w++) {
+    if (w < currentWeek) {
+      squares.push(`<div style="width:14px;height:14px;border-radius:2px;background:var(--primary);opacity:0.3;flex-shrink:0;" title="Week ${w}"></div>`);
+    } else if (w === currentWeek) {
+      squares.push(
+        `<div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;">` +
+        `<div style="width:14px;height:14px;border-radius:2px;background:var(--primary);" title="Week ${w}"></div>` +
+        `<div style="font-size:8px;color:var(--primary-bright);margin-top:2px;font-family:var(--font-data);white-space:nowrap;">Wk ${w}</div>` +
+        `</div>`
+      );
+    } else {
+      squares.push(`<div style="width:14px;height:14px;border-radius:2px;border:1px solid var(--primary);opacity:0.4;flex-shrink:0;" title="Week ${w}"></div>`);
+    }
+  }
+  return `<div style="display:flex;gap:3px;align-items:flex-end;padding:2px 0;">${squares.join('')}</div>`;
+}
+
+section('buildWeekStrip');
+(function() {
+  assert('returns a non-empty string',
+    typeof buildWeekStrip(3, 10) === 'string' && buildWeekStrip(3, 10).length > 0, true);
+  assert('contains current week label "Wk 3" when currentWeek=3',
+    buildWeekStrip(3, 10).includes('Wk 3'), true);
+  assert('does NOT contain "Wk 2" label when currentWeek=3 (past weeks have no label)',
+    buildWeekStrip(3, 10).includes('Wk 2'), false);
+  assert('week 1 of 1 is just the current week, no past or future',
+    buildWeekStrip(1, 1).includes('Wk 1'), true);
+  assert('totalWeeks=0 returns empty wrapper div',
+    buildWeekStrip(1, 0), '<div style="display:flex;gap:3px;align-items:flex-end;padding:2px 0;"></div>');
+  assert('contains "Wk 12" label when currentWeek=12',
+    buildWeekStrip(12, 12).includes('Wk 12'), true);
+})();
+
 // ── summary ──
 results.innerHTML += `<h2 style="color:${failed ? '#EF4444' : '#10B981'}">${passed} passed, ${failed} failed</h2>`;
 </script>
