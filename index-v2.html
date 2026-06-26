@@ -1876,8 +1876,10 @@ function renderRealCharts() {
 }
 
 function renderLastEntry(entry) {
+  const el = document.getElementById('last-entry');
+  if (!el) return;
   const d = parseLocalDate(entry.date);
-  document.getElementById('last-entry').innerHTML = `<span style="color:var(--text-secondary);">${d.toLocaleDateString()} — Entry logged</span>`;
+  el.innerHTML = `<span style="color:var(--text-secondary);">${d.toLocaleDateString()} — Entry logged</span>`;
 }
 
 function renderLastVitalsEntry() {
