@@ -458,7 +458,6 @@ section('Mood extraction');
     })(), 'Low');
 })();
 
-<script>
 // ── getCycleChartData ──
 function getCycleChartData(logs, fieldKey, protocol) {
   const filtered = logs.filter(l => l[fieldKey] && parseFloat(l[fieldKey]) > 0);
@@ -526,7 +525,6 @@ section('getCycleChartData');
   const onStart = [{ date: '2026-06-01', weight: '198' }];
   assert('cycle: includes entry on startDate', getCycleChartData(onStart, 'weight', proto).entries.length, 1);
 })();
-</script>
 
 // ── summary ──
 results.innerHTML += `<h2 style="color:${failed ? '#EF4444' : '#10B981'}">${passed} passed, ${failed} failed</h2>`;
