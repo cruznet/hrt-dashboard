@@ -1819,6 +1819,31 @@ function renderVitalsToCards() {
       [{ label:'Weight (lbs)', data, borderColor:'#F59E0B', backgroundColor:'rgba(245,158,11,0.08)',
          tension:0.4, fill:true, pointBackgroundColor:'#FCD34D', pointRadius:3 }]);
   }
+
+  renderMoodEnergyCharts();
+}
+
+function renderMoodEnergyCharts() {
+  const logs     = lsGet('hrt_vitals_log', []);
+  const protocol = lsGet('hrt_active_protocol_data', null);
+
+  const { entries: mEntries, labels: mLabels } = getCycleChartData(logs, 'mood', protocol);
+  if (mEntries.length >= 1) {
+    showChart('chart-mood');
+    makeChart('chart-mood', 'line', mLabels,
+      [{ label: 'Mood (1–10)', data: mEntries.map(l => parseInt(l.mood)),
+         borderColor: 'var(--purple)', backgroundColor: 'rgba(168,85,247,0.08)',
+         tension: 0.4, fill: true, pointBackgroundColor: '#C084FC', pointRadius: 3 }]);
+  }
+
+  const { entries: eEntries, labels: eLabels } = getCycleChartData(logs, 'energy', protocol);
+  if (eEntries.length >= 1) {
+    showChart('chart-energy');
+    makeChart('chart-energy', 'line', eLabels,
+      [{ label: 'Energy (1–10)', data: eEntries.map(l => parseInt(l.energy)),
+         borderColor: 'var(--amber)', backgroundColor: 'rgba(245,158,11,0.08)',
+         tension: 0.4, fill: true, pointBackgroundColor: '#FCD34D', pointRadius: 3 }]);
+  }
 }
 
 // Set a delta indicator: positive = up arrow, lowerIsBetter inverts color logic
@@ -1924,6 +1949,8 @@ function renderRealCharts() {
       [{ label:'Weight (lbs)', data:wData, borderColor:'#22D3EE', backgroundColor:'rgba(34,211,238,0.08)', tension:0.4, fill:true, pointBackgroundColor:'#22D3EE', pointRadius:3 }]);
   }
   // else: leave empty state visible
+
+  renderMoodEnergyCharts();
 }
 
 function renderLastEntry(entry) {
