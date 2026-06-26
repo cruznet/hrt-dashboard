@@ -1701,6 +1701,34 @@ function loadDemoData() {
   updateTopbarBadge();
 }
 
+// ── getCycleChartData: extract chart data and labels for mood/energy/weight ──
+function getCycleChartData(logs, fieldKey, protocol) {
+  const filtered = logs.filter(l => l[fieldKey] && parseFloat(l[fieldKey]) > 0);
+  const startDate = protocol && (protocol.startDate || protocol.saved_at);
+  const cycleLengthWeeks = protocol && (protocol.cycleLengthWeeks || parseInt(protocol.weeks) || 0);
+  const usingCycle = !!(startDate && cycleLengthWeeks > 0);
+  let entries = usingCycle
+    ? filtered.filter(l => l.date >= startDate)
+    : filtered.slice(0, 30);
+  entries = [...entries].reverse(); // oldest-first
+  let labels;
+  if (usingCycle) {
+    const [sy, sm, sd] = startDate.split('-').map(Number);
+    const startMs = new Date(sy, sm - 1, sd).getTime();
+    labels = entries.map(l => {
+      const [ly, lm, ld] = l.date.split('-').map(Number);
+      const daysSinceStart = Math.round((new Date(ly, lm - 1, ld).getTime() - startMs) / 86400000);
+      return `Wk ${Math.ceil((daysSinceStart + 1) / 7)}`;
+    });
+  } else {
+    labels = entries.map(l => {
+      const [y, m, d] = l.date.split('-').map(Number);
+      return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    });
+  }
+  return { entries, labels };
+}
+
 // ── Render vitals log → dashboard cards, deltas, sparklines, weight chart ──
 function renderVitalsToCards() {
   const logs = lsGet('hrt_vitals_log', []);
