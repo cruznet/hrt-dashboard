@@ -1732,6 +1732,7 @@ function getCycleChartData(logs, fieldKey, protocol) {
 // ── Render vitals log → dashboard cards, deltas, sparklines, weight chart ──
 function renderVitalsToCards() {
   const logs = lsGet('hrt_vitals_log', []);
+  const protocol = lsGet('hrt_active_protocol_data', null);
   // logs are sorted newest-first
   if (!logs.length) {
     ['m-weight','m-bp','m-glucose','m-mood'].forEach(id =>
@@ -1784,15 +1785,11 @@ function renderVitalsToCards() {
   }
 
   // ── Weight chart from local data ──
-  if (weightLogs.length >= 2) {
-    const chartLogs = weightLogs.slice(0, 30).reverse(); // oldest → newest, max 30
-    const labels = chartLogs.map(l => {
-      const d = new Date(l.date + 'T00:00:00');
-      return d.toLocaleDateString('en-US', { month:'short', day:'numeric' });
-    });
-    const data = chartLogs.map(l => parseFloat(l.weight).toFixed(1));
+  const { entries: wEntries, labels: wLabels } = getCycleChartData(logs, 'weight', protocol);
+  if (wEntries.length >= 2) {
+    const data = wEntries.map(l => parseFloat(l.weight).toFixed(1));
     showChart('chart-weight');
-    makeChart('chart-weight', 'line', labels,
+    makeChart('chart-weight', 'line', wLabels,
       [{ label:'Weight (lbs)', data, borderColor:'#F59E0B', backgroundColor:'rgba(245,158,11,0.08)',
          tension:0.4, fill:true, pointBackgroundColor:'#FCD34D', pointRadius:3 }]);
   }
