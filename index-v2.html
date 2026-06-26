@@ -2309,6 +2309,68 @@ function renderCycleProgress(rawProtocol) {
     ${cycleEndBanner}
     ${upcomingHtml}
   `;
+  renderDoseSchedule();
+}
+
+function currentPhaseDose(phases, startDate) {
+  if (!Array.isArray(phases) || !phases.length) return null;
+  const week = pbCurrentCycleWeek(startDate);
+  const phase = phases.find(ph => week >= ph.startWeek && week <= (ph.endWeek || Infinity));
+  return phase ? phase.dose : phases[phases.length - 1].dose;
+}
+
+function renderDoseSchedule() {
+  const el = document.getElementById('dose-schedule-content');
+  if (!el) return;
+  const protocol = lsGet('hrt_active_protocol_data', null);
+  if (!protocol || !(protocol.compounds || []).length) {
+    el.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:160px;gap:6px;text-align:center;"><i class="ti ti-calendar-off" style="font-size:28px;color:var(--text-muted);opacity:0.4;"></i><div style="color:var(--text-muted);">No active protocol</div><div style="font-size:11px;color:var(--text-muted);opacity:0.7;"><a href="#" onclick="nav('protocols');return false;" style="color:var(--primary-bright);">My Protocols →</a></div></div>`;
+    return;
+  }
+  const startDate  = protocol.startDate || '';
+  const today      = new Date();
+  const DAY_NAMES  = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const MON_NAMES  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const todayLabel = `${DAY_NAMES[today.getDay()]} ${MON_NAMES[today.getMonth()]} ${today.getDate()}`;
+  const trunc      = s => (s && s.length > 22) ? s.slice(0, 21) + '…' : (s || '');
+
+  const compounds = protocol.compounds.map(raw => {
+    const c    = normalizeCompound(raw);
+    const dose = Array.isArray(raw.phases) ? currentPhaseDose(raw.phases, startDate) : c.dose;
+    return { name: c.name, dose, unit: c.unit, freq: c.freq, dueToday: isDueOnDate(c.freq, startDate, today) };
+  });
+
+  // TODAY section
+  let html = `<div style="font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Today · ${escHtml(todayLabel)}</div>`;
+  for (const c of compounds) {
+    const dot      = c.dueToday ? `<span style="color:var(--success);">●</span>` : `<span style="color:var(--text-muted);">○</span>`;
+    const rowStyle = c.dueToday ? '' : 'opacity:0.5;';
+    html += `<div style="display:flex;justify-content:space-between;gap:8px;${rowStyle}">${dot} <span style="flex:1;">${escHtml(trunc(c.name))}</span><span style="color:var(--text-muted);white-space:nowrap;">${escHtml(String(c.dose ?? ''))}${escHtml(c.unit)}</span></div>`;
+  }
+
+  // UPCOMING section
+  const isNonDaily = c => { const f = Array.isArray(c.freq) ? '' : (c.freq || '').toUpperCase().trim(); return f !== 'ED' && f !== 'PWO'; };
+  const nonDaily   = compounds.filter(isNonDaily);
+
+  if (!nonDaily.length) {
+    html += `<div style="color:var(--text-muted);font-size:11px;font-style:italic;margin-top:6px;">All compounds daily</div>`;
+  } else {
+    let upcomingHtml = '';
+    let shown = 0;
+    for (let i = 1; i <= 6 && shown < 5; i++) {
+      const d   = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i);
+      const due = nonDaily.filter(c => isDueOnDate(c.freq, startDate, d));
+      if (!due.length) continue;
+      const label   = `${DAY_NAMES[d.getDay()]} ${d.getDate()}`;
+      const abbrevs = due.map(c => escHtml(_abbrevCompound(c.name))).join(' · ');
+      upcomingHtml += `<div style="color:var(--text-muted);font-size:11px;">${label} · ${abbrevs}</div>`;
+      shown++;
+    }
+    if (upcomingHtml) {
+      html += `<div style="font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.05em;margin-top:10px;margin-bottom:4px;">Upcoming</div>${upcomingHtml}`;
+    }
+  }
+  el.innerHTML = html;
 }
 
 function toggleSidebar() {
