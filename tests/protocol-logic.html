@@ -580,6 +580,8 @@ assert('array freq Tue not due', isDueOnDate(['Mon','Wed','Fri'], null, _d(1)), 
 assert('no startDate non-ED false', isDueOnDate('E3D', null, _d(0)), false);
 assert('E4D day 4 due', isDueOnDate('E4D', _ioaStart, _d(4)), true);
 assert('E4D day 2 not due', isDueOnDate('E4D', _ioaStart, _d(2)), false);
+assert('E3.5D same as 2X/WK (Thu due)', isDueOnDate('E3.5D', _ioaStart, _d(3)), true);
+assert('E3D day 0 due', isDueOnDate('E3D', _ioaStart, _d(0)), true);
 
 // ── summary ──
 results.innerHTML += `<h2 style="color:${failed ? '#EF4444' : '#10B981'}">${passed} passed, ${failed} failed</h2>`;
