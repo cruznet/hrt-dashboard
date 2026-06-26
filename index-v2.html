@@ -1697,10 +1697,7 @@ function loadDemoData() {
   }
 
   renderCycleProgress(p);
-  renderVitalsToCards();   // populate metric cards + deltas + sparklines from localStorage
-  renderLastVitalsEntry();
-  renderUpcoming();
-  renderAdherenceBadge();
+  renderVitalsToCards();
   updateTopbarBadge();
 }
 
@@ -1923,7 +1920,7 @@ function nav(page) {
   if (page === 'protocols') renderProtocolsPage();
   if (page === 'vitals') renderVitalsPage();
   if (page === 'calculator') setTimeout(() => { calcBuildCompoundSelect(); pepUpdate(); }, 100);
-  if (page === 'dashboard') setTimeout(() => { if (_supa && _supaUser) renderRealCharts(); else renderDemoCharts(); renderUpcoming(); }, 100);
+  if (page === 'dashboard') setTimeout(() => { if (_supa && _supaUser) renderRealCharts(); else renderDemoCharts(); }, 100);
   // Load active protocol on dashboard
   if (page === 'dashboard') {
     const activeData = localStorage.getItem('hrt_active_protocol_data');
@@ -2189,7 +2186,7 @@ function renderCycleProgress(rawProtocol) {
     : '';
 
   cycleCard.innerHTML = `
-    <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;">Active this week</div>
+    <div style="font-size:10px;color:var(--green);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;">Today&#x27;s Injections</div>
     ${activeHtml}
     ${cycleEndBanner}
     ${upcomingHtml}
