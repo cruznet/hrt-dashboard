@@ -1823,8 +1823,8 @@ function renderVitalsToCards() {
   renderMoodEnergyCharts();
 }
 
-function renderMoodEnergyCharts() {
-  const logs     = lsGet('hrt_vitals_log', []);
+function renderMoodEnergyCharts(supaLogs) {
+  const logs     = supaLogs || lsGet('hrt_vitals_log', []);
   const protocol = lsGet('hrt_active_protocol_data', null);
 
   const { entries: mEntries, labels: mLabels } = getCycleChartData(logs, 'mood', protocol);
@@ -1950,7 +1950,10 @@ function renderRealCharts() {
   }
   // else: leave empty state visible
 
-  renderMoodEnergyCharts();
+  const moodEnergyLogs = (window._weightHistory || [])
+    .filter(r => r.mood || r.energy)
+    .map(r => ({ date: r.date, mood: r.mood, energy: r.energy }));
+  renderMoodEnergyCharts(moodEnergyLogs.length ? moodEnergyLogs : undefined);
 }
 
 function renderLastEntry(entry) {
