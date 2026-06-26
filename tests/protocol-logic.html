@@ -526,6 +526,61 @@ section('getCycleChartData');
   assert('cycle: includes entry on startDate', getCycleChartData(onStart, 'weight', proto).entries.length, 1);
 })();
 
+// ── isDueOnDate ──
+function isDueOnDate(freq, startDate, targetDate) {
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const targetDay = days[targetDate.getDay()];
+  if (Array.isArray(freq)) return freq.includes(targetDay);
+  const f = (freq || '').toUpperCase().trim();
+  if (f === 'ED' || f === 'PWO') return true;
+  if (!startDate) return false;
+  const [sy, sm, sd] = startDate.split('-').map(Number);
+  const start  = new Date(sy, sm - 1, sd);
+  const target = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+  const daysSinceStart = Math.round((target - start) / 86400000);
+  if (daysSinceStart < 0) return false;
+  const startDay = days[start.getDay()];
+  if (f === 'EOD')   return daysSinceStart % 2 === 0;
+  if (f === 'E3D')   return daysSinceStart % 3 === 0;
+  if (f === 'E4D')   return daysSinceStart % 4 === 0;
+  if (f === 'E5D')   return daysSinceStart % 5 === 0;
+  if (f === 'E3.5D' || f === '2X/WK') {
+    const si = days.indexOf(startDay);
+    return targetDay === startDay || targetDay === days[(si + 3) % 7];
+  }
+  if (f === '3X/WK') {
+    const si = days.indexOf(startDay);
+    return targetDay === startDay || targetDay === days[(si + 2) % 7] || targetDay === days[(si + 4) % 7];
+  }
+  if (f === 'WEEKLY')  return targetDay === startDay;
+  if (f === 'BI-WKLY') return targetDay === startDay && daysSinceStart % 14 === 0;
+  if (f === 'MONTHLY') return targetDate.getDate() === start.getDate();
+  return false;
+}
+
+section('isDueOnDate');
+// Jan 1 2024 = Monday. Use as fixed start date for all tests.
+const _ioaStart = '2024-01-01';
+function _d(offset) { return new Date(2024, 0, 1 + offset); } // day 0=Mon, 1=Tue, 3=Thu, 7=Mon
+
+assert('ED always due', isDueOnDate('ED', _ioaStart, _d(5)), true);
+assert('PWO always due', isDueOnDate('PWO', _ioaStart, _d(2)), true);
+assert('EOD day 0 due', isDueOnDate('EOD', _ioaStart, _d(0)), true);
+assert('EOD day 1 not due', isDueOnDate('EOD', _ioaStart, _d(1)), false);
+assert('EOD day 2 due', isDueOnDate('EOD', _ioaStart, _d(2)), true);
+assert('E3D day 3 due', isDueOnDate('E3D', _ioaStart, _d(3)), true);
+assert('E3D day 1 not due', isDueOnDate('E3D', _ioaStart, _d(1)), false);
+assert('2X/WK start day due', isDueOnDate('2X/WK', _ioaStart, _d(0)), true);
+assert('2X/WK start+3 (Thu) due', isDueOnDate('2X/WK', _ioaStart, _d(3)), true);
+assert('2X/WK start+1 (Tue) not due', isDueOnDate('2X/WK', _ioaStart, _d(1)), false);
+assert('WEEKLY next Mon due', isDueOnDate('WEEKLY', _ioaStart, _d(7)), true);
+assert('WEEKLY Tue not due', isDueOnDate('WEEKLY', _ioaStart, _d(1)), false);
+assert('array freq Mon due', isDueOnDate(['Mon','Wed','Fri'], null, _d(0)), true);
+assert('array freq Tue not due', isDueOnDate(['Mon','Wed','Fri'], null, _d(1)), false);
+assert('no startDate non-ED false', isDueOnDate('E3D', null, _d(0)), false);
+assert('E4D day 4 due', isDueOnDate('E4D', _ioaStart, _d(4)), true);
+assert('E4D day 2 not due', isDueOnDate('E4D', _ioaStart, _d(2)), false);
+
 // ── summary ──
 results.innerHTML += `<h2 style="color:${failed ? '#EF4444' : '#10B981'}">${passed} passed, ${failed} failed</h2>`;
 </script>

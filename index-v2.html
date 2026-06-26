@@ -2064,6 +2064,37 @@ function isDueToday(freq, startDate) {
   return false;
 }
 
+function isDueOnDate(freq, startDate, targetDate) {
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const targetDay = days[targetDate.getDay()];
+  if (Array.isArray(freq)) return freq.includes(targetDay);
+  const f = (freq || '').toUpperCase().trim();
+  if (f === 'ED' || f === 'PWO') return true;
+  if (!startDate) return false;
+  const [sy, sm, sd] = startDate.split('-').map(Number);
+  const start  = new Date(sy, sm - 1, sd);
+  const target = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+  const daysSinceStart = Math.round((target - start) / 86400000);
+  if (daysSinceStart < 0) return false;
+  const startDay = days[start.getDay()];
+  if (f === 'EOD')   return daysSinceStart % 2 === 0;
+  if (f === 'E3D')   return daysSinceStart % 3 === 0;
+  if (f === 'E4D')   return daysSinceStart % 4 === 0;
+  if (f === 'E5D')   return daysSinceStart % 5 === 0;
+  if (f === 'E3.5D' || f === '2X/WK') {
+    const si = days.indexOf(startDay);
+    return targetDay === startDay || targetDay === days[(si + 3) % 7];
+  }
+  if (f === '3X/WK') {
+    const si = days.indexOf(startDay);
+    return targetDay === startDay || targetDay === days[(si + 2) % 7] || targetDay === days[(si + 4) % 7];
+  }
+  if (f === 'WEEKLY')  return targetDay === startDay;
+  if (f === 'BI-WKLY') return targetDay === startDay && daysSinceStart % 14 === 0;
+  if (f === 'MONTHLY') return targetDate.getDate() === start.getDate();
+  return false;
+}
+
 function daysUntilNextDose(freq, startDate) {
   const f = Array.isArray(freq) ? '' : (freq || '').toUpperCase().trim();
   if (f === 'ED' || f === 'PWO') return null;
