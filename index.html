@@ -4333,6 +4333,42 @@ function markDoseTaken(label, date) {
   renderAdherenceBadge();
 }
 
+async function checkDose(compound_name, dose, unit, date) {
+  const taken = lsGet('hrt_doses_taken', []);
+  if (taken.some(t => t.label === compound_name && t.date === date)) return;
+  const entry = { label: compound_name, date, ts: new Date().toISOString(), id: null };
+  taken.push(entry);
+  localStorage.setItem('hrt_doses_taken', JSON.stringify(taken));
+  renderDoseSchedule();
+  if (_supa && _supaUser) {
+    const { data, error } = await _supa
+      .from('administration_log')
+      .insert({ user_id: _supaUser.id, date, compound_name, dose, unit, created_at: entry.ts })
+      .select('id')
+      .single();
+    if (error) { console.warn('[checkDose] Supabase insert failed:', error.message); }
+    else {
+      const taken2 = lsGet('hrt_doses_taken', []);
+      const idx = taken2.findIndex(t => t.label === compound_name && t.date === date);
+      if (idx >= 0) { taken2[idx].id = data.id; localStorage.setItem('hrt_doses_taken', JSON.stringify(taken2)); }
+    }
+  }
+}
+
+async function uncheckDose(compound_name, date) {
+  const taken = lsGet('hrt_doses_taken', []);
+  const idx = taken.findIndex(t => t.label === compound_name && t.date === date);
+  if (idx < 0) return;
+  const entry = taken[idx];
+  taken.splice(idx, 1);
+  localStorage.setItem('hrt_doses_taken', JSON.stringify(taken));
+  renderDoseSchedule();
+  if (_supa && _supaUser && entry?.id) {
+    const { error } = await _supa.from('administration_log').delete().eq('id', entry.id);
+    if (error) console.warn('[uncheckDose] Supabase delete failed:', error.message);
+  }
+}
+
 function renderAdherenceBadge() {
   // Calculate adherence % over last 30 days from taken log vs expected doses
   const taken = lsGet('hrt_doses_taken', []);
