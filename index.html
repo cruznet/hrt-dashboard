@@ -489,6 +489,7 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
   .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; }
   .form-row { grid-template-columns: 1fr; }
   .modal { padding: 16px; }
+  .col-secondary { display: none; }
 }
 
 /* ── Scrollbar ── */
@@ -2782,7 +2783,7 @@ function renderVitalsPage() {
     <table class="data-table">
       <thead>
         <tr>
-          <th>Date</th><th>Weight</th><th>Blood Pressure</th><th>Glucose</th><th>HR</th><th>Mood</th><th>Energy</th><th>Notes</th>
+          <th>Date</th><th>Weight</th><th>Blood Pressure</th><th>Glucose</th><th>HR</th><th>Mood</th><th>Energy</th><th class="col-secondary">Notes</th>
         </tr>
       </thead>
       <tbody>
@@ -2795,7 +2796,7 @@ function renderVitalsPage() {
             <td class="mono">${l.hr ? l.hr+' bpm' : '—'}</td>
             <td class="mono">${l.mood ? l.mood+'/10' : '—'}</td>
             <td class="mono">${l.energy ? l.energy+'/10' : '—'}</td>
-            <td style="color:var(--text-muted);font-size:12px;">${l.notes || ''}</td>
+            <td class="col-secondary" style="color:var(--text-muted);font-size:12px;">${l.notes || ''}</td>
           </tr>`).join('')}
       </tbody>
     </table>`;
@@ -2909,8 +2910,8 @@ function renderInsulinLog() {
       <td style="padding:8px 6px;">${badge}</td>
       <td style="padding:8px 6px;font-size:12px;">${escHtml(e.name)}</td>
       <td style="padding:8px 6px;font-size:12px;font-family:var(--font-data);">${escHtml(String(e.units))}u</td>
-      <td style="padding:8px 6px;font-size:12px;color:var(--text-muted);">${e.bg_before != null ? escHtml(String(e.bg_before)) : '—'}</td>
-      <td style="padding:8px 6px;font-size:12px;color:var(--text-muted);">${e.carbs != null ? escHtml(String(e.carbs)) + 'g' : '—'}</td>
+      <td class="col-secondary" style="padding:8px 6px;font-size:12px;color:var(--text-muted);">${e.bg_before != null ? escHtml(String(e.bg_before)) : '—'}</td>
+      <td class="col-secondary" style="padding:8px 6px;font-size:12px;color:var(--text-muted);">${e.carbs != null ? escHtml(String(e.carbs)) + 'g' : '—'}</td>
       <td style="padding:8px 6px;font-size:12px;">${bgAfter}</td>
     </tr>`;
   }).join('');
@@ -2920,8 +2921,8 @@ function renderInsulinLog() {
       <th style="padding:6px;font-size:11px;color:var(--text-muted);font-weight:500;text-align:left;">Type</th>
       <th style="padding:6px;font-size:11px;color:var(--text-muted);font-weight:500;text-align:left;">Name</th>
       <th style="padding:6px;font-size:11px;color:var(--text-muted);font-weight:500;text-align:left;">Units</th>
-      <th style="padding:6px;font-size:11px;color:var(--text-muted);font-weight:500;text-align:left;">BG Before</th>
-      <th style="padding:6px;font-size:11px;color:var(--text-muted);font-weight:500;text-align:left;">Carbs</th>
+      <th class="col-secondary" style="padding:6px;font-size:11px;color:var(--text-muted);font-weight:500;text-align:left;">BG Before</th>
+      <th class="col-secondary" style="padding:6px;font-size:11px;color:var(--text-muted);font-weight:500;text-align:left;">Carbs</th>
       <th style="padding:6px;font-size:11px;color:var(--text-muted);font-weight:500;text-align:left;">BG After</th>
     </tr></thead>
     <tbody>${rows}</tbody>
