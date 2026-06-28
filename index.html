@@ -372,28 +372,94 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
 
 /* ── Auth overlay ── */
 #auth-overlay {
-  display: none; position: fixed; inset: 0;
-  background: var(--bg-deep); z-index: 200;
-  align-items: center; justify-content: center;
-  flex-direction: column; gap: 20px;
+  display: none; position: fixed; inset: 0; z-index: 200;
+  background: var(--bg-deep);
 }
 #auth-overlay.visible { display: flex; }
-.auth-card {
+.auth-layout {
+  display: flex; width: 100%; height: 100%;
+}
+.auth-panel-left {
+  flex: 1; background: var(--bg-deep);
+  border-right: 0.5px solid var(--border);
+  display: flex; flex-direction: column;
+  justify-content: center; padding: 60px;
+  position: relative; overflow: hidden;
+}
+.auth-panel-left::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 20% 50%, rgba(8,145,178,0.12) 0%, transparent 60%),
+              radial-gradient(ellipse at 80% 20%, rgba(34,211,238,0.06) 0%, transparent 50%);
+  pointer-events: none;
+}
+.auth-brand {
+  display: flex; align-items: center; gap: 14px; margin-bottom: 40px;
+}
+.auth-brand-icon {
+  width: 48px; height: 48px; border-radius: 12px;
+  background: var(--primary-dim); border: 1px solid var(--primary-border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; color: var(--primary-bright);
+}
+.auth-brand-name { font-size: 22px; font-weight: 600; color: var(--text-primary); }
+.auth-brand-sub  { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.auth-headline {
+  font-size: 36px; font-weight: 600; color: var(--text-primary);
+  line-height: 1.2; margin-bottom: 14px; max-width: 420px;
+}
+.auth-headline span { color: var(--primary-bright); }
+.auth-tagline {
+  font-size: 15px; color: var(--text-muted); margin-bottom: 44px;
+  line-height: 1.6; max-width: 380px;
+}
+.auth-features { display: flex; flex-direction: column; gap: 16px; }
+.auth-feature {
+  display: flex; align-items: flex-start; gap: 12px;
+}
+.auth-feature-icon {
+  width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0;
   background: var(--bg-card); border: 0.5px solid var(--border);
-  border-radius: var(--radius-lg); padding: 36px 40px;
-  width: 360px; text-align: center;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; color: var(--primary-bright); margin-top: 1px;
 }
-.auth-logo { font-size: 32px; color: var(--primary-bright); margin-bottom: 8px; }
-.auth-title { font-size: 20px; font-weight: 500; color: var(--text-primary); margin-bottom: 6px; }
-.auth-sub   { font-size: 13px; color: var(--text-muted); margin-bottom: 28px; line-height: 1.5; }
+.auth-feature-text { font-size: 13px; color: var(--text-label); line-height: 1.5; }
+.auth-feature-text strong { color: var(--text-secondary); font-weight: 500; display: block; }
+.auth-panel-right {
+  width: 420px; flex-shrink: 0; background: var(--bg-base);
+  display: flex; align-items: center; justify-content: center; padding: 48px 40px;
+}
+.auth-card {
+  width: 100%; text-align: center;
+}
+.auth-card-icon { font-size: 36px; color: var(--primary-bright); margin-bottom: 12px; }
+.auth-card-title { font-size: 22px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; }
+.auth-card-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 36px; line-height: 1.5; }
 .auth-btn {
-  width: 100%; background: var(--primary); color: #fff;
-  border: none; padding: 11px; border-radius: var(--radius);
-  font-size: 14px; font-weight: 500; cursor: pointer; font-family: var(--font-ui);
-  display: flex; align-items: center; justify-content: center; gap: 9px;
-  transition: opacity var(--transition);
+  width: 100%; background: var(--bg-card);
+  color: var(--text-primary);
+  border: 0.5px solid var(--border-mid); padding: 13px 16px;
+  border-radius: var(--radius); font-size: 14px; font-weight: 500;
+  cursor: pointer; font-family: var(--font-ui);
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  transition: background var(--transition), border-color var(--transition);
 }
-.auth-btn:hover { opacity: 0.88; }
+.auth-btn:hover { background: var(--bg-card-hover); border-color: var(--primary-border); }
+.auth-divider {
+  display: flex; align-items: center; gap: 12px;
+  margin: 20px 0; color: var(--text-muted); font-size: 12px;
+}
+.auth-divider::before, .auth-divider::after {
+  content: ''; flex: 1; height: 0.5px; background: var(--border);
+}
+.auth-privacy {
+  margin-top: 28px; font-size: 11px; color: var(--text-muted);
+  line-height: 1.6; padding: 14px; border-radius: var(--radius);
+  background: var(--bg-card); border: 0.5px solid var(--border);
+}
+@media (max-width: 768px) {
+  .auth-panel-left { display: none; }
+  .auth-panel-right { width: 100%; }
+}
 
 /* ── Responsive ── */
 @media (max-width: 768px) {
@@ -471,15 +537,61 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
 
 <!-- ── Auth Overlay ── -->
 <div id="auth-overlay" class="visible">
-  <div class="auth-card">
-    <div class="auth-logo"><i class="ti ti-dna-2"></i></div>
-    <div class="auth-title">HRT Tracker</div>
-    <div class="auth-sub">Track your TRT, HRT, and performance protocols. Bloodwork, vitals, and AI insights in one place.</div>
-    <button class="auth-btn" onclick="supaSignIn()">
-      <svg width="16" height="16" viewBox="0 0 18 18" fill="none"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/><path d="M3.964 10.707A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.96l3.007 2.332C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>
-      Sign in with Google
-    </button>
-    <div style="margin-top:16px;font-size:11px;color:var(--text-muted);">Your data stays private. Sign in to sync across devices.</div>
+  <div class="auth-layout">
+
+    <!-- Left branding panel -->
+    <div class="auth-panel-left">
+      <div class="auth-brand">
+        <div class="auth-brand-icon"><i class="ti ti-dna-2"></i></div>
+        <div>
+          <div class="auth-brand-name">HRT Tracker</div>
+          <div class="auth-brand-sub">v2.0 · Private &amp; Secure</div>
+        </div>
+      </div>
+      <div class="auth-headline">Your protocol.<br><span>Your data.</span></div>
+      <div class="auth-tagline">Track TRT, HRT, and performance protocols with bloodwork, vitals, and cycle analytics — all in one place.</div>
+      <div class="auth-features">
+        <div class="auth-feature">
+          <div class="auth-feature-icon"><i class="ti ti-pill"></i></div>
+          <div class="auth-feature-text">
+            <strong>Protocol Management</strong>
+            Build and track compounds, doses, and frequencies with full cycle history.
+          </div>
+        </div>
+        <div class="auth-feature">
+          <div class="auth-feature-icon"><i class="ti ti-chart-line"></i></div>
+          <div class="auth-feature-text">
+            <strong>Vitals &amp; Bloodwork</strong>
+            Log weight, body fat, mood, energy, and lab values over time.
+          </div>
+        </div>
+        <div class="auth-feature">
+          <div class="auth-feature-icon"><i class="ti ti-devices"></i></div>
+          <div class="auth-feature-text">
+            <strong>Multi-Device Sync</strong>
+            Sign in on any device and your data follows you automatically.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right sign-in panel -->
+    <div class="auth-panel-right">
+      <div class="auth-card">
+        <div class="auth-card-icon"><i class="ti ti-lock"></i></div>
+        <div class="auth-card-title">Welcome back</div>
+        <div class="auth-card-sub">Sign in to access your protocols and health data.</div>
+        <button class="auth-btn" onclick="supaSignIn()">
+          <svg width="16" height="16" viewBox="0 0 18 18" fill="none"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/><path d="M3.964 10.707A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.96l3.007 2.332C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>
+          Continue with Google
+        </button>
+        <div class="auth-privacy">
+          <i class="ti ti-shield-check" style="color:var(--green);"></i>
+          Your data is private and encrypted. Only you can access it.
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
