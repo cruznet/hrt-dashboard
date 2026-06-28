@@ -461,9 +461,29 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
   .auth-panel-right { width: 100%; }
 }
 
+/* ── Mobile menu button ── */
+#mob-menu-btn {
+  display: none;
+  background: none; border: none; color: var(--text-primary);
+  font-size: 20px; cursor: pointer; padding: 6px; flex-shrink: 0;
+}
+#mob-backdrop {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.5); z-index: 99;
+}
+
 /* ── Responsive ── */
 @media (max-width: 768px) {
-  #sidebar { width: var(--sidebar-w-col); }
+  #mob-menu-btn { display: flex; align-items: center; }
+  #sidebar {
+    position: fixed; top: 0; left: 0; height: 100vh;
+    width: var(--sidebar-w); z-index: 100;
+    transform: translateX(calc(-1 * var(--sidebar-w)));
+    transition: transform 0.22s ease;
+  }
+  #sidebar.mob-open { transform: translateX(0); }
+  #mob-backdrop.mob-open { display: block; }
+  .btn-text { display: none; }
   .grid-2, .grid-3, .grid-2-1, .grid-1-2 { grid-template-columns: 1fr; }
   #content { padding: 12px; }
 }
@@ -652,14 +672,19 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
   </div>
 </nav>
 
+<div id="mob-backdrop" onclick="closeMobileMenu()"></div>
+
 <!-- ── Main ── -->
 <div id="main">
   <!-- Top bar -->
   <header id="topbar">
+    <button id="mob-menu-btn" onclick="toggleMobileMenu()" aria-label="Open menu">
+      <i class="ti ti-menu-2"></i>
+    </button>
     <div class="topbar-title" id="topbar-title">Dashboard</div>
     <div class="topbar-badge" id="topbar-badge">TRT Mode</div>
     <button class="topbar-btn-ghost" onclick="openModal('log-modal')">
-      <i class="ti ti-plus" style="font-size:13px;"></i> Log Entry
+      <i class="ti ti-plus" style="font-size:13px;"></i><span class="btn-text"> Log Entry</span>
     </button>
     <div class="avatar" style="cursor:pointer;" onclick="supaSignOut()" title="Sign out">LC</div>
   </header>
@@ -2234,7 +2259,16 @@ function renderLastVitalsEntry() {
 
 // ── Navigation ──
 let currentPage = 'dashboard';
+function toggleMobileMenu() {
+  const open = document.getElementById('sidebar').classList.toggle('mob-open');
+  document.getElementById('mob-backdrop').classList.toggle('mob-open', open);
+}
+function closeMobileMenu() {
+  document.getElementById('sidebar').classList.remove('mob-open');
+  document.getElementById('mob-backdrop').classList.remove('mob-open');
+}
 function nav(page) {
+  closeMobileMenu();
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   const pageEl = document.getElementById('page-' + page);
