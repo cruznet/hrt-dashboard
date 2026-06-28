@@ -1667,20 +1667,62 @@ async function loadUserData() {
   updateUserUI(_supaUser);
   const uid = _supaUser.id;
   try {
-    const [logsRes, metricsRes] = await Promise.all([
+    const [logsRes, metricsRes, settingsRes] = await Promise.all([
       _supa.from('administration_log').select('*').eq('user_id', uid).order('date', { ascending: false }).limit(50),
-      _supa.from('daily_metrics').select('*').eq('user_id', uid).order('date', { ascending: false }).limit(90)
+      _supa.from('daily_metrics').select('*').eq('user_id', uid).order('date', { ascending: false }).limit(90),
+      _supa.from('user_settings').select('*').eq('user_id', uid).maybeSingle()
     ]);
     if (logsRes.error) console.error('[loadUserData] logs query failed:', logsRes.error);
     if (metricsRes.error) console.error('[loadUserData] metrics query failed:', metricsRes.error);
+    if (settingsRes.error) console.error('[loadUserData] settings query failed:', settingsRes.error);
+
+    // Restore protocol state from Supabase (Supabase wins on load)
+    const settings = settingsRes.data;
+    if (settings) {
+      if (Array.isArray(settings.protocols) && settings.protocols.length)
+        localStorage.setItem('hrt_protocols', JSON.stringify(settings.protocols));
+      if (settings.active_protocol_key)
+        localStorage.setItem('hrt_active_protocol', settings.active_protocol_key);
+      if (settings.active_protocol_data)
+        localStorage.setItem('hrt_active_protocol_data', JSON.stringify(settings.active_protocol_data));
+    }
+
     if (metricsRes.data?.length) renderMetrics(metricsRes.data);
     if (logsRes.data?.length) renderLastEntry(logsRes.data[0]);
-    // Store for chart rendering
+
+    // Store for chart rendering and map to hrt_vitals_log
     window._weightHistory = metricsRes.data || [];
+    if (window._weightHistory.length) {
+      const vitals = window._weightHistory
+        .map(r => ({
+          date:    r.date,
+          weight:  r.weight   ?? null,
+          bodyFat: r.body_fat ?? null,
+          mood:    r.mood     ?? null,
+          energy:  r.energy   ?? null,
+          notes:   r.notes    ?? null
+        }))
+        .filter(r => r.weight !== null || r.bodyFat !== null ||
+                     r.mood   !== null || r.energy  !== null);
+      localStorage.setItem('hrt_vitals_log', JSON.stringify(vitals));
+    }
+
     setTimeout(renderRealCharts, 100);
   } catch (e) {
     console.error('[loadUserData] fatal:', e);
   }
+}
+
+async function syncProtocolsToSupabase() {
+  if (!_supa || !_supaUser) return;
+  const { error } = await _supa.from('user_settings').upsert({
+    user_id:              _supaUser.id,
+    protocols:            lsGet('hrt_protocols', []),
+    active_protocol_key:  localStorage.getItem('hrt_active_protocol') || null,
+    active_protocol_data: lsGet('hrt_active_protocol_data', null),
+    updated_at:           new Date().toISOString()
+  }, { onConflict: 'user_id' });
+  if (error) console.warn('[syncProtocols]', error.message);
 }
 
 function updateUserUI(user) {
@@ -3149,6 +3191,7 @@ function _doSwitch(newIndex) {
   renderCycleProgress(p);
   renderUpcoming();
   updateTopbarBadge();
+  syncProtocolsToSupabase();
 }
 
 function _pbCloseOutOld(closedAs, week, note) {
@@ -3202,6 +3245,7 @@ function deleteProtocol(index) {
     localStorage.removeItem('hrt_active_protocol');
     localStorage.removeItem('hrt_active_protocol_data');
   }
+  syncProtocolsToSupabase();
   renderProtocolsPage();
 }
 
@@ -3298,6 +3342,7 @@ function _pbDoSave() {
     renderUpcoming();
   }
 
+  syncProtocolsToSupabase();
   pbState.modificationLog = modLog;
   pbEditIndex = -1;
   return protocol;
