@@ -1997,22 +1997,24 @@ async function loadUserData() {
     renderDoseSchedule();   // always call — reads localStorage directly, independent of cycle card
     updateTopbarBadge();
 
-    // Store for chart rendering and map to hrt_vitals_log
+    // Store for chart rendering and map to hrt_vitals_log (match field names submitLog() uses)
     window._weightHistory = metricsRes.data || [];
     if (window._weightHistory.length) {
       const vitals = window._weightHistory
         .map(r => ({
           date:    r.date,
-          weight:  r.weight   ?? null,
-          bodyFat: r.body_fat ?? null,
+          weight:  r.weight_lbs  != null ? String(r.weight_lbs)  : null,
+          bp:      r.bp_systolic && r.bp_diastolic ? `${r.bp_systolic}/${r.bp_diastolic}` : null,
+          glucose: r.fasting_glucose != null ? String(r.fasting_glucose) : null,
           mood:    r.mood     ?? null,
           energy:  r.energy   ?? null,
           notes:   r.notes    ?? null
         }))
-        .filter(r => r.weight !== null || r.bodyFat !== null ||
-                     r.mood   !== null || r.energy  !== null);
+        .filter(r => r.weight !== null || r.bp !== null || r.glucose !== null ||
+                     r.mood   !== null || r.energy !== null);
       localStorage.setItem('hrt_vitals_log', JSON.stringify(vitals));
     }
+    renderVitalsToCards();
 
     setTimeout(renderRealCharts, 100);
   } catch (e) {
@@ -2350,7 +2352,7 @@ function nav(page) {
   if (page === 'protocols') renderProtocolsPage();
   if (page === 'vitals') renderVitalsPage();
   if (page === 'calculator') setTimeout(() => { calcBuildCompoundSelect(); pepUpdate(); }, 100);
-  if (page === 'dashboard') setTimeout(() => { if (_supa && _supaUser) renderRealCharts(); else renderDemoCharts(); }, 100);
+  if (page === 'dashboard') { renderVitalsToCards(); setTimeout(() => { if (_supa && _supaUser) renderRealCharts(); else renderDemoCharts(); }, 100); }
   // Load active protocol on dashboard
   if (page === 'dashboard') {
     const activeData = localStorage.getItem('hrt_active_protocol_data');
