@@ -637,7 +637,7 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
     <div class="nav-label" style="margin-top:6px;">Health</div>
     <div class="nav-item" onclick="nav('vitals')">
       <span class="nav-icon"><i class="ti ti-heart-rate-monitor"></i></span>
-      <span class="nav-text">Vitals</span>
+      <span class="nav-text">Health Log</span>
     </div>
   </div>
 
@@ -993,7 +993,7 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
 
     <!-- ── VITALS PAGE ── -->
     <section class="page" id="page-vitals">
-      <div class="section-heading">Vitals &amp; Daily Metrics</div>
+      <div class="section-heading">Health Log</div>
       <div class="grid-2" style="margin-bottom:14px;">
         <div class="card">
           <div class="card-title">Blood Pressure History</div>
@@ -1008,8 +1008,15 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
           </div>
         </div>
       </div>
+      <div class="card" style="margin-bottom:14px;">
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+          Insulin Log
+          <button class="btn-primary" style="font-size:12px;padding:5px 12px;" onclick="openInsulinModal()">+ Add</button>
+        </div>
+        <div id="insulin-log-content"></div>
+      </div>
       <div class="card">
-        <div class="card-title">Vitals Log</div>
+        <div class="card-title">Daily Log</div>
         <div id="vitals-table-wrap">
           <div style="color:var(--text-muted);font-size:13px;text-align:center;padding:30px;">No vitals logged yet. Use Log Entry to add data.</div>
         </div>
@@ -1708,6 +1715,78 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:6px;">
       <button class="btn-secondary" onclick="closeModal('log-modal')">Cancel</button>
       <button class="btn-primary" onclick="submitQuickLog()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="insulin-modal">
+  <div class="modal">
+    <div class="modal-title">
+      Log Insulin Injection
+      <span class="modal-close" onclick="closeModal('insulin-modal')"><i class="ti ti-x"></i></span>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Date</label>
+        <input type="date" class="form-input" id="ins-date">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Time</label>
+        <input type="time" class="form-input" id="ins-time">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Type</label>
+        <select class="form-select" id="ins-type" onchange="updateInsulinTypeUI()">
+          <option value="short">Short-acting</option>
+          <option value="long">Long-acting</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Units</label>
+        <input type="number" class="form-input" id="ins-units" placeholder="10" step="0.5" min="0.5">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Insulin</label>
+      <select class="form-select" id="ins-name" onchange="document.getElementById('ins-other-wrap').style.display=this.value==='other'?'':'none'">
+        <option>Humalog</option><option>NovoLog</option><option>Humulin R</option><option>Slin</option><option value="other">Other</option>
+      </select>
+      <div id="ins-other-wrap" style="display:none;margin-top:6px;">
+        <input type="text" class="form-input" id="ins-other-name" placeholder="Insulin name">
+      </div>
+    </div>
+    <div id="ins-timing-wrap" class="form-group">
+      <label class="form-label">Timing</label>
+      <select class="form-select" id="ins-timing">
+        <option value="post-workout">Post-workout</option>
+        <option value="pre-meal">Pre-meal</option>
+        <option value="fasted">Fasted</option>
+        <option value="other">Other</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">BG Before (mg/dL)</label>
+        <input type="number" class="form-input" id="ins-bg-before" placeholder="98">
+      </div>
+      <div id="ins-carbs-wrap" class="form-group">
+        <label class="form-label">Carbs (g)</label>
+        <input type="number" class="form-input" id="ins-carbs" placeholder="80">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">BG After (mg/dL)</label>
+      <input type="number" class="form-input" id="ins-bg-after" placeholder="112">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Notes</label>
+      <textarea class="form-input" id="ins-notes" rows="2" placeholder="Optional notes" style="resize:vertical;"></textarea>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:6px;">
+      <button class="btn-secondary" onclick="closeModal('insulin-modal')">Cancel</button>
+      <button class="btn-primary" onclick="submitInsulinLog()">Save Injection</button>
     </div>
   </div>
 </div>
