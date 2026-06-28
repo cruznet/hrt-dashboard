@@ -461,6 +461,18 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
   .auth-panel-right { width: 100%; }
 }
 
+.log-compound-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr auto;
+  gap: 8px;
+  align-items: end;
+  margin-bottom: 8px;
+}
+.calc-inputs-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+.calc-freq-grid   { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; }
+.calc-stats-grid  { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-top: 4px; }
+.calc-peptide-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; max-width: 780px; }
+
 /* ── Mobile menu button ── */
 #mob-menu-btn {
   display: none;
@@ -483,14 +495,14 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
   }
   #sidebar.mob-open { transform: translateX(0); }
   #mob-backdrop.mob-open { display: block; }
-  .btn-text { display: none; }
+  .topbar-btn-ghost .btn-text { display: none; }
   .grid-2, .grid-3, .grid-2-1, .grid-1-2 { grid-template-columns: 1fr; }
   #content { padding: 12px; }
   .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; }
   .form-row { grid-template-columns: 1fr; }
   .modal { padding: 16px; }
   .col-secondary { display: none; }
-  .log-compound-row { grid-template-columns: 1fr 1fr; grid-template-rows: auto auto; }
+  .log-compound-row { grid-template-columns: 1fr 1fr auto; }
   .log-compound-row > *:first-child { grid-column: 1 / -1; }
   .calc-inputs-grid { grid-template-columns: 1fr; }
   .calc-freq-grid   { grid-template-columns: 1fr; }
@@ -521,17 +533,6 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
 /* ── Gantt bars (Protocol builder) ── */
 .gantt-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
 .gantt-label { width: 100px; font-size: 11px; color: var(--text-secondary); text-align: right; flex-shrink: 0; }
-.log-compound-row {
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr auto;
-  gap: 8px;
-  align-items: end;
-  margin-bottom: 8px;
-}
-.calc-inputs-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 16px; }
-.calc-freq-grid   { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; }
-.calc-stats-grid  { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-top: 4px; }
-.calc-peptide-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; max-width: 780px; }
 .gantt-track { flex: 1; background: rgba(255,255,255,0.04); border-radius: 3px; height: 18px; position: relative; }
 .gantt-bar {
   position: absolute; height: 18px; border-radius: 3px;
@@ -2814,7 +2815,7 @@ function renderVitalsPage() {
             <td class="mono">${l.hr ? l.hr+' bpm' : '—'}</td>
             <td class="mono">${l.mood ? l.mood+'/10' : '—'}</td>
             <td class="mono">${l.energy ? l.energy+'/10' : '—'}</td>
-            <td class="col-secondary" style="color:var(--text-muted);font-size:12px;">${l.notes || ''}</td>
+            <td class="col-secondary" style="color:var(--text-muted);font-size:12px;">${escHtml(l.notes || '')}</td>
           </tr>`).join('')}
       </tbody>
     </table>`;
