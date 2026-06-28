@@ -1751,7 +1751,7 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
     <div class="form-group">
       <label class="form-label">Insulin</label>
       <select class="form-select" id="ins-name" onchange="document.getElementById('ins-other-wrap').style.display=this.value==='other'?'':'none'">
-        <option>Humalog</option><option>NovoLog</option><option>Humulin R</option><option>Slin</option><option value="other">Other</option>
+        <option>Humalog</option><option>NovoLog</option><option>Novolin R</option><option>Humulin R</option><option value="other">Other</option>
       </select>
       <div id="ins-other-wrap" style="display:none;margin-top:6px;">
         <input type="text" class="form-input" id="ins-other-name" placeholder="Insulin name">
@@ -2785,7 +2785,7 @@ function openInsulinModal() {
 function updateInsulinTypeUI() {
   const isShort = document.getElementById('ins-type').value === 'short';
   const nameEl  = document.getElementById('ins-name');
-  const shortOpts = '<option>Humalog</option><option>NovoLog</option><option>Humulin R</option><option>Slin</option><option value="other">Other</option>';
+  const shortOpts = '<option>Humalog</option><option>NovoLog</option><option>Novolin R</option><option>Humulin R</option><option value="other">Other</option>';
   const longOpts  = '<option>Lantus</option><option>Levemir</option><option>Tresiba</option><option>Basaglar</option><option value="other">Other</option>';
   nameEl.innerHTML = isShort ? shortOpts : longOpts;
   document.getElementById('ins-timing-wrap').style.display    = isShort ? '' : 'none';
