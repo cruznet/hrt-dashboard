@@ -1635,18 +1635,23 @@ function initSupa() {
 }
 
 async function _initSupaAuth() {
+  // If URL has OAuth callback params, don't show auth overlay until exchange completes
+  const isOAuthCallback = window.location.hash.includes('access_token') ||
+                          window.location.search.includes('code=');
+
+  _supa.auth.onAuthStateChange((event, session) => {
+    _supaSession = session; _supaUser = session?.user || null;
+    if (_supaUser) { showApp(); loadUserData(); }
+    else if (event !== 'INITIAL_SESSION') { showAuthOverlay(); }
+  });
+
   try {
     const { data, error } = await _supa.auth.getSession();
     if (error) { console.error('[auth] getSession failed:', error); showAuthOverlay(); return; }
     const session = data?.session;
     if (session) { _supaSession = session; _supaUser = session.user; showApp(); loadUserData(); }
-    else { showAuthOverlay(); }
+    else if (!isOAuthCallback) { showAuthOverlay(); }
   } catch (e) { console.error('[auth] init crashed:', e); showAuthOverlay(); }
-  _supa.auth.onAuthStateChange((event, session) => {
-    _supaSession = session; _supaUser = session?.user || null;
-    if (_supaUser) { showApp(); loadUserData(); }
-    else { showAuthOverlay(); }
-  });
 }
 
 async function supaSignIn() {
