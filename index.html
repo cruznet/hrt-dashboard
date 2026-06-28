@@ -2709,6 +2709,7 @@ async function submitLog() {
 }
 
 function renderVitalsPage() {
+  renderInsulinLog();
   const wrap = document.getElementById('vitals-table-wrap');
   const logs = lsGet('hrt_vitals_log', []);
 
@@ -2742,6 +2743,129 @@ function renderVitalsPage() {
     </table>`;
 
   renderVitalsCharts(logs);
+}
+
+function openInsulinModal() {
+  const now = new Date();
+  document.getElementById('ins-date').value = now.toISOString().split('T')[0];
+  document.getElementById('ins-time').value = now.toTimeString().slice(0, 5);
+  document.getElementById('ins-type').value = 'short';
+  document.getElementById('ins-units').value = '';
+  document.getElementById('ins-bg-before').value = '';
+  document.getElementById('ins-carbs').value = '';
+  document.getElementById('ins-bg-after').value = '';
+  document.getElementById('ins-notes').value = '';
+  document.getElementById('ins-other-wrap').style.display = 'none';
+  document.getElementById('ins-other-name').value = '';
+  updateInsulinTypeUI();
+  openModal('insulin-modal');
+}
+
+function updateInsulinTypeUI() {
+  const isShort = document.getElementById('ins-type').value === 'short';
+  const nameEl  = document.getElementById('ins-name');
+  const shortOpts = '<option>Humalog</option><option>NovoLog</option><option>Humulin R</option><option>Slin</option><option value="other">Other</option>';
+  const longOpts  = '<option>Lantus</option><option>Levemir</option><option>Tresiba</option><option>Basaglar</option><option value="other">Other</option>';
+  nameEl.innerHTML = isShort ? shortOpts : longOpts;
+  document.getElementById('ins-timing-wrap').style.display = isShort ? '' : 'none';
+  document.getElementById('ins-carbs-wrap').style.display  = isShort ? '' : 'none';
+  document.getElementById('ins-other-wrap').style.display  = 'none';
+}
+
+function submitInsulinLog() {
+  const date  = document.getElementById('ins-date').value;
+  const units = parseFloat(document.getElementById('ins-units').value);
+  if (!date)          { alert('Please enter a date.');       return; }
+  if (!units || units <= 0) { alert('Please enter units > 0.'); return; }
+
+  const type    = document.getElementById('ins-type').value;
+  const nameEl  = document.getElementById('ins-name');
+  const nameVal = nameEl.value === 'other'
+    ? (document.getElementById('ins-other-name').value.trim() || 'Other')
+    : nameEl.value;
+  const isShort = type === 'short';
+
+  const entry = {
+    date,
+    time:      document.getElementById('ins-time').value || '',
+    type,
+    name:      nameVal,
+    units,
+    timing:    isShort ? document.getElementById('ins-timing').value : '',
+    bg_before: parseFloat(document.getElementById('ins-bg-before').value) || null,
+    carbs:     isShort ? (parseFloat(document.getElementById('ins-carbs').value) || null) : null,
+    bg_after:  parseFloat(document.getElementById('ins-bg-after').value) || null,
+    notes:     document.getElementById('ins-notes').value.trim()
+  };
+
+  saveInsulinEntry(entry);
+  closeModal('insulin-modal');
+}
+
+async function saveInsulinEntry(entry) {
+  entry.id         = crypto.randomUUID();
+  entry.created_at = new Date().toISOString();
+  const log = lsGet('hrt_insulin_log', []);
+  log.unshift(entry);
+  localStorage.setItem('hrt_insulin_log', JSON.stringify(log));
+  renderInsulinLog();
+  if (_supa && _supaUser) {
+    const { error } = await _supa.from('insulin_log').insert({ ...entry, user_id: _supaUser.id });
+    if (error) console.warn('[insulin] save failed:', error.message);
+  }
+}
+
+function renderInsulinLog() {
+  const el = document.getElementById('insulin-log-content');
+  if (!el) return;
+  const entries = lsGet('hrt_insulin_log', []).slice(0, 30);
+  if (!entries.length) {
+    el.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100px;gap:6px;text-align:center;">
+      <i class="ti ti-syringe" style="font-size:28px;color:var(--text-muted);opacity:0.4;"></i>
+      <div style="color:var(--text-muted);font-size:13px;">No insulin entries yet</div>
+      <div style="font-size:11px;color:var(--text-muted);opacity:0.7;">Track your first injection with + Add</div>
+    </div>`;
+    return;
+  }
+  const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const bgStyle = v => {
+    if (!v) return '';
+    const n = parseFloat(v);
+    if (n < 70 || n > 180) return 'color:var(--red);font-weight:500;';
+    if (n > 140)            return 'color:var(--amber);';
+    return 'color:var(--green);';
+  };
+  const rows = entries.map(e => {
+    const [y, m, d] = e.date.split('-').map(Number);
+    const dateLabel = `${MON[m-1]} ${d}${e.time ? ' · ' + e.time : ''}`;
+    const badge = e.type === 'short'
+      ? `<span style="font-size:10px;padding:2px 6px;border-radius:4px;background:var(--primary-dim);color:var(--primary-bright);">Short</span>`
+      : `<span style="font-size:10px;padding:2px 6px;border-radius:4px;background:var(--purple-dim);color:var(--purple);">Long</span>`;
+    const bgAfter = e.bg_after != null
+      ? `<span style="${bgStyle(e.bg_after)}">${escHtml(String(e.bg_after))}</span>`
+      : '—';
+    return `<tr style="border-bottom:0.5px solid var(--border);">
+      <td style="padding:8px 6px;font-size:12px;color:var(--text-secondary);white-space:nowrap;">${escHtml(dateLabel)}</td>
+      <td style="padding:8px 6px;">${badge}</td>
+      <td style="padding:8px 6px;font-size:12px;">${escHtml(e.name)}</td>
+      <td style="padding:8px 6px;font-size:12px;font-family:var(--font-data);">${escHtml(String(e.units))}u</td>
+      <td style="padding:8px 6px;font-size:12px;color:var(--text-muted);">${e.bg_before != null ? escHtml(String(e.bg_before)) : '—'}</td>
+      <td style="padding:8px 6px;font-size:12px;color:var(--text-muted);">${e.carbs != null ? escHtml(String(e.carbs)) + 'g' : '—'}</td>
+      <td style="padding:8px 6px;font-size:12px;">${bgAfter}</td>
+    </tr>`;
+  }).join('');
+  el.innerHTML = `<table style="width:100%;border-collapse:collapse;">
+    <thead><tr style="border-bottom:0.5px solid var(--border);">
+      <th style="padding:6px;font-size:11px;color:var(--text-muted);font-weight:500;text-align:left;">Date / Time</th>
+      <th style="padding:6px;font-size:11px;color:var(--text-muted);font-weight:500;text-align:left;">Type</th>
+      <th style="padding:6px;font-size:11px;color:var(--text-muted);font-weight:500;text-align:left;">Name</th>
+      <th style="padding:6px;font-size:11px;color:var(--text-muted);font-weight:500;text-align:left;">Units</th>
+      <th style="padding:6px;font-size:11px;color:var(--text-muted);font-weight:500;text-align:left;">BG Before</th>
+      <th style="padding:6px;font-size:11px;color:var(--text-muted);font-weight:500;text-align:left;">Carbs</th>
+      <th style="padding:6px;font-size:11px;color:var(--text-muted);font-weight:500;text-align:left;">BG After</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
 }
 
 function renderVitalsCharts(logs) {
