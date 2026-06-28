@@ -3784,7 +3784,12 @@ function _pbDoSave() {
   if (pbEditIndex >= 0 && pbEditIndex < saved.length) {
     saved.splice(pbEditIndex, 1, protocol);
   } else {
-    saved.unshift(protocol);
+    const dupIdx = saved.findIndex(p => (p.name || '').trim().toLowerCase() === protocol.name.trim().toLowerCase());
+    if (dupIdx >= 0) {
+      saved.splice(dupIdx, 1, protocol); // overwrite same-name protocol instead of duplicating
+    } else {
+      saved.unshift(protocol);
+    }
   }
   localStorage.setItem('hrt_protocols', JSON.stringify(saved));
 
