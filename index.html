@@ -1865,14 +1865,35 @@ async function loadUserData() {
   updateUserUI(_supaUser);
   const uid = _supaUser.id;
   try {
-    const [logsRes, metricsRes, settingsRes] = await Promise.all([
+    const [logsRes, metricsRes, settingsRes, insulinRes] = await Promise.all([
       _supa.from('administration_log').select('*').eq('user_id', uid).order('date', { ascending: false }).limit(50),
       _supa.from('daily_metrics').select('*').eq('user_id', uid).order('date', { ascending: false }).limit(90),
-      _supa.from('user_settings').select('*').eq('user_id', uid).maybeSingle()
+      _supa.from('user_settings').select('*').eq('user_id', uid).maybeSingle(),
+      _supa.from('insulin_log').select('*').eq('user_id', uid).order('date', { ascending: false }).order('created_at', { ascending: false }).limit(90)
     ]);
-    if (logsRes.error) console.error('[loadUserData] logs query failed:', logsRes.error);
+    if (logsRes.error)    console.error('[loadUserData] logs query failed:', logsRes.error);
     if (metricsRes.error) console.error('[loadUserData] metrics query failed:', metricsRes.error);
     if (settingsRes.error) console.error('[loadUserData] settings query failed:', settingsRes.error);
+    if (insulinRes.error) console.error('[loadUserData] insulin query failed:', insulinRes.error);
+
+    if (insulinRes.data?.length) {
+      const insulinLog = insulinRes.data.map(r => ({
+        id:        r.id,
+        date:      r.date,
+        time:      r.time      || '',
+        type:      r.type,
+        name:      r.name,
+        units:     r.units,
+        timing:    r.timing    || '',
+        bg_before: r.bg_before ?? null,
+        carbs:     r.carbs     ?? null,
+        bg_after:  r.bg_after  ?? null,
+        notes:     r.notes     || '',
+        created_at: r.created_at
+      }));
+      localStorage.setItem('hrt_insulin_log', JSON.stringify(insulinLog));
+      renderInsulinLog();
+    }
 
     // Restore protocol state from Supabase (Supabase wins on load)
     const settings = settingsRes.data;
