@@ -2662,11 +2662,20 @@ function renderDoseSchedule() {
   });
 
   // TODAY section
+  const todayStr    = today.toISOString().split('T')[0];
+  const takenToday  = lsGet('hrt_doses_taken', []).filter(t => t.date === todayStr);
+  const dueCompounds = compounds.filter(c => c.dueToday);
   let html = `<div style="font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Today · ${escHtml(todayLabel)}</div>`;
-  for (const c of compounds) {
-    const dot      = c.dueToday ? `<span style="color:var(--success);">●</span>` : `<span style="color:var(--text-muted);">○</span>`;
-    const rowStyle = c.dueToday ? '' : 'opacity:0.5;';
-    html += `<div style="display:flex;justify-content:space-between;gap:8px;${rowStyle}">${dot} <span style="flex:1;">${escHtml(trunc(c.name))}</span><span style="color:var(--text-muted);white-space:nowrap;">${escHtml(String(c.dose ?? ''))}${escHtml(c.unit)}</span></div>`;
+  if (!dueCompounds.length) {
+    html += `<div style="color:var(--text-muted);font-size:12px;font-style:italic;">No compounds due today</div>`;
+  } else {
+    for (const c of dueCompounds) {
+      const isChecked = takenToday.some(t => t.label === c.name);
+      const rowStyle  = isChecked ? 'text-decoration:line-through;opacity:0.6;' : '';
+      const safeName  = c.name.replace(/'/g, "\\'");
+      const safeUnit  = (c.unit || '').replace(/'/g, "\\'");
+      html += `<label style="display:flex;align-items:center;gap:8px;cursor:pointer;${rowStyle}"><input type="checkbox" ${isChecked ? 'checked' : ''} style="accent-color:var(--primary-bright);width:16px;height:16px;flex-shrink:0;" onchange="this.checked?checkDose('${safeName}',${c.dose ?? 0},'${safeUnit}','${todayStr}'):uncheckDose('${safeName}','${todayStr}')"><span style="flex:1;">${escHtml(trunc(c.name))}</span><span style="color:var(--text-muted);white-space:nowrap;">${escHtml(String(c.dose ?? ''))}${escHtml(c.unit)}</span></label>`;
+    }
   }
 
   // UPCOMING section
