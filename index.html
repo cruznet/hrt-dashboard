@@ -709,7 +709,10 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
     <button class="topbar-btn-ghost" onclick="openModal('log-modal')">
       <i class="ti ti-plus" style="font-size:13px;"></i><span class="btn-text"> Log Entry</span>
     </button>
-    <div class="avatar" style="cursor:pointer;" onclick="supaSignOut()" title="Sign out">LC</div>
+    <button class="topbar-btn-ghost" onclick="supaSignOut()" style="display:flex;align-items:center;gap:6px;padding:4px 8px;">
+      <div class="avatar" id="topbar-avatar" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">LC</div>
+      <span class="btn-text">Sign Out</span>
+    </button>
   </header>
 
   <!-- Content -->
@@ -1918,12 +1921,25 @@ async function supaSignIn() {
   if (error) { console.error('[auth] signIn failed:', error); alert('Sign-in failed: ' + error.message); }
 }
 async function supaSignOut() {
+  clearTimeout(_inactivityTimer);
   try { if (_supa) { const { error } = await _supa.auth.signOut(); if (error) console.error('[auth] signOut:', error); } }
   finally { showAuthOverlay(); }
 }
 
+let _inactivityTimer = null;
+const _INACTIVITY_MS = 60 * 60 * 1000; // 60 minutes
+function _resetInactivityTimer() {
+  clearTimeout(_inactivityTimer);
+  _inactivityTimer = setTimeout(() => { if (_supaUser) supaSignOut(); }, _INACTIVITY_MS);
+}
+['mousemove', 'keydown', 'click', 'touchstart'].forEach(evt =>
+  document.addEventListener(evt, _resetInactivityTimer, { passive: true })
+);
 
-function showApp() { document.getElementById('auth-overlay').classList.remove('visible'); }
+function showApp() {
+  document.getElementById('auth-overlay').classList.remove('visible');
+  _resetInactivityTimer();
+}
 function showAuthOverlay() { document.getElementById('auth-overlay').classList.add('visible'); }
 
 async function loadUserData() {
@@ -1975,6 +1991,11 @@ async function loadUserData() {
     if (metricsRes.data?.length) renderMetrics(metricsRes.data);
     if (logsRes.data?.length) renderLastEntry(logsRes.data[0]);
 
+    // Re-render dashboard protocol card + dose schedule now that localStorage is populated
+    const _p = lsGet('hrt_active_protocol_data', null);
+    if (_p) renderCycleProgress(_p); else renderDoseSchedule();
+    updateTopbarBadge();
+
     // Store for chart rendering and map to hrt_vitals_log
     window._weightHistory = metricsRes.data || [];
     if (window._weightHistory.length) {
@@ -2014,7 +2035,7 @@ function updateUserUI(user) {
   const name  = user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
   const email = user.email || '';
   const initials = name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2);
-  ['nav-avatar','settings-avatar'].forEach(id => { const el=document.getElementById(id); if(el) el.textContent=initials; });
+  ['nav-avatar','settings-avatar','topbar-avatar'].forEach(id => { const el=document.getElementById(id); if(el) el.textContent=initials; });
   ['nav-name','settings-name'].forEach(id => { const el=document.getElementById(id); if(el) el.textContent=name; });
   ['nav-email','settings-email'].forEach(id => { const el=document.getElementById(id); if(el) el.textContent=email; });
 }
