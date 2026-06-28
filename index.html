@@ -1766,7 +1766,7 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
         <option value="other">Other</option>
       </select>
     </div>
-    <div class="form-row">
+    <div id="ins-bg-glucose-row" class="form-row">
       <div class="form-group">
         <label class="form-label">BG Before (mg/dL)</label>
         <input type="number" class="form-input" id="ins-bg-before" placeholder="98">
@@ -1776,7 +1776,7 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
         <input type="number" class="form-input" id="ins-carbs" placeholder="80">
       </div>
     </div>
-    <div class="form-group">
+    <div id="ins-bg-after-wrap" class="form-group">
       <label class="form-label">BG After (mg/dL)</label>
       <input type="number" class="form-input" id="ins-bg-after" placeholder="112">
     </div>
@@ -2788,8 +2788,10 @@ function updateInsulinTypeUI() {
   const shortOpts = '<option>Humalog</option><option>NovoLog</option><option>Humulin R</option><option>Slin</option><option value="other">Other</option>';
   const longOpts  = '<option>Lantus</option><option>Levemir</option><option>Tresiba</option><option>Basaglar</option><option value="other">Other</option>';
   nameEl.innerHTML = isShort ? shortOpts : longOpts;
-  document.getElementById('ins-timing-wrap').style.display = isShort ? '' : 'none';
-  document.getElementById('ins-carbs-wrap').style.display  = isShort ? '' : 'none';
+  document.getElementById('ins-timing-wrap').style.display    = isShort ? '' : 'none';
+  document.getElementById('ins-carbs-wrap').style.display     = isShort ? '' : 'none';
+  document.getElementById('ins-bg-glucose-row').style.display = isShort ? '' : 'none';
+  document.getElementById('ins-bg-after-wrap').style.display  = isShort ? '' : 'none';
   document.getElementById('ins-other-wrap').style.display  = 'none';
 }
 
@@ -2813,9 +2815,9 @@ function submitInsulinLog() {
     name:      nameVal,
     units,
     timing:    isShort ? document.getElementById('ins-timing').value : '',
-    bg_before: parseFloat(document.getElementById('ins-bg-before').value) || null,
+    bg_before: isShort ? (parseFloat(document.getElementById('ins-bg-before').value) || null) : null,
     carbs:     isShort ? (parseFloat(document.getElementById('ins-carbs').value) || null) : null,
-    bg_after:  parseFloat(document.getElementById('ins-bg-after').value) || null,
+    bg_after:  isShort ? (parseFloat(document.getElementById('ins-bg-after').value) || null) : null,
     notes:     document.getElementById('ins-notes').value.trim()
   };
 
