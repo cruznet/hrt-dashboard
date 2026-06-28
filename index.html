@@ -1991,9 +1991,10 @@ async function loadUserData() {
     if (metricsRes.data?.length) renderMetrics(metricsRes.data);
     if (logsRes.data?.length) renderLastEntry(logsRes.data[0]);
 
-    // Re-render dashboard protocol card + dose schedule now that localStorage is populated
+    // Re-render dashboard cards now that localStorage is populated from Supabase
     const _p = lsGet('hrt_active_protocol_data', null);
-    if (_p) renderCycleProgress(_p); else renderDoseSchedule();
+    if (_p) renderCycleProgress(_p);
+    renderDoseSchedule();   // always call — reads localStorage directly, independent of cycle card
     updateTopbarBadge();
 
     // Store for chart rendering and map to hrt_vitals_log
