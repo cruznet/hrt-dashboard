@@ -1160,6 +1160,17 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
         <!-- Key KPI cards -->
         <div class="metrics-grid" id="bw-kpi-row" style="margin-bottom:14px;"></div>
 
+        <!-- Trend Charts -->
+        <div class="card" style="margin-bottom:14px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+            <div class="card-title" style="margin-bottom:0;">Trends</div>
+            <div id="bw-trend-pills" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+          </div>
+          <div style="height:220px;position:relative;">
+            <canvas id="bw-trend-chart"></canvas>
+          </div>
+        </div>
+
         <!-- Panel detail + history -->
         <div class="grid-2-1" style="margin-bottom:14px;">
           <div class="card">
@@ -3157,6 +3168,7 @@ function renderBloodworkPage() {
   bwRenderPanelSelect(panels);
   bwRenderPanel();
   bwRenderHistory(panels);
+  renderBwTrendCharts();
 }
 
 function bwRenderKpiCards(latest, prev) {
@@ -3262,6 +3274,120 @@ function bwRenderHistory(panels) {
       </div>
     </div>`;
   }).join('');
+}
+
+// ── Bloodwork Trend Charts ────────────────────────────────────────────
+let _bwTrendKey = 'tt';
+
+const BW_TREND_MARKERS = [
+  { key: 'tt',          label: 'TT',    color: '#F5C518' },
+  { key: 'e2',          label: 'E2',    color: '#A78BFA' },
+  { key: 'hematocrit',  label: 'HCT',   color: '#F87171' },
+  { key: 'ldl',         label: 'LDL',   color: '#FB923C' },
+  { key: 'hdl',         label: 'HDL',   color: '#4ADE80' },
+  { key: 'igf1',        label: 'IGF-1', color: '#38BDF8' },
+];
+
+function bwSetTrendKey(key) {
+  _bwTrendKey = key;
+  renderBwTrendCharts();
+}
+
+function renderBwTrendCharts() {
+  const panels = bwLoad().sort((a, b) => a.date.localeCompare(b.date));
+
+  // Build toggle pills
+  const pillsEl = document.getElementById('bw-trend-pills');
+  if (pillsEl) {
+    pillsEl.innerHTML = BW_TREND_MARKERS.map(t => {
+      const active = _bwTrendKey === t.key;
+      return `<button onclick="bwSetTrendKey('${t.key}')"
+        style="font-size:11px;padding:3px 11px;border-radius:20px;border:1.5px solid ${t.color};
+               background:${active ? t.color + '2a' : 'transparent'};color:${t.color};
+               cursor:pointer;font-family:var(--font-ui);font-weight:600;transition:background 0.15s;">
+        ${t.label}</button>`;
+    }).join('');
+  }
+
+  if (panels.length < 2) return;
+
+  const trendDef = BW_TREND_MARKERS.find(t => t.key === _bwTrendKey) || BW_TREND_MARKERS[0];
+  const m        = BW_MARKERS[_bwTrendKey];
+  const color    = trendDef.color;
+
+  const labels = panels.map(p => {
+    const d = new Date(p.date + 'T12:00:00');
+    return d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+  });
+  const values = panels.map(p => p.markers[_bwTrendKey] ?? null);
+
+  const pointBg = panels.map(p => {
+    const v = p.markers[_bwTrendKey];
+    if (v == null) return 'transparent';
+    const s = bwRangeStatus(_bwTrendKey, v);
+    return s === 'ok' ? '#4ADE80' : '#F87171';
+  });
+
+  // Reference range as flat dashed datasets (no plugin needed)
+  const extraDatasets = [];
+  const n = panels.length;
+  if (m.hi && m.hi < 9000) {
+    extraDatasets.push({
+      data: Array(n).fill(m.hi),
+      borderColor: 'rgba(248,113,113,0.35)',
+      borderWidth: 1,
+      borderDash: [5, 5],
+      pointRadius: 0,
+      fill: false,
+      tension: 0,
+    });
+  }
+  if (m.lo && m.lo > 0) {
+    extraDatasets.push({
+      data: Array(n).fill(m.lo),
+      borderColor: 'rgba(248,113,113,0.35)',
+      borderWidth: 1,
+      borderDash: [5, 5],
+      pointRadius: 0,
+      fill: false,
+      tension: 0,
+    });
+  }
+
+  makeChart('bw-trend-chart', 'line', labels, [
+    {
+      data: values,
+      borderColor: color,
+      backgroundColor: color + '15',
+      pointBackgroundColor: pointBg,
+      pointBorderColor: pointBg,
+      pointRadius: 5,
+      pointHoverRadius: 7,
+      tension: 0.35,
+      fill: true,
+      spanGaps: true,
+    },
+    ...extraDatasets,
+  ], {
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#192134',
+        borderColor: 'rgba(255,255,255,0.08)',
+        borderWidth: 0.5,
+        titleColor: '#F8FAFC',
+        bodyColor: '#94A3B8',
+        padding: 10,
+        filter: item => item.datasetIndex === 0,
+        callbacks: { label: ctx => `${m.label}: ${ctx.parsed.y} ${m.unit}` }
+      }
+    },
+    scales: {
+      x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#64748B', font: { family: "'JetBrains Mono', monospace", size: 11 } } },
+      y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#64748B', font: { family: "'JetBrains Mono', monospace", size: 11 } },
+           title: { display: true, text: m.unit, color: '#475569', font: { size: 10 } } }
+    }
+  });
 }
 
 function renderBwDashStrip() {
