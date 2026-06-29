@@ -4861,8 +4861,8 @@ async function hevyMeasSync() {
     let page = 1;
     let pageCount = 1;
     do {
-      const res = await fetch(`${HEVY_BASE}/body_measurements?page=${page}&pageSize=100`, {
-        headers: { 'api-key': key, 'Content-Type': 'application/json' }
+      const res = await fetch(`${HEVY_BASE}/body_measurements?page=${page}&pageSize=10`, {
+        headers: { 'api-key': key }
       });
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const data = await res.json();
@@ -4881,8 +4881,8 @@ async function hevyMeasSync() {
       if (!dateStr) continue;
       const date = localDate(new Date(dateStr));
       const prev = dedupMap[date];
-      const fields = (h.weight_kg ?? h.weight) != null ? 1 : 0 + (h.body_fat_percentage != null ? 1 : 0);
-      const prevFields = prev ? ((prev.weight_kg ?? prev.weight) != null ? 1 : 0) + (prev.body_fat_percentage != null ? 1 : 0) : -1;
+      const fields = (h.weight_kg != null ? 1 : 0) + (h.fat_percent != null ? 1 : 0);
+      const prevFields = prev ? (prev.weight_kg != null ? 1 : 0) + (prev.fat_percent != null ? 1 : 0) : -1;
       if (!prev || fields >= prevFields) dedupMap[date] = h;
     }
 
@@ -4893,10 +4893,10 @@ async function hevyMeasSync() {
 
     let added = 0, updated = 0;
     for (const [date, h] of Object.entries(dedupMap)) {
-      const weightKg = h.weight_kg ?? h.weight ?? null;
+      const weightKg = h.weight_kg ?? null;
       const hevyMeas = {};
-      if (weightKg != null)                  hevyMeas.weight = +(weightKg * 2.20462).toFixed(1);
-      if (h.body_fat_percentage != null)      hevyMeas.bf     = +h.body_fat_percentage.toFixed(2);
+      if (weightKg != null)        hevyMeas.weight = +(weightKg * 2.20462).toFixed(1);
+      if (h.fat_percent != null)   hevyMeas.bf     = +h.fat_percent.toFixed(2);
       if (!Object.keys(hevyMeas).length) continue;
 
       if (byDate[date] !== undefined) {
