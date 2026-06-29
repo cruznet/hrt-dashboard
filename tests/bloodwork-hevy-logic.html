@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html>
+<head><title>Bloodwork & Hevy Logic Tests</title>
+<style>
+  body { font-family: monospace; padding: 20px; background: #0f1117; color: #f1f5f9; }
+  .pass { color: #10B981; } .fail { color: #EF4444; }
+  h2 { color: #6366F1; margin-top: 24px; }
+  #summary { margin-top: 24px; font-size: 15px; font-weight: bold; }
+</style>
+</head>
+<body>
+<h1>Bloodwork & Hevy Logic Tests</h1>
+<div id="results"></div>
+<div id="summary"></div>
+
+<script>
+const results = document.getElementById('results');
+let passed = 0, failed = 0;
+
+function assert(label, actual, expected) {
+  const ok = JSON.stringify(actual) === JSON.stringify(expected);
+  if (ok) passed++; else failed++;
+  results.innerHTML += `<div class="${ok ? 'pass' : 'fail'}">${ok ? '✓' : '✗'} ${label}${ok ? '' : ` — expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`}</div>`;
+}
+function section(name) { results.innerHTML += `<h2>${name}</h2>`; }
+</script>
+
+<!-- ── Functions under test ─────────────────────────────────────────────── -->
+<script>
+
+// ── BW_MARKERS (subset used by tests) ────────────────────────────────────────
+const BW_MARKERS = {
+  tt:         { label: 'Total Testosterone', unit: 'ng/dL',  lo: 300,  hi: 1000 },
+  e2:         { label: 'Estradiol (E2)',     unit: 'pg/mL',  lo: 10,   hi: 40   },
+  hematocrit: { label: 'Hematocrit',        unit: '%',       lo: 38,   hi: 52   },
+  hdl:        { label: 'HDL',               unit: 'mg/dL',  lo: 40,   hi: 9999, higherBetter: true },
+  ldl:        { label: 'LDL',               unit: 'mg/dL',  lo: 0,    hi: 129  },
+  alt:        { label: 'ALT',               unit: 'U/L',    lo: 7,    hi: 56   },
+  egfr:       { label: 'eGFR',              unit: 'mL/min', lo: 60,   hi: 9999, higherBetter: true },
+  crp:        { label: 'hs-CRP',            unit: 'mg/L',   lo: 0,    hi: 1.0  },
+};
+
+function bwRangeStatus(key, value) {
+  const m = BW_MARKERS[key];
+  if (!m || value == null || value === '') return 'none';
+  const v = parseFloat(value);
+  if (isNaN(v)) return 'none';
+  if (m.higherBetter) return v >= m.lo ? 'ok' : 'low';
+  if (v < m.lo) return 'low';
+  if (m.hi < 9000 && v > m.hi) return 'high';
+  return 'ok';
+}
+
+// ── Hevy helpers ──────────────────────────────────────────────────────────────
+function hevyParseMs(t) {
+  if (!t) return 0;
+  if (typeof t === 'number') return t * 1000;
+  const ms = new Date(t).getTime();
+  return isNaN(ms) ? 0 : ms;
+}
+
+function hevyE1RM(weightKg, reps) {
+  if (!weightKg || !reps || reps <= 0) return 0;
+  return weightKg * 2.205 * (1 + reps / 30);
+}
+
+function hevyWorkoutVolume(w) {
+  return (w.exercises||[]).reduce((total, e) =>
+    total + (e.sets||[]).reduce((s, set) =>
+      s + (set.weight_kg > 0 && set.reps > 0 ? set.weight_kg * 2.205 * set.reps : 0), 0), 0);
+}
+
+function hevyBuildPRMap(workouts) {
+  const map = new Map();
+  [...workouts].sort((a,b) => hevyParseMs(a.start_time) - hevyParseMs(b.start_time)).forEach(w => {
+    const ms = hevyParseMs(w.start_time);
+    const date = ms ? new Date(ms).toISOString().slice(0,10) : '1970-01-01';
+    (w.exercises||[]).forEach(e => {
+      const title = e.title || 'Unknown';
+      if (!map.has(title)) map.set(title, { bestWeight:0, bestWeightReps:0, weightDate:'', bestE1RM:0, e1rmDate:'', sets:[] });
+      const pr = map.get(title);
+      (e.sets||[]).filter(s => s.weight_kg > 0 && s.reps > 0).forEach(s => {
+        pr.sets.push({ date, weightKg: s.weight_kg, reps: s.reps });
+        const e1rm = hevyE1RM(s.weight_kg, s.reps);
+        if (s.weight_kg > pr.bestWeight) { pr.bestWeight = s.weight_kg; pr.bestWeightReps = s.reps; pr.weightDate = date; }
+        if (e1rm > pr.bestE1RM) { pr.bestE1RM = e1rm; pr.e1rmDate = date; }
+      });
+    });
+  });
+  return map;
+}
+</script>
+
+<!-- ── Tests ──────────────────────────────────────────────────────────────── -->
+<script>
+
+// ─────────────────────────────────────────────────────────────────────────────
+section('bwRangeStatus — unknown / null inputs');
+assert('unknown key → none',         bwRangeStatus('xyz', 100),       'none');
+assert('null value → none',          bwRangeStatus('tt', null),        'none');
+assert('empty string → none',        bwRangeStatus('tt', ''),          'none');
+assert('non-numeric string → none',  bwRangeStatus('tt', 'abc'),       'none');
+
+// ─────────────────────────────────────────────────────────────────────────────
+section('bwRangeStatus — Total Testosterone (lo:300 hi:1000)');
+assert('TT 700 → ok',       bwRangeStatus('tt', 700),   'ok');
+assert('TT 300 → ok (lo boundary)',  bwRangeStatus('tt', 300),   'ok');
+assert('TT 1000 → ok (hi boundary)', bwRangeStatus('tt', 1000),  'ok');
+assert('TT 200 → low',      bwRangeStatus('tt', 200),   'low');
+assert('TT 1200 → high',    bwRangeStatus('tt', 1200),  'high');
+assert('TT string "850" → ok',       bwRangeStatus('tt', '850'),  'ok');
+
+// ─────────────────────────────────────────────────────────────────────────────
+section('bwRangeStatus — Estradiol E2 (lo:10 hi:40)');
+assert('E2 25 → ok',        bwRangeStatus('e2', 25),  'ok');
+assert('E2 5 → low',        bwRangeStatus('e2', 5),   'low');
+assert('E2 60 → high',      bwRangeStatus('e2', 60),  'high');
+
+// ─────────────────────────────────────────────────────────────────────────────
+section('bwRangeStatus — Hematocrit (lo:38 hi:52)');
+assert('HCT 45 → ok',       bwRangeStatus('hematocrit', 45),  'ok');
+assert('HCT 35 → low',      bwRangeStatus('hematocrit', 35),  'low');
+assert('HCT 54 → high',     bwRangeStatus('hematocrit', 54),  'high');
+assert('HCT 52 → ok (hi boundary)', bwRangeStatus('hematocrit', 52), 'ok');
+
+// ─────────────────────────────────────────────────────────────────────────────
+section('bwRangeStatus — HDL (higherBetter, lo:40, hi:9999)');
+assert('HDL 55 → ok',       bwRangeStatus('hdl', 55),  'ok');
+assert('HDL 40 → ok (exact lo)', bwRangeStatus('hdl', 40),  'ok');
+assert('HDL 30 → low',      bwRangeStatus('hdl', 30),  'low');
+assert('HDL 200 → ok (no upper limit)', bwRangeStatus('hdl', 200), 'ok');
+
+// ─────────────────────────────────────────────────────────────────────────────
+section('bwRangeStatus — eGFR (higherBetter, lo:60)');
+assert('eGFR 90 → ok',      bwRangeStatus('egfr', 90),  'ok');
+assert('eGFR 59 → low',     bwRangeStatus('egfr', 59),  'low');
+assert('eGFR 120 → ok',     bwRangeStatus('egfr', 120), 'ok');
+
+// ─────────────────────────────────────────────────────────────────────────────
+section('bwRangeStatus — hs-CRP (lo:0 hi:1.0, decimal boundary)');
+assert('CRP 0.5 → ok',      bwRangeStatus('crp', 0.5),  'ok');
+assert('CRP 1.0 → ok (exact hi)', bwRangeStatus('crp', 1.0),  'ok');
+assert('CRP 1.1 → high',    bwRangeStatus('crp', 1.1),  'high');
+assert('CRP 0 → ok (lo boundary)', bwRangeStatus('crp', 0),    'ok');
+
+// ─────────────────────────────────────────────────────────────────────────────
+section('hevyParseMs — timestamp normalization');
+assert('Unix int → ms',     hevyParseMs(1000),            1000000);
+assert('Unix int 0 → 0',    hevyParseMs(0),               0);
+assert('null → 0',           hevyParseMs(null),            0);
+assert('undefined → 0',      hevyParseMs(undefined),       0);
+const isoMs = new Date('2026-06-01T12:00:00Z').getTime();
+assert('ISO string → correct ms', hevyParseMs('2026-06-01T12:00:00Z'), isoMs);
+assert('invalid string → 0', hevyParseMs('not-a-date'),   0);
+
+// ─────────────────────────────────────────────────────────────────────────────
+section('hevyE1RM — Epley formula (weight_kg × 2.205 × (1 + reps/30))');
+assert('0 weight → 0',       hevyE1RM(0, 5),    0);
+assert('0 reps → 0',         hevyE1RM(100, 0),  0);
+assert('negative reps → 0',  hevyE1RM(100, -1), 0);
+// 100 kg × 2.205 × (1 + 1/30) = 220.5 × 1.0333 = 227.85
+assert('100kg × 1 rep',
+  Math.round(hevyE1RM(100, 1) * 100) / 100,
+  Math.round(100 * 2.205 * (1 + 1/30) * 100) / 100);
+// 100 kg × 2.205 × (1 + 10/30) = 220.5 × 1.333 = 294.0
+assert('100kg × 10 reps',
+  Math.round(hevyE1RM(100, 10) * 100) / 100,
+  Math.round(100 * 2.205 * (1 + 10/30) * 100) / 100);
+// Higher reps → lower e1rm per kg
+assert('more reps = higher e1RM', hevyE1RM(100, 5) < hevyE1RM(100, 1), false);
+assert('fewer reps = lower e1RM for same weight', hevyE1RM(100, 1) < hevyE1RM(100, 5), true);
+
+// ─────────────────────────────────────────────────────────────────────────────
+section('hevyWorkoutVolume — lbs volume (weight_kg × 2.205 × reps)');
+assert('empty workout → 0',
+  hevyWorkoutVolume({ exercises: [] }), 0);
+assert('no exercises key → 0',
+  hevyWorkoutVolume({}), 0);
+assert('bodyweight sets (weight_kg=0) excluded',
+  hevyWorkoutVolume({ exercises: [{ sets: [{ weight_kg: 0, reps: 10 }] }] }), 0);
+assert('zero reps excluded',
+  hevyWorkoutVolume({ exercises: [{ sets: [{ weight_kg: 100, reps: 0 }] }] }), 0);
+
+// 100kg × 2.205 × 5 = 1102.5 lbs
+const vol1 = hevyWorkoutVolume({ exercises: [{
+  sets: [{ weight_kg: 100, reps: 5 }]
+}]});
+assert('100kg × 5 reps = 1102.5 lbs', Math.round(vol1 * 10) / 10, 1102.5);
+
+// Multi-exercise, multi-set
+const vol2 = hevyWorkoutVolume({ exercises: [
+  { sets: [{ weight_kg: 100, reps: 5 }, { weight_kg: 100, reps: 5 }] },
+  { sets: [{ weight_kg: 50,  reps: 10 }] },
+]});
+// (100×2.205×5) + (100×2.205×5) + (50×2.205×10) = 1102.5 + 1102.5 + 1102.5 = 3307.5
+assert('multi-exercise volume', Math.round(vol2 * 10) / 10, 3307.5);
+
+// ─────────────────────────────────────────────────────────────────────────────
+section('hevyBuildPRMap — PR tracking across workouts');
+
+const fakeWorkouts = [
+  {
+    start_time: 1000000,  // earlier
+    exercises: [{ title: 'Bench Press', sets: [
+      { weight_kg: 100, reps: 5 },
+      { weight_kg: 110, reps: 3 },
+    ]}]
+  },
+  {
+    start_time: 2000000,  // later — should update PRs
+    exercises: [{ title: 'Bench Press', sets: [
+      { weight_kg: 120, reps: 2 },
+    ]}]
+  }
+];
+
+const prMap = hevyBuildPRMap(fakeWorkouts);
+const bp = prMap.get('Bench Press');
+assert('PR map has Bench Press',     prMap.has('Bench Press'), true);
+assert('Best weight = 120 kg',       bp.bestWeight, 120);
+assert('Best weight reps = 2',       bp.bestWeightReps, 2);
+assert('Total sets logged = 3',      bp.sets.length, 3);
+assert('e1RM is a positive number',  bp.bestE1RM > 0, true);
+
+// Exercise with only bodyweight (weight_kg=0) — should not appear in map sets
+const bwWorkout = [{ start_time: 1000, exercises: [{ title: 'Pull-ups', sets: [{ weight_kg: 0, reps: 10 }] }] }];
+const bwMap = hevyBuildPRMap(bwWorkout);
+const pu = bwMap.get('Pull-ups');
+assert('Bodyweight sets not counted in PR sets', pu?.sets.length ?? 0, 0);
+
+// Empty workouts
+const emptyMap = hevyBuildPRMap([]);
+assert('Empty workouts → empty map', emptyMap.size, 0);
+
+// ─────────────────────────────────────────────────────────────────────────────
+document.getElementById('summary').innerHTML =
+  `<span style="color:${failed===0?'#10B981':'#EF4444'}">${passed} passed, ${failed} failed</span>`;
+</script>
+</body>
+</html>
