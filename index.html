@@ -4444,10 +4444,10 @@ function renderWorkoutsPage() {
   // ── Stats ──
   const totalVol   = workouts.reduce((s, w) => s + hevyWorkoutVolume(w), 0);
   const totalSets  = workouts.reduce((s, w) => s + w.exercises.reduce((ss, e) => ss + (e.sets?.length||0), 0), 0);
-  const avgDurMins = workouts.reduce((s, w) => s + ((w.end_time||0)-(w.start_time||0)), 0) / workouts.length / 60;
+  const avgDurMins = workouts.reduce((s, w) => s + (hevyParseMs(w.end_time) - hevyParseMs(w.start_time)), 0) / workouts.length / 60000;
   // workouts per week over last 4 weeks
   const fourWeeksAgo = Date.now() - 28 * 86400000;
-  const recentCount  = workouts.filter(w => (w.start_time||0)*1000 >= fourWeeksAgo).length;
+  const recentCount  = workouts.filter(w => hevyParseMs(w.start_time) >= fourWeeksAgo).length;
   const perWeek      = (recentCount / 4).toFixed(1);
 
   const kpiHtml = `<div class="metrics-grid" style="margin-bottom:14px;">
@@ -4477,7 +4477,7 @@ function renderWorkoutsPage() {
   const volByWeek = {};
   const freqByWeek = {};
   workouts.forEach(w => {
-    const d   = new Date((w.start_time || 0) * 1000);
+    const d   = new Date(hevyParseMs(w.start_time));
     const jan = new Date(d.getFullYear(), 0, 1);
     const wk  = Math.ceil(((d - jan) / 86400000 + jan.getDay() + 1) / 7);
     const wkey = `${d.getFullYear()}-W${String(wk).padStart(2,'0')}`;
@@ -4499,13 +4499,13 @@ function renderWorkoutsPage() {
     </div>` : '';
 
   // ── Workout cards grouped by week ──
-  const sorted = [...workouts].sort((a, b) => (b.start_time||0) - (a.start_time||0)).slice(0, 40);
+  const sorted = [...workouts].sort((a, b) => hevyParseMs(b.start_time) - hevyParseMs(a.start_time)).slice(0, 40);
 
   // Group into weeks
   const weekGroups = [];
   let curWeekKey = null, curGroup = [];
   sorted.forEach(w => {
-    const d   = new Date((w.start_time||0)*1000);
+    const d   = new Date(hevyParseMs(w.start_time));
     const jan = new Date(d.getFullYear(), 0, 1);
     const wk  = Math.ceil(((d - jan) / 86400000 + jan.getDay() + 1) / 7);
     const wkey = `${d.getFullYear()}-W${String(wk).padStart(2,'0')}`;
@@ -4521,14 +4521,14 @@ function renderWorkoutsPage() {
     const grpVol  = grp.workouts.reduce((s, w) => s + hevyWorkoutVolume(w), 0);
     const weekLabel = (() => {
       const firstW = grp.workouts[0];
-      const d = new Date((firstW.start_time||0)*1000);
+      const d = new Date(hevyParseMs(firstW.start_time));
       const weekStart = new Date(d - d.getDay()*86400000);
       return weekStart.toLocaleDateString('default', { month:'short', day:'numeric' });
     })();
 
     const cardsHtml = grp.workouts.map(w => {
-      const start   = new Date((w.start_time||0)*1000);
-      const durMins = Math.round(((w.end_time||0) - (w.start_time||0)) / 60);
+      const start   = new Date(hevyParseMs(w.start_time));
+      const durMins = Math.round((hevyParseMs(w.end_time) - hevyParseMs(w.start_time)) / 60000);
       const vol     = hevyWorkoutVolume(w);
       const sets    = w.exercises.reduce((s, e) => s + (e.sets?.length||0), 0);
       const tag     = hevyWorkoutTag(w.title);
@@ -4619,11 +4619,20 @@ function hevyE1RM(weightKg, reps) {
   return weightKg * 2.205 * (1 + reps / 30);
 }
 
+// Handle both Unix timestamp (number) and ISO string from Hevy API
+function hevyParseMs(t) {
+  if (!t) return 0;
+  if (typeof t === 'number') return t * 1000;
+  const ms = new Date(t).getTime();
+  return isNaN(ms) ? 0 : ms;
+}
+
 function hevyBuildPRMap(workouts) {
   // Returns Map<exerciseTitle, { bestWeight, bestReps, bestE1RM, e1rmDate, weightDate, sets:[] }>
   const map = new Map();
-  [...workouts].sort((a,b) => (a.start_time||0)-(b.start_time||0)).forEach(w => {
-    const date = new Date((w.start_time||0)*1000).toISOString().slice(0,10);
+  [...workouts].sort((a,b) => hevyParseMs(a.start_time) - hevyParseMs(b.start_time)).forEach(w => {
+    const ms = hevyParseMs(w.start_time);
+    const date = ms ? new Date(ms).toISOString().slice(0,10) : '1970-01-01';
     (w.exercises||[]).forEach(e => {
       const title = e.title || 'Unknown';
       if (!map.has(title)) map.set(title, { bestWeight:0, bestWeightReps:0, weightDate:'', bestE1RM:0, e1rmDate:'', sets:[] });
@@ -4643,19 +4652,33 @@ function renderHevyPRs(workouts) {
   const content = document.getElementById('hevy-content');
   if (!content) return;
 
-  const prMap   = hevyBuildPRMap(workouts);
+  let prMap;
+  try { prMap = hevyBuildPRMap(workouts); }
+  catch(e) {
+    content.innerHTML = `<div class="alert alert-neutral" style="margin-top:8px;font-size:13px;">Error building PR data: ${e.message}</div>`;
+    return;
+  }
   const now     = Date.now();
   const day     = 86400000;
-  const recent  = 30 * day;
 
   // Sort exercises: recent PRs first, then by best e1rm desc
   const entries = [...prMap.entries()]
     .filter(([, pr]) => pr.bestWeight > 0)
     .map(([title, pr]) => {
-      const daysAgo = Math.floor((now - Date.parse(pr.e1rmDate)) / day);
+      const ms = pr.e1rmDate ? new Date(pr.e1rmDate).getTime() : 0;
+      const daysAgo = ms ? Math.floor((now - ms) / day) : 9999;
       return { title, pr, daysAgo };
     })
     .sort((a, b) => a.daysAgo - b.daysAgo);
+
+  if (!entries.length) {
+    const totalExs = [...prMap.keys()].length;
+    content.innerHTML = `<div style="text-align:center;padding:40px 0;">
+      <div style="font-size:14px;color:var(--text-secondary);margin-bottom:8px;">No weighted exercises found</div>
+      <div style="font-size:12px;color:var(--text-muted);">Scanned ${workouts.length} workouts · ${totalExs} exercises total · none had weight_kg &gt; 0 with reps.<br>PRs only track barbell/dumbbell/cable movements with weight logged in Hevy.</div>
+    </div>`;
+    return;
+  }
 
   const recentCount = entries.filter(e => e.daysAgo <= 30).length;
 
@@ -4727,16 +4750,25 @@ function renderHevyE1RM(workouts) {
   const content = document.getElementById('hevy-content');
   if (!content) return;
 
-  const prMap = hevyBuildPRMap(workouts);
+  let prMap;
+  try { prMap = hevyBuildPRMap(workouts); }
+  catch(e) {
+    content.innerHTML = `<div class="alert alert-neutral" style="margin-top:8px;font-size:13px;">Error building E1RM data: ${e.message}</div>`;
+    return;
+  }
 
-  // Only exercises with 3+ data points for meaningful trend
+  // Exercises with at least 1 weighted set
   const exercises = [...prMap.entries()]
-    .filter(([, pr]) => pr.sets.length >= 3 && pr.bestWeight > 0)
+    .filter(([, pr]) => pr.sets.length >= 1 && pr.bestWeight > 0)
     .map(([title]) => title)
     .sort();
 
   if (!exercises.length) {
-    content.innerHTML = `<div style="text-align:center;padding:40px 0;color:var(--text-muted);font-size:13px;">Not enough data for trends — sync more workouts.</div>`;
+    const totalExs = [...prMap.entries()].length;
+    content.innerHTML = `<div style="text-align:center;padding:40px 0;">
+      <div style="font-size:14px;color:var(--text-secondary);margin-bottom:8px;">No weighted exercises found</div>
+      <div style="font-size:12px;color:var(--text-muted);">Scanned ${workouts.length} workouts · ${totalExs} exercises · none had weight_kg &gt; 0.<br>E1RM trends only apply to barbell/dumbbell/cable movements.</div>
+    </div>`;
     return;
   }
 
