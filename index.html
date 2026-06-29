@@ -2141,6 +2141,15 @@ let _supa = null;
 let _supaUser = null;
 let _supaSession = null;
 
+// Returns "YYYY-MM-DD" in the device's LOCAL timezone (not UTC)
+function localDate(d) {
+  if (!d) d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dd}`;
+}
+
 function lsGet(key, fallback) {
   const raw = localStorage.getItem(key);
   if (raw == null) return fallback;
@@ -2263,7 +2272,7 @@ async function loadUserData() {
     // Without this, checkboxes appear unchecked on any new device/session even
     // though the doses were already recorded in administration_log.
     if (logsRes.data?.length) {
-      const todayStr  = new Date().toISOString().split('T')[0];
+      const todayStr  = localDate();
       const todayLogs = logsRes.data.filter(r => r.date === todayStr);
       if (todayLogs.length) {
         const existing = lsGet('hrt_doses_taken', []);
@@ -2504,14 +2513,14 @@ function renderSparkline(containerId, values, max, color) {
 // Calculate consecutive day log streak (days ending today or yesterday)
 function calcLogStreak(logs) {
   if (!logs.length) return 0;
-  const today = new Date().toISOString().split('T')[0];
+  const today = localDate();
   const dates = new Set(logs.map(l => l.date));
   let streak = 0;
   let check = new Date();
   // Allow streak to start from today or yesterday
   if (!dates.has(today)) check.setDate(check.getDate() - 1);
   while (true) {
-    const d = check.toISOString().split('T')[0];
+    const d = localDate(check);
     if (!dates.has(d)) break;
     streak++;
     check.setDate(check.getDate() - 1);
@@ -2979,7 +2988,7 @@ function renderDoseSchedule() {
   });
 
   // TODAY section
-  const todayStr    = today.toISOString().split('T')[0];
+  const todayStr    = localDate(today);
   const takenToday  = lsGet('hrt_doses_taken', []).filter(t => t.date === todayStr);
   const dueCompounds = compounds.filter(c => c.dueToday);
   let html = `<div style="font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Today · ${escHtml(todayLabel)}</div>`;
@@ -3035,14 +3044,14 @@ function switchTab(btn, panelId) {
 }
 
 // ── Modals ──
-function openModal(id)  { document.getElementById(id).classList.add('open'); const d=document.getElementById('modal-date'); if(d) d.value=new Date().toISOString().split('T')[0]; }
+function openModal(id)  { document.getElementById(id).classList.add('open'); const d=document.getElementById('modal-date'); if(d) d.value=localDate(); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 document.addEventListener('click', e => {
   if (e.target.classList.contains('modal-overlay')) closeModal(e.target.id);
 });
 
 // ── Log form ──
-const _today = new Date().toISOString().split('T')[0];
+const _today = localDate();
 document.getElementById('log-date').value = _today;
 const _labDateEl = document.getElementById('lab-date');
 if (_labDateEl) _labDateEl.value = _today;
@@ -3120,7 +3129,7 @@ async function submitLog() {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
-  document.getElementById('log-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('log-date').value = localDate();
 
   renderLastVitalsEntry();
   renderVitalsToCards(); // refresh dashboard cards + deltas + sparklines
@@ -3210,7 +3219,7 @@ function bwBadge(status) {
 function bwShowForm(panelId) {
   const formEl = document.getElementById('bw-form');
   formEl.style.display = 'block';
-  document.getElementById('bw-date').value = new Date().toISOString().slice(0, 10);
+  document.getElementById('bw-date').value = localDate();
   document.getElementById('bw-lab').value = '';
   document.getElementById('bw-notes').value = '';
 
@@ -3706,7 +3715,7 @@ function measShowForm(id) {
       form.dataset.editId = id;
     }
   } else {
-    document.getElementById('ph-date').value  = new Date().toISOString().slice(0,10);
+    document.getElementById('ph-date').value  = localDate();
     document.getElementById('ph-notes').value = '';
     MEAS_KEYS.forEach(m => { const el = document.getElementById('ph-' + m.key); if (el) el.value = ''; });
     delete form.dataset.editId;
@@ -3930,7 +3939,7 @@ function renderCoachReport() {
   const phPrev   = measList[1] || null;
   const vitals   = lsGet('hrt_vitals_log', []).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
 
-  const today    = new Date().toISOString().slice(0, 10);
+  const today    = localDate();
   const sections = [];
 
   // ── Active Protocol ──
@@ -4049,7 +4058,7 @@ function reportCopy() {
   const phLatest = measList[0] || null;
   const phPrev   = measList[1] || null;
   const vitals   = lsGet('hrt_vitals_log', []).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
-  const today    = new Date().toISOString().slice(0, 10);
+  const today    = localDate();
 
   const lines = [`HRT / Physique Report — ${today}`, '═'.repeat(44), ''];
 
@@ -4127,7 +4136,7 @@ function renderCompliancePage() {
 
   const now      = new Date();
   const dayMs    = 86400000;
-  const endDate  = new Date(now.toISOString().slice(0, 10));
+  const endDate  = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const startDate= new Date(endDate - (_complianceRange - 1) * dayMs);
 
   // Build set of dose dates per compound label
@@ -4146,7 +4155,7 @@ function renderCompliancePage() {
     let scheduled = 0, checked = 0;
     const compound = protocol.compounds.find(c => c.name === name);
     for (let d = new Date(startDate); d <= endDate; d = new Date(+d + dayMs)) {
-      const dateStr = d.toISOString().slice(0, 10);
+      const dateStr = localDate(d);
       if (isScheduledDay(compound, dateStr, protocol.startDate)) {
         scheduled++;
         if (taken.has(dateStr)) checked++;
@@ -4165,7 +4174,7 @@ function renderCompliancePage() {
   // ── Heatmap (all compounds combined) ──
   const days = [];
   for (let d = new Date(startDate); d <= endDate; d = new Date(+d + dayMs)) {
-    const dateStr = d.toISOString().slice(0, 10);
+    const dateStr = localDate(d);
     const taken   = compounds.filter(n => doseMap[n]?.has(dateStr)).length;
     const sched   = compounds.filter(n => {
       const c = protocol.compounds.find(x => x.name === n);
@@ -4919,7 +4928,7 @@ function renderVitalsPage() {
 
 function openInsulinModal() {
   const now = new Date();
-  document.getElementById('ins-date').value = now.toISOString().split('T')[0];
+  document.getElementById('ins-date').value = localDate(now);
   document.getElementById('ins-time').value = now.toTimeString().slice(0, 5);
   document.getElementById('ins-type').value = 'short';
   document.getElementById('ins-units').value = '';
@@ -6301,7 +6310,7 @@ function renderUpcoming() {
 
   // Load taken log
   const taken = lsGet('hrt_doses_taken', []);
-  const todayStr = today.toISOString().split('T')[0];
+  const todayStr = localDate(today);
 
   function isTakenToday(compoundLabel) {
     return taken.some(t => t.date === todayStr && t.label === compoundLabel);
@@ -6337,7 +6346,7 @@ function renderUpcoming() {
     const items = schedule[offset];
     const dot = items[0].color;
     const isToday = offset === 0;
-    const dateForRow = new Date(today.getTime() + offset * msPerDay).toISOString().split('T')[0];
+    const dateForRow = localDate(new Date(today.getTime() + offset * msPerDay));
 
     if (isToday) {
       const takenBtns = items.map(i => {
@@ -6369,7 +6378,7 @@ function renderUpcoming() {
   const missedRows = [];
   for (let back = 1; back <= 3; back++) {
     const pastDate = new Date(today.getTime() - back * msPerDay);
-    const pastStr  = pastDate.toISOString().split('T')[0];
+    const pastStr  = localDate(pastDate);
     compounds.forEach((c, idx) => {
       const intervalDays = freqToDays(c.freq);
       if (intervalDays === 1) return; // ED handled separately
@@ -6468,7 +6477,7 @@ function renderAdherenceBadge() {
   let expected = 0, confirmed = 0;
   for (let back = 0; back < 30; back++) {
     const d = new Date(today.getTime() - back * msPerDay);
-    const dStr = d.toISOString().split('T')[0];
+    const dStr = localDate(d);
     const daysSince = (d - startDate) / msPerDay;
     if (daysSince < 0) continue;
     compounds.forEach(c => {
