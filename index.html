@@ -2856,7 +2856,7 @@ function nav(page) {
   if (page === 'vitals') renderVitalsPage();
   if (page === 'bloodwork') renderBloodworkPage();
   if (page === 'physique') renderPhysiquePage();
-  if (page === 'workouts') renderWorkoutsPage();
+  if (page === 'workouts') { renderWorkoutsPage(); hevyAutoSync(); }
   if (page === 'report') renderCoachReport();
   if (page === 'compliance') renderCompliancePage();
   if (page === 'healthkit') renderHealthKitPage();
@@ -4755,6 +4755,13 @@ function hevySaveKey() {
   localStorage.setItem(HEVY_KEY_LS, key);
   document.getElementById('hevy-setup').style.display = 'none';
   hevySync();
+}
+
+function hevyAutoSync() {
+  if (!hevyKey()) return;
+  const last = localStorage.getItem('hrt_hevy_synced');
+  const staleMs = 2 * 60 * 60 * 1000; // 2 hours
+  if (!last || (Date.now() - new Date(last).getTime()) > staleMs) hevySync();
 }
 
 async function hevySync() {
