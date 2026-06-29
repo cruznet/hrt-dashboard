@@ -3014,8 +3014,8 @@ const BW_MARKERS = {
 };
 
 const BW_GROUP_ORDER = ['Hormones', 'CBC', 'Metabolic', 'Liver', 'Lipids', 'Other'];
-const BW_KPI_KEYS    = ['tt', 'hematocrit', 'e2', 'ldl']; // 4 key dashboard markers
-const BW_KPI_COLORS  = { tt: 'mc-gold', hematocrit: 'mc-red', e2: 'mc-purple', ldl: 'mc-amber' };
+const BW_KPI_KEYS    = ['tt', 'hematocrit', 'e2', 'ldl', 'hdl'];
+const BW_KPI_COLORS  = { tt: 'mc-gold', hematocrit: 'mc-red', e2: 'mc-purple', ldl: 'mc-amber', hdl: 'mc-green' };
 
 function bwLoad()           { return lsGet('hrt_bloodwork', []); }
 function bwSaveAll(panels)  { localStorage.setItem('hrt_bloodwork', JSON.stringify(panels)); }
