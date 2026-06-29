@@ -1,0 +1,18 @@
+{
+  "name": "HRT Tracker",
+  "short_name": "HRT",
+  "description": "Track TRT, HRT, and performance protocols with bloodwork, vitals, and cycle analytics.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0D0D15",
+  "theme_color": "#0D0D15",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
