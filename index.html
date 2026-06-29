@@ -4380,6 +4380,18 @@ async function hevySync() {
   }
 }
 
+function hevyWorkoutTag(title) {
+  const t = (title||'').toLowerCase();
+  if (/pull|back|row|deadlift|curl|lat|bicep/i.test(t))  return { label:'Pull',  color:'#38BDF8' };
+  if (/push|chest|press|delt|tricep|shoulder/i.test(t))  return { label:'Push',  color:'#F87171' };
+  if (/leg|squat|quad|hamstring|glute|calf|calves/i.test(t)) return { label:'Legs', color:'#4ADE80' };
+  if (/upper/i.test(t)) return { label:'Upper', color:'#A78BFA' };
+  if (/lower/i.test(t)) return { label:'Lower', color:'#FB923C' };
+  if (/full|total/i.test(t)) return { label:'Full',  color:'#F5C518' };
+  if (/cardio|run|bike|swim/i.test(t)) return { label:'Cardio','color':'#F472B6' };
+  return null;
+}
+
 function renderWorkoutsPage() {
   const setup  = document.getElementById('hevy-setup');
   const content= document.getElementById('hevy-content');
@@ -4388,7 +4400,6 @@ function renderWorkoutsPage() {
   const key      = hevyKey();
   const workouts = hevyCache();
 
-  // Always hide setup unless explicitly opened
   if (setup) setup.style.display = 'none';
 
   if (!key && !workouts.length) {
@@ -4409,82 +4420,141 @@ function renderWorkoutsPage() {
   const synced = localStorage.getItem('hrt_hevy_synced');
   const syncedStr = synced ? `Last synced ${new Date(synced).toLocaleString('default',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}` : '';
 
-  // Weekly volume chart data (last 12 weeks)
-  const volByWeek = {};
-  workouts.forEach(w => {
-    const d   = new Date((w.start_time || 0) * 1000);
-    // ISO week key: YYYY-Www
-    const jan = new Date(d.getFullYear(), 0, 1);
-    const wk  = Math.ceil(((d - jan) / 86400000 + jan.getDay() + 1) / 7);
-    const key = `${d.getFullYear()}-W${String(wk).padStart(2,'0')}`;
-    const vol = hevyWorkoutVolume(w);
-    volByWeek[key] = (volByWeek[key] || 0) + vol;
-  });
-  const weekKeys = Object.keys(volByWeek).sort().slice(-12);
-  const weekVols = weekKeys.map(k => volByWeek[k]);
-
-  // Stat cards
+  // ── Stats ──
   const totalVol   = workouts.reduce((s, w) => s + hevyWorkoutVolume(w), 0);
   const totalSets  = workouts.reduce((s, w) => s + w.exercises.reduce((ss, e) => ss + (e.sets?.length||0), 0), 0);
   const avgDurMins = workouts.reduce((s, w) => s + ((w.end_time||0)-(w.start_time||0)), 0) / workouts.length / 60;
+  // workouts per week over last 4 weeks
+  const fourWeeksAgo = Date.now() - 28 * 86400000;
+  const recentCount  = workouts.filter(w => (w.start_time||0)*1000 >= fourWeeksAgo).length;
+  const perWeek      = (recentCount / 4).toFixed(1);
 
   const kpiHtml = `<div class="metrics-grid" style="margin-bottom:14px;">
     <div class="metric-card">
-      <div class="metric-label">WORKOUTS</div>
+      <div class="metric-label">TOTAL</div>
       <div class="metric-value" style="color:var(--primary-bright);">${workouts.length}</div>
-      <div class="metric-unit">synced</div>
+      <div class="metric-unit">workouts</div>
     </div>
     <div class="metric-card">
-      <div class="metric-label">TOTAL VOLUME</div>
-      <div class="metric-value" style="color:var(--purple);">${(totalVol/1000).toFixed(1)}<span style="font-size:16px;">k</span></div>
-      <div class="metric-unit">lbs</div>
-    </div>
-    <div class="metric-card">
-      <div class="metric-label">TOTAL SETS</div>
-      <div class="metric-value" style="color:var(--teal);">${totalSets}</div>
-      <div class="metric-unit">sets</div>
+      <div class="metric-label">PER WEEK</div>
+      <div class="metric-value" style="color:var(--teal);">${perWeek}</div>
+      <div class="metric-unit">avg (last 4 wk)</div>
     </div>
     <div class="metric-card">
       <div class="metric-label">AVG DURATION</div>
       <div class="metric-value" style="color:var(--amber);">${Math.round(avgDurMins)}</div>
       <div class="metric-unit">min</div>
     </div>
+    <div class="metric-card">
+      <div class="metric-label">TOTAL VOLUME</div>
+      <div class="metric-value" style="color:var(--purple);">${(totalVol/1000).toFixed(0)}<span style="font-size:16px;">k</span></div>
+      <div class="metric-unit">lbs</div>
+    </div>
   </div>`;
 
-  // Volume chart
+  // ── Weekly volume chart ──
+  const volByWeek = {};
+  const freqByWeek = {};
+  workouts.forEach(w => {
+    const d   = new Date((w.start_time || 0) * 1000);
+    const jan = new Date(d.getFullYear(), 0, 1);
+    const wk  = Math.ceil(((d - jan) / 86400000 + jan.getDay() + 1) / 7);
+    const wkey = `${d.getFullYear()}-W${String(wk).padStart(2,'0')}`;
+    volByWeek[wkey]  = (volByWeek[wkey]  || 0) + hevyWorkoutVolume(w);
+    freqByWeek[wkey] = (freqByWeek[wkey] || 0) + 1;
+  });
+  const weekKeys = Object.keys(volByWeek).sort().slice(-12);
+  const weekVols = weekKeys.map(k => volByWeek[k]);
+
   const chartHtml = weekKeys.length > 1 ? `
     <div class="card" style="margin-bottom:14px;">
-      <div class="card-title">Weekly Volume (lbs)</div>
-      <div style="height:160px;position:relative;"><canvas id="hevy-vol-chart"></canvas></div>
-    </div>` : '';
-
-  // Workout list
-  const listHtml = workouts.slice(0, 30).map(w => {
-    const start    = new Date((w.start_time || 0) * 1000);
-    const durMins  = Math.round(((w.end_time||0) - (w.start_time||0)) / 60);
-    const dateStr  = start.toLocaleDateString('default', { weekday:'short', month:'short', day:'numeric' });
-    const vol      = hevyWorkoutVolume(w);
-    const sets     = w.exercises.reduce((s, e) => s + (e.sets?.length||0), 0);
-    const exList   = (w.exercises||[]).slice(0, 4).map(e => {
-      const topSet = (e.sets||[]).filter(s => s.weight_kg > 0).sort((a,b) => b.weight_kg-a.weight_kg)[0];
-      const topStr = topSet ? ` <span style="color:var(--text-muted);font-size:11px;">${Math.round(topSet.weight_kg*2.205)}lbs×${topSet.reps}</span>` : '';
-      return `<span style="font-size:12px;color:var(--text-secondary);">${escHtml(e.title||'')}${topStr}</span>`;
-    }).join('<span style="color:var(--border);margin:0 6px;">·</span>');
-    const moreEx   = (w.exercises||[]).length > 4 ? `<span style="font-size:11px;color:var(--text-muted);margin-left:4px;">+${w.exercises.length-4} more</span>` : '';
-
-    return `<div style="padding:12px 0;border-bottom:0.5px solid var(--border);">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px;">
-        <div>
-          <span style="font-size:14px;font-weight:600;color:var(--text-primary);">${escHtml(w.title||'Workout')}</span>
-          <span style="font-size:12px;color:var(--text-muted);margin-left:8px;">${dateStr}</span>
-        </div>
-        <div style="display:flex;gap:12px;font-size:12px;color:var(--text-muted);flex-shrink:0;">
-          ${durMins > 0 ? `<span><i class="ti ti-clock" style="margin-right:3px;"></i>${durMins}m</span>` : ''}
-          <span><i class="ti ti-list" style="margin-right:3px;"></i>${sets} sets</span>
-          ${vol > 0 ? `<span style="color:var(--purple);font-family:var(--font-data);">${(vol/1000).toFixed(1)}k lbs</span>` : ''}
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <div class="card-title" style="margin-bottom:0;">Weekly Volume</div>
+        <div style="display:flex;gap:14px;font-size:12px;color:var(--text-muted);">
+          ${weekKeys.slice(-4).map(k => `<span>${k.replace(/^\d{4}-/,'')} <strong style="color:var(--text-secondary);">${freqByWeek[k]}×</strong></span>`).join('')}
         </div>
       </div>
-      <div style="display:flex;flex-wrap:wrap;gap:4px;">${exList}${moreEx}</div>
+      <div style="height:140px;position:relative;"><canvas id="hevy-vol-chart"></canvas></div>
+    </div>` : '';
+
+  // ── Workout cards grouped by week ──
+  const sorted = [...workouts].sort((a, b) => (b.start_time||0) - (a.start_time||0)).slice(0, 40);
+
+  // Group into weeks
+  const weekGroups = [];
+  let curWeekKey = null, curGroup = [];
+  sorted.forEach(w => {
+    const d   = new Date((w.start_time||0)*1000);
+    const jan = new Date(d.getFullYear(), 0, 1);
+    const wk  = Math.ceil(((d - jan) / 86400000 + jan.getDay() + 1) / 7);
+    const wkey = `${d.getFullYear()}-W${String(wk).padStart(2,'0')}`;
+    if (wkey !== curWeekKey) {
+      if (curGroup.length) weekGroups.push({ key: curWeekKey, workouts: curGroup });
+      curWeekKey = wkey; curGroup = [];
+    }
+    curGroup.push(w);
+  });
+  if (curGroup.length) weekGroups.push({ key: curWeekKey, workouts: curGroup });
+
+  const groupsHtml = weekGroups.map(grp => {
+    const grpVol  = grp.workouts.reduce((s, w) => s + hevyWorkoutVolume(w), 0);
+    const weekLabel = (() => {
+      const firstW = grp.workouts[0];
+      const d = new Date((firstW.start_time||0)*1000);
+      const weekStart = new Date(d - d.getDay()*86400000);
+      return weekStart.toLocaleDateString('default', { month:'short', day:'numeric' });
+    })();
+
+    const cardsHtml = grp.workouts.map(w => {
+      const start   = new Date((w.start_time||0)*1000);
+      const durMins = Math.round(((w.end_time||0) - (w.start_time||0)) / 60);
+      const vol     = hevyWorkoutVolume(w);
+      const sets    = w.exercises.reduce((s, e) => s + (e.sets?.length||0), 0);
+      const tag     = hevyWorkoutTag(w.title);
+      const dayStr  = start.toLocaleDateString('default', { weekday:'short', month:'short', day:'numeric' });
+
+      const exRows = (w.exercises||[]).map(e => {
+        const validSets = (e.sets||[]).filter(s => s.reps > 0 || s.weight_kg > 0);
+        const topSet = validSets.filter(s => s.weight_kg > 0).sort((a,b) => b.weight_kg - a.weight_kg)[0];
+        const setCount = validSets.length;
+        // Format: "3×8 @ 221 lbs" or just "3×12" for bodyweight
+        let setStr = '';
+        if (topSet) {
+          setStr = `${setCount}×${topSet.reps} @ ${Math.round(topSet.weight_kg*2.205)} lbs`;
+        } else if (validSets.length) {
+          const avgReps = Math.round(validSets.reduce((s,x)=>s+x.reps,0)/validSets.length);
+          setStr = `${setCount}×${avgReps}`;
+        }
+        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:0.5px solid rgba(255,255,255,0.04);">
+          <span style="font-size:12px;color:var(--text-secondary);">${escHtml(e.title||'')}</span>
+          <span style="font-size:12px;font-family:var(--font-data);color:var(--text-muted);">${setStr}</span>
+        </div>`;
+      }).join('');
+
+      return `<div class="card" style="margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+          <div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;">
+              <span style="font-size:14px;font-weight:600;color:var(--text-primary);">${escHtml(w.title||'Workout')}</span>
+              ${tag ? `<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px;background:${tag.color}18;color:${tag.color};">${tag.label}</span>` : ''}
+            </div>
+            <span style="font-size:12px;color:var(--text-muted);">${dayStr}</span>
+          </div>
+          <div style="text-align:right;flex-shrink:0;">
+            <div style="font-size:13px;font-weight:600;font-family:var(--font-data);color:var(--purple);">${vol > 0 ? (vol/1000).toFixed(1)+'k lbs' : ''}</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${durMins > 0 ? durMins+'m' : ''} · ${sets} sets</div>
+          </div>
+        </div>
+        <div>${exRows}</div>
+      </div>`;
+    }).join('');
+
+    return `<div style="margin-bottom:20px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;color:var(--text-muted);text-transform:uppercase;">Week of ${weekLabel}</div>
+        <div style="font-size:11px;color:var(--text-muted);">${grp.workouts.length} sessions · ${(grpVol/1000).toFixed(1)}k lbs</div>
+      </div>
+      ${cardsHtml}
     </div>`;
   }).join('');
 
@@ -4492,12 +4562,8 @@ function renderWorkoutsPage() {
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">${syncedStr}</div>
     ${kpiHtml}
     ${chartHtml}
-    <div class="card">
-      <div class="card-title">Recent Workouts</div>
-      ${listHtml}
-    </div>`;
+    ${groupsHtml}`;
 
-  // Render volume chart
   if (weekKeys.length > 1) {
     setTimeout(() => {
       const canvas = document.getElementById('hevy-vol-chart');
@@ -4506,7 +4572,7 @@ function renderWorkoutsPage() {
         type: 'bar',
         data: {
           labels: weekKeys.map(k => k.replace(/^\d{4}-/, '')),
-          datasets: [{ data: weekVols, backgroundColor: 'rgba(167,139,250,0.6)', borderColor: '#A78BFA', borderWidth: 1, borderRadius: 3 }]
+          datasets: [{ data: weekVols, backgroundColor: 'rgba(167,139,250,0.55)', borderColor: '#A78BFA', borderWidth: 1, borderRadius: 4 }]
         },
         options: {
           responsive: true, maintainAspectRatio: false, animation: false,
