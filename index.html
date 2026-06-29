@@ -2359,10 +2359,40 @@ function _checkInactivity() {
   document.addEventListener(evt, _resetInactivityTimer, { passive: true })
 );
 
+// Track the calendar date when the UI was last rendered so we can detect day-change
+let _lastRenderedDate = localDate();
+
+// Re-run dose UI whenever the day rolls over (tab left open overnight)
+function _checkDateRollover() {
+  const today = localDate();
+  if (today !== _lastRenderedDate) {
+    _lastRenderedDate = today;
+    if (typeof renderDoseSchedule === 'function') renderDoseSchedule();
+  }
+}
+
 // Check elapsed time whenever the tab/window becomes visible (covers sleep/wake)
 document.addEventListener('visibilitychange', () => {
-  if (!document.hidden) _checkInactivity();
+  if (!document.hidden) {
+    _checkInactivity();
+    _checkDateRollover();
+  }
 });
+
+// One-time migration: re-derive each dose's date from its ISO timestamp using
+// local timezone. Fixes entries that were saved with the wrong UTC date before
+// the localDate() fix was deployed.
+(function migrateDoseDates() {
+  const doses = lsGet('hrt_doses_taken', []);
+  let changed = false;
+  const fixed = doses.map(d => {
+    if (!d.ts) return d;
+    const correct = localDate(new Date(d.ts));
+    if (correct !== d.date) { changed = true; return { ...d, date: correct }; }
+    return d;
+  });
+  if (changed) localStorage.setItem('hrt_doses_taken', JSON.stringify(fixed));
+})();
 
 function showApp() {
   document.getElementById('auth-overlay').classList.remove('visible');
