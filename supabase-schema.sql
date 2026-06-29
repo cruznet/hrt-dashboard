@@ -196,7 +196,7 @@ CREATE TABLE administration_log (
 -- ============================================================
 -- 9. DAILY METRICS (per user — once per day)
 -- ============================================================
-CREATE TABLE daily_metrics (
+CREATE TABLE daily_logs (
   id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id             UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   date                DATE NOT NULL,
@@ -314,7 +314,7 @@ CREATE TABLE workout_sets (
 -- ============================================================
 CREATE INDEX idx_admin_log_user_date       ON administration_log (user_id, date DESC);
 CREATE INDEX idx_admin_log_compound        ON administration_log (compound_id);
-CREATE INDEX idx_daily_metrics_user_date   ON daily_metrics (user_id, date DESC);
+CREATE INDEX idx_daily_logs_user_date   ON daily_logs (user_id, date DESC);
 CREATE INDEX idx_labs_user_date            ON labs (user_id, draw_date DESC);
 CREATE INDEX idx_labs_marker               ON labs (user_id, marker);
 CREATE INDEX idx_protocols_user            ON protocols (user_id, start_date DESC);
@@ -330,7 +330,7 @@ CREATE INDEX idx_protocol_segments         ON protocol_compound_segments (protoc
 ALTER TABLE profiles                     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_vials                   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE administration_log           ENABLE ROW LEVEL SECURITY;
-ALTER TABLE daily_metrics                ENABLE ROW LEVEL SECURITY;
+ALTER TABLE daily_logs                ENABLE ROW LEVEL SECURITY;
 ALTER TABLE labs                         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE protocols                    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE protocol_compounds           ENABLE ROW LEVEL SECURITY;
@@ -348,8 +348,8 @@ CREATE POLICY "Users own vials"
   ON user_vials FOR ALL USING (auth.uid() = user_id);
 CREATE POLICY "Users own admin_log"
   ON administration_log FOR ALL USING (auth.uid() = user_id);
-CREATE POLICY "Users own daily_metrics"
-  ON daily_metrics FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "Users own daily_logs"
+  ON daily_logs FOR ALL USING (auth.uid() = user_id);
 CREATE POLICY "Users own labs"
   ON labs FOR ALL USING (auth.uid() = user_id);
 CREATE POLICY "Users own lab_results"

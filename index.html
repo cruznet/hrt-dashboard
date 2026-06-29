@@ -1865,7 +1865,7 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
 
 <script>
 // ── Config ──
-// Supabase tables: administration_log, daily_metrics
+// Supabase tables: administration_log, daily_logs
 const SUPABASE_URL      = 'https://lnxhksnvcewtpwkaghrh.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable__lU8rYLjeTMoAgXANKsKKA_9Xgau8bm';
 
@@ -1949,7 +1949,7 @@ async function loadUserData() {
   try {
     const [logsRes, metricsRes, settingsRes, insulinRes] = await Promise.all([
       _supa.from('administration_log').select('*').eq('user_id', uid).order('date', { ascending: false }).limit(50),
-      _supa.from('daily_metrics').select('*').eq('user_id', uid).order('date', { ascending: false }).limit(90),
+      _supa.from('daily_logs').select('*').eq('user_id', uid).order('date', { ascending: false }).limit(90),
       _supa.from('user_settings').select('*').eq('user_id', uid).maybeSingle(),
       _supa.from('insulin_log').select('*').eq('user_id', uid).order('date', { ascending: false }).order('created_at', { ascending: false }).limit(90)
     ]);
@@ -2276,7 +2276,7 @@ function parseLocalDate(s) { return new Date(s + 'T12:00:00'); }
 function renderRealCharts() {
   const weights = window._weightHistory || [];
 
-  // Weight chart from daily_metrics
+  // Weight chart from daily_logs
   if (weights.length > 1) {
     const wSorted = [...weights].filter(w => w.weight_lbs).reverse().slice(-8);
     const wLabels = wSorted.map(w => {
@@ -2818,8 +2818,8 @@ async function submitLog() {
     metricsRow.bp_systolic    = bpParts.length >= 1 && bpParts[0] ? parseInt(bpParts[0]) : null;
     metricsRow.bp_diastolic   = bpParts.length === 2             ? parseInt(bpParts[1]) : null;
     metricsRow.fasting_glucose = entry.glucose       ? parseFloat(entry.glucose)   : null;
-    const { error: metricsErr } = await _supa.from('daily_metrics').upsert(metricsRow, { onConflict: 'user_id,date' });
-    if (metricsErr) console.error('[submitLog] daily_metrics upsert failed:', metricsErr);
+    const { error: metricsErr } = await _supa.from('daily_logs').upsert(metricsRow, { onConflict: 'user_id,date' });
+    if (metricsErr) console.error('[submitLog] daily_logs upsert failed:', metricsErr);
   }
 
   // Clear value fields, keep date set to today for next entry
