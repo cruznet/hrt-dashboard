@@ -4157,6 +4157,131 @@ function renderPhysiqueDashStrip() {
 
 // ── COACH REPORT ──────────────────────────────────────────────────────────────
 
+function renderCycleRetro() {
+  const protocol = lsGet('hrt_active_protocol_data', null);
+  if (!protocol || !protocol.startDate) return '';
+
+  const MS_DAY  = 86400000;
+  const MS_WEEK = MS_DAY * 7;
+  const startMs = new Date(protocol.startDate).getTime();
+  const todayStr = localDate();
+  const todayMs  = new Date(todayStr).getTime();
+
+  const weeksElapsed  = Math.ceil((todayMs - startMs + MS_DAY) / MS_WEEK);
+  const totalWeeks    = protocol.weeks || weeksElapsed;
+  const displayWeeks  = Math.min(weeksElapsed, totalWeeks);
+  if (displayWeeks < 1) return '';
+
+  const doses    = lsGet('hrt_doses_taken', []);
+  const vitals   = lsGet('hrt_vitals_log', []);
+  const panels   = bwLoad();
+  const measList = measLoad();
+
+  const dosesByDate = {};
+  doses.forEach(d => { (dosesByDate[d.date] = dosesByDate[d.date] || []).push(d.label); });
+  const weightByDate = {};
+  vitals.forEach(v => { if (v.weight) weightByDate[v.date] = parseFloat(v.weight); });
+  const bwDates   = new Set(panels.map(p => p.date));
+  const measDates = new Set(measList.map(m => m.date));
+
+  const compounds = (protocol.compounds || []).map(c => ({
+    name:  c.name,
+    freq:  c.phases?.[0]?.freq ?? (Array.isArray(c.freq) ? c.freq[0] : c.freq) ?? 'ED',
+    start: c.phases?.[0]?.startDate || protocol.startDate
+  }));
+
+  let totalScheduled = 0, totalTaken = 0;
+  const weekData = [];
+
+  for (let w = 0; w < displayWeeks; w++) {
+    const weekStartMs = startMs + w * MS_WEEK;
+    const weekEndMs   = weekStartMs + MS_WEEK;
+    let scheduled = 0, taken = 0;
+    const weights = [];
+    let hasBW = false, hasMeas = false;
+
+    for (let d = 0; d < 7; d++) {
+      const dayMs  = weekStartMs + d * MS_DAY;
+      if (dayMs > todayMs) break;
+      const dateStr = localDate(new Date(dayMs));
+      if (weightByDate[dateStr]) weights.push(weightByDate[dateStr]);
+      if (bwDates.has(dateStr))   hasBW   = true;
+      if (measDates.has(dateStr)) hasMeas = true;
+      compounds.forEach(c => {
+        if (new Date(c.start).getTime() > dayMs) return;
+        if (isDueOnDate(c.freq, c.start, dateStr)) {
+          scheduled++;
+          if ((dosesByDate[dateStr] || []).includes(c.name)) taken++;
+        }
+      });
+    }
+
+    totalScheduled += scheduled;
+    totalTaken     += taken;
+    const adherence  = scheduled > 0 ? Math.round((taken / scheduled) * 100) : null;
+    const avgWeight  = weights.length ? +(weights.reduce((a, b) => a + b, 0) / weights.length).toFixed(1) : null;
+    const wkStart    = localDate(new Date(weekStartMs));
+    const wkEnd      = localDate(new Date(Math.min(weekEndMs - MS_DAY, todayMs)));
+    weekData.push({ weekNum: w + 1, wkStart, wkEnd, adherence, avgWeight, hasBW, hasMeas });
+  }
+
+  const overallAdherence = totalScheduled > 0 ? Math.round((totalTaken / totalScheduled) * 100) : null;
+  const weights = weekData.map(w => w.avgWeight).filter(Boolean);
+  const weightDelta = weights.length >= 2 ? +(weights[weights.length - 1] - weights[0]).toFixed(1) : null;
+
+  const adherenceCol = v => v === null ? 'var(--text-muted)' : v === 100 ? 'var(--green)' : v >= 80 ? 'var(--primary-bright)' : 'var(--red)';
+
+  const rows = weekData.map(w => {
+    const notes = [
+      w.hasBW   ? `<span style="font-size:11px;color:var(--teal);background:rgba(34,211,238,0.1);padding:1px 5px;border-radius:3px;">Bloodwork</span>`  : '',
+      w.hasMeas ? `<span style="font-size:11px;color:var(--purple);background:rgba(192,132,252,0.1);padding:1px 5px;border-radius:3px;">Check-in</span>` : ''
+    ].filter(Boolean).join(' ');
+    return `<tr style="border-bottom:0.5px solid var(--border);">
+      <td style="padding:6px 0;font-family:var(--font-data);font-size:12px;color:var(--text-muted);white-space:nowrap;">Wk ${w.weekNum}</td>
+      <td style="padding:6px 0;font-size:11px;color:var(--text-muted);white-space:nowrap;">${w.wkStart.slice(5)} – ${w.wkEnd.slice(5)}</td>
+      <td style="padding:6px 0;font-family:var(--font-data);font-size:13px;font-weight:600;color:${adherenceCol(w.adherence)};">${w.adherence !== null ? w.adherence + '%' : '—'}</td>
+      <td style="padding:6px 0;font-family:var(--font-data);font-size:13px;color:var(--text-primary);">${w.avgWeight ? w.avgWeight + ' lbs' : '—'}</td>
+      <td style="padding:6px 0;">${notes}</td>
+    </tr>`;
+  }).join('');
+
+  const deltaHtml = weightDelta !== null
+    ? `${weights[0]} → ${weights[weights.length-1]} lbs <span style="color:${weightDelta <= 0 ? 'var(--green)' : 'var(--amber)'};">(${weightDelta > 0 ? '+' : ''}${weightDelta})</span>`
+    : '—';
+
+  return `
+    <div class="report-card card" style="margin-bottom:14px;">
+      <div class="report-card-title card-title">Cycle Retrospective</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">
+        ${escHtml(protocol.name)} · Week ${displayWeeks} of ${totalWeeks} · Started ${escHtml(protocol.startDate)}
+      </div>
+      <div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:14px;padding-bottom:12px;border-bottom:0.5px solid var(--border);">
+        <div>
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:2px;">Overall Adherence</div>
+          <div style="font-size:22px;font-weight:700;font-family:var(--font-data);color:${adherenceCol(overallAdherence)};">${overallAdherence !== null ? overallAdherence + '%' : '—'}</div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:2px;">Weight Trend</div>
+          <div style="font-size:14px;font-family:var(--font-data);color:var(--text-primary);line-height:1.8;">${deltaHtml}</div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:2px;">Weeks Logged</div>
+          <div style="font-size:22px;font-weight:700;font-family:var(--font-data);color:var(--text-primary);">${displayWeeks}</div>
+        </div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;">
+        <thead><tr style="border-bottom:0.5px solid var(--border-mid);">
+          <th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;padding-bottom:6px;">Wk</th>
+          <th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;padding-bottom:6px;">Dates</th>
+          <th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;padding-bottom:6px;">Adherence</th>
+          <th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;padding-bottom:6px;">Avg Weight</th>
+          <th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;padding-bottom:6px;">Events</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
 function renderCoachReport() {
   const el = document.getElementById('report-content');
   if (!el) return;
@@ -4192,6 +4317,8 @@ function renderCoachReport() {
           <tbody style="line-height:2;">${compounds}</tbody>
         </table>
       </div>`);
+    const retroHtml = renderCycleRetro();
+    if (retroHtml) sections.push(retroHtml);
   }
 
   // ── Bloodwork ──
@@ -4300,6 +4427,50 @@ function reportCopy() {
       lines.push(`  ${c.name}  ${dose}${c.unit||'mg'}  ${freq}`);
     });
     lines.push('');
+
+    // Cycle Retrospective (plain-text)
+    const MS_DAY = 86400000, MS_WEEK = MS_DAY * 7;
+    const startMs = new Date(protocol.startDate).getTime();
+    const todayStr = localDate();
+    const todayMs  = new Date(todayStr).getTime();
+    const weeksElapsed = Math.ceil((todayMs - startMs + MS_DAY) / MS_WEEK);
+    const displayWeeks = Math.min(weeksElapsed, protocol.weeks || weeksElapsed);
+    if (displayWeeks >= 1) {
+      const doses = lsGet('hrt_doses_taken', []);
+      const dosesByDate = {};
+      doses.forEach(d => { (dosesByDate[d.date] = dosesByDate[d.date] || []).push(d.label); });
+      const weightByDate = {};
+      lsGet('hrt_vitals_log', []).forEach(v => { if (v.weight) weightByDate[v.date] = parseFloat(v.weight); });
+      const cpds = (protocol.compounds || []).map(c => ({
+        name: c.name,
+        freq: c.phases?.[0]?.freq ?? (Array.isArray(c.freq) ? c.freq[0] : c.freq) ?? 'ED',
+        start: c.phases?.[0]?.startDate || protocol.startDate
+      }));
+      let totSched = 0, totTaken = 0;
+      lines.push(`CYCLE RETROSPECTIVE — Week ${displayWeeks} of ${protocol.weeks || '?'}`);
+      for (let w = 0; w < displayWeeks; w++) {
+        const wsMs = startMs + w * MS_WEEK;
+        let sched = 0, taken = 0; const wts = [];
+        for (let d = 0; d < 7; d++) {
+          const dayMs = wsMs + d * MS_DAY; if (dayMs > todayMs) break;
+          const ds = localDate(new Date(dayMs));
+          if (weightByDate[ds]) wts.push(weightByDate[ds]);
+          cpds.forEach(c => {
+            if (new Date(c.start).getTime() > dayMs) return;
+            if (isDueOnDate(c.freq, c.start, ds)) { sched++; if ((dosesByDate[ds]||[]).includes(c.name)) taken++; }
+          });
+        }
+        totSched += sched; totTaken += taken;
+        const adh = sched > 0 ? Math.round((taken/sched)*100) + '%' : '—';
+        const wt  = wts.length ? (wts.reduce((a,b)=>a+b,0)/wts.length).toFixed(1)+' lbs' : '—';
+        const ws  = localDate(new Date(wsMs)).slice(5);
+        const we  = localDate(new Date(Math.min(wsMs+MS_WEEK-MS_DAY, todayMs))).slice(5);
+        lines.push(`  Wk ${w+1} (${ws}–${we})  Adherence:${adh}  Avg Wt:${wt}`);
+      }
+      const overall = totSched > 0 ? Math.round((totTaken/totSched)*100)+'%' : '—';
+      lines.push(`  Overall adherence: ${overall}`);
+      lines.push('');
+    }
   }
 
   if (bwLatest) {
