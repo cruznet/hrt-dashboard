@@ -4305,6 +4305,39 @@ function reportCopy() {
   if (vitals.length) {
     lines.push('RECENT VITALS:');
     vitals.forEach(v => lines.push(`  ${v.date}  Wt:${v.weight||'—'}  BP:${v.bp||'—'}  Gluc:${v.glucose||'—'}  Mood:${v.mood||'—'}/10`));
+    lines.push('');
+  }
+
+  const workouts = hevyCache();
+  if (workouts.length) {
+    const cutoff = Date.now() - 14 * 86400000;
+    const recent = workouts
+      .filter(w => hevyParseMs(w.start_time) >= cutoff)
+      .sort((a, b) => hevyParseMs(b.start_time) - hevyParseMs(a.start_time));
+    if (recent.length) {
+      lines.push('WORKOUTS (last 14 days):');
+      recent.forEach(w => {
+        const date = new Date(hevyParseMs(w.start_time)).toISOString().slice(0, 10);
+        const sets = (w.exercises||[]).reduce((s, e) => s + (e.sets?.length||0), 0);
+        const vol  = Math.round(hevyWorkoutVolume(w));
+        lines.push(`  ${date}  ${w.title||'Workout'}  (${sets} sets · ${vol.toLocaleString()} lbs vol)`);
+      });
+      lines.push('');
+    }
+    try {
+      const prMap = hevyBuildPRMap(workouts);
+      const topPRs = [...prMap.entries()]
+        .filter(([, pr]) => pr.bestE1RM > 0)
+        .sort((a, b) => b[1].bestE1RM - a[1].bestE1RM)
+        .slice(0, 5);
+      if (topPRs.length) {
+        lines.push('TOP PRs (e1RM):');
+        topPRs.forEach(([name, pr]) => {
+          const lbs = Math.round(pr.bestWeight * 2.205);
+          lines.push(`  ${name}: ${lbs} lbs × ${pr.bestWeightReps} (${pr.weightDate})`);
+        });
+      }
+    } catch(e) { /* PR map failure is non-fatal */ }
   }
 
   navigator.clipboard.writeText(lines.join('\n')).then(() => {
