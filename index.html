@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0F1117">
 <title>HRT Tracker v2</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -544,6 +547,123 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
   .gantt-label { width: 70px; }
 }
 
+/* ── iOS / Mobile Native Feel ─────────────────────────────────────────────── */
+
+/* Eliminate 300ms tap delay + remove iOS gray tap flash everywhere */
+*, *::before, *::after {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+/* Re-allow scrolling on scrollable containers */
+#content, .nav-section, [style*="overflow"] {
+  touch-action: pan-y;
+}
+
+/* Momentum scrolling on the main content area */
+#content {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
+/* Prevent pull-to-refresh on the outer body */
+body {
+  overscroll-behavior: none;
+}
+
+/* Inputs must be ≥16px to prevent iOS auto-zoom on focus */
+@media (max-width: 768px) {
+  input, select, textarea, .form-input {
+    font-size: 16px !important;
+  }
+}
+
+/* ── Press feedback (scale + opacity) on touch devices ── */
+@media (hover: none) and (pointer: coarse) {
+  button, .btn-primary, .btn-secondary, .topbar-btn, .topbar-btn-ghost,
+  .nav-item, .tab-btn, .pb-tab, .metric-card[onclick] {
+    transition: transform 80ms ease, opacity 80ms ease, background var(--transition), color var(--transition), border-color var(--transition);
+  }
+  button:active, .btn-primary:active, .btn-secondary:active,
+  .topbar-btn:active, .topbar-btn-ghost:active {
+    transform: scale(0.94);
+    opacity: 0.75;
+  }
+  .nav-item:active { opacity: 0.65; }
+  .card { transition: transform 80ms ease, border-color var(--transition); }
+  .card:active { transform: scale(0.985); }
+}
+
+/* ── Bottom Tab Bar ── */
+#bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  z-index: 95;
+  background: rgba(10, 12, 18, 0.92);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border-top: 0.5px solid var(--border);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  flex-direction: row;
+  align-items: stretch;
+}
+.bnav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 3px;
+  padding: 10px 4px 6px;
+  min-height: 54px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-family: var(--font-ui);
+  font-weight: 500;
+  letter-spacing: 0.1px;
+  cursor: pointer;
+  user-select: none;
+}
+.bnav-item i {
+  font-size: 23px;
+  line-height: 1;
+  transition: transform 120ms cubic-bezier(0.34, 1.56, 0.64, 1), color 120ms ease;
+}
+.bnav-item span {
+  transition: color 120ms ease;
+}
+.bnav-item.active { color: var(--primary-bright); }
+.bnav-item.active i { transform: scale(1.08); }
+.bnav-item:active i { transform: scale(0.84); transition-duration: 80ms; }
+.bnav-item:active { opacity: 0.6; }
+
+/* Mobile-specific layout overrides */
+@media (max-width: 768px) {
+  /* Show bottom nav */
+  #bottom-nav { display: flex; }
+
+  /* Hide the hamburger — More tab in bottom nav does this job */
+  #mob-menu-btn { display: none !important; }
+
+  /* Topbar: account for notch / Dynamic Island with safe-area-inset-top */
+  #topbar {
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+
+  /* Content: pad bottom so it isn't hidden behind the tab bar */
+  #content {
+    padding: 14px 14px calc(56px + env(safe-area-inset-bottom, 0px) + 14px);
+  }
+
+  /* Sidebar on mobile still slides in for the More overlay */
+  #sidebar {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+}
+
 @media print {
   #sidebar, #topbar, #auth-overlay { display: none !important; }
   body { background: #fff !important; color: #000 !important; overflow: auto !important; }
@@ -765,6 +885,25 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
 </nav>
 
 <div id="mob-backdrop" onclick="closeMobileMenu()"></div>
+
+<!-- ── Bottom Tab Bar (mobile only) ── -->
+<nav id="bottom-nav" role="tablist" aria-label="Main navigation">
+  <button class="bnav-item active" data-page="dashboard" onclick="nav('dashboard')" aria-label="Dashboard">
+    <i class="ti ti-home"></i><span>Home</span>
+  </button>
+  <button class="bnav-item" data-page="compliance" onclick="nav('compliance')" aria-label="Dose Compliance">
+    <i class="ti ti-calendar-check"></i><span>Doses</span>
+  </button>
+  <button class="bnav-item" data-page="workouts" onclick="nav('workouts')" aria-label="Workouts">
+    <i class="ti ti-barbell"></i><span>Workouts</span>
+  </button>
+  <button class="bnav-item" data-page="bloodwork" onclick="nav('bloodwork')" aria-label="Bloodwork">
+    <i class="ti ti-test-pipe"></i><span>Labs</span>
+  </button>
+  <button class="bnav-item" onclick="toggleMobileMenu()" aria-label="More">
+    <i class="ti ti-layout-grid"></i><span>More</span>
+  </button>
+</nav>
 
 <!-- ── Main ── -->
 <div id="main">
@@ -2655,6 +2794,11 @@ function nav(page) {
   document.querySelectorAll('.nav-item').forEach(n => {
     if (n.getAttribute('onclick') === `nav('${page}')`) n.classList.add('active');
   });
+  // Sync bottom tab bar active state
+  document.querySelectorAll('#bottom-nav .bnav-item[data-page]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.page === page);
+  });
+
   currentPage = page;
   localStorage.setItem('hrt_active_page', page);
   if (page === 'compounds') renderCompoundsTable();
