@@ -1295,13 +1295,15 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
 
     <!-- ── WORKOUTS PAGE ── -->
     <section class="page" id="page-workouts">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding-bottom:12px;border-bottom:0.5px solid var(--border);flex-wrap:wrap;gap:8px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
         <div style="font-size:15px;font-weight:600;color:var(--text-primary);">Workouts <span style="font-size:12px;color:var(--text-muted);font-weight:400;">via Hevy</span></div>
         <div style="display:flex;gap:8px;align-items:center;">
           <button class="btn-secondary" onclick="hevySync()" id="hevy-sync-btn" style="padding:7px 14px;font-size:13px;"><i class="ti ti-refresh"></i> Sync</button>
           <button class="btn-secondary" onclick="hevyShowSettings()" style="padding:7px 14px;font-size:13px;"><i class="ti ti-settings"></i></button>
         </div>
       </div>
+      <!-- Tabs -->
+      <div id="hevy-tabs" style="display:flex;gap:6px;margin-bottom:16px;padding-bottom:12px;border-bottom:0.5px solid var(--border);"></div>
 
       <!-- API key setup -->
       <div id="hevy-setup" style="display:none;margin-bottom:16px;">
@@ -1316,14 +1318,7 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
       </div>
 
       <!-- Content -->
-      <div id="hevy-content">
-        <div style="text-align:center;padding:64px 0;" id="hevy-empty">
-          <i class="ti ti-barbell" style="font-size:44px;color:var(--text-muted);opacity:0.25;"></i>
-          <div style="font-size:15px;color:var(--text-secondary);margin:14px 0 6px;font-weight:500;">No workouts loaded</div>
-          <div style="font-size:13px;color:var(--text-muted);margin-bottom:22px;">Connect your Hevy account to pull your training history</div>
-          <button class="btn-primary" onclick="hevyShowSettings()">Connect Hevy</button>
-        </div>
-      </div>
+      <div id="hevy-content"></div>
     </section>
 
     <!-- ── COACH REPORT PAGE ── -->
@@ -4329,8 +4324,30 @@ const HEVY_BASE    = 'https://api.hevyapp.com/v1';
 const HEVY_KEY_LS  = 'hrt_hevy_key';
 const HEVY_DATA_LS = 'hrt_hevy_workouts';
 
+let _hevyTab     = 'recent';
+let _hevyE1RMKey = null;   // selected exercise for E1RM chart
+let _hevyE1RMChart = null;
+
 function hevyKey()  { return localStorage.getItem(HEVY_KEY_LS) || ''; }
 function hevyCache(){ return lsGet(HEVY_DATA_LS, []); }
+
+function hevySetTab(tab) {
+  _hevyTab = tab;
+  renderWorkoutsPage();
+}
+
+function hevyRenderTabs() {
+  const el = document.getElementById('hevy-tabs');
+  if (!el) return;
+  const tabs = [
+    { key: 'recent', label: 'Recent' },
+    { key: 'prs',    label: 'PRs' },
+    { key: 'e1rm',   label: 'E1RM Trends' },
+  ];
+  el.innerHTML = tabs.map(t =>
+    `<button onclick="hevySetTab('${t.key}')" style="padding:5px 14px;border-radius:99px;border:1.5px solid ${_hevyTab===t.key?'var(--primary-bright)':'var(--border)'};background:${_hevyTab===t.key?'rgba(245,197,24,0.12)':'transparent'};color:${_hevyTab===t.key?'var(--primary-bright)':'var(--text-muted)'};font-size:13px;font-weight:600;cursor:pointer;">${t.label}</button>`
+  ).join('');
+}
 
 function hevyShowSettings() {
   const setup = document.getElementById('hevy-setup');
@@ -4401,6 +4418,7 @@ function renderWorkoutsPage() {
   const workouts = hevyCache();
 
   if (setup) setup.style.display = 'none';
+  hevyRenderTabs();
 
   if (!key && !workouts.length) {
     content.innerHTML = `<div style="text-align:center;padding:64px 0;">
@@ -4416,6 +4434,9 @@ function renderWorkoutsPage() {
     content.innerHTML = `<div style="text-align:center;padding:40px 0;color:var(--text-muted);font-size:13px;">No workouts found. Hit Sync to pull from Hevy.</div>`;
     return;
   }
+
+  if (_hevyTab === 'prs')  { renderHevyPRs(workouts);   return; }
+  if (_hevyTab === 'e1rm') { renderHevyE1RM(workouts);  return; }
 
   const synced = localStorage.getItem('hrt_hevy_synced');
   const syncedStr = synced ? `Last synced ${new Date(synced).toLocaleString('default',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}` : '';
@@ -4591,6 +4612,238 @@ function hevyWorkoutVolume(w) {
   return (w.exercises||[]).reduce((total, e) =>
     total + (e.sets||[]).reduce((s, set) =>
       s + (set.weight_kg > 0 && set.reps > 0 ? set.weight_kg * 2.205 * set.reps : 0), 0), 0);
+}
+
+function hevyE1RM(weightKg, reps) {
+  if (!weightKg || !reps || reps <= 0) return 0;
+  return weightKg * 2.205 * (1 + reps / 30);
+}
+
+function hevyBuildPRMap(workouts) {
+  // Returns Map<exerciseTitle, { bestWeight, bestReps, bestE1RM, e1rmDate, weightDate, sets:[] }>
+  const map = new Map();
+  [...workouts].sort((a,b) => (a.start_time||0)-(b.start_time||0)).forEach(w => {
+    const date = new Date((w.start_time||0)*1000).toISOString().slice(0,10);
+    (w.exercises||[]).forEach(e => {
+      const title = e.title || 'Unknown';
+      if (!map.has(title)) map.set(title, { bestWeight:0, bestWeightReps:0, weightDate:'', bestE1RM:0, e1rmDate:'', sets:[] });
+      const pr = map.get(title);
+      (e.sets||[]).filter(s => s.weight_kg > 0 && s.reps > 0).forEach(s => {
+        pr.sets.push({ date, weightKg: s.weight_kg, reps: s.reps });
+        const e1rm = hevyE1RM(s.weight_kg, s.reps);
+        if (s.weight_kg > pr.bestWeight) { pr.bestWeight = s.weight_kg; pr.bestWeightReps = s.reps; pr.weightDate = date; }
+        if (e1rm > pr.bestE1RM) { pr.bestE1RM = e1rm; pr.e1rmDate = date; }
+      });
+    });
+  });
+  return map;
+}
+
+function renderHevyPRs(workouts) {
+  const content = document.getElementById('hevy-content');
+  if (!content) return;
+
+  const prMap   = hevyBuildPRMap(workouts);
+  const now     = Date.now();
+  const day     = 86400000;
+  const recent  = 30 * day;
+
+  // Sort exercises: recent PRs first, then by best e1rm desc
+  const entries = [...prMap.entries()]
+    .filter(([, pr]) => pr.bestWeight > 0)
+    .map(([title, pr]) => {
+      const daysAgo = Math.floor((now - Date.parse(pr.e1rmDate)) / day);
+      return { title, pr, daysAgo };
+    })
+    .sort((a, b) => a.daysAgo - b.daysAgo);
+
+  const recentCount = entries.filter(e => e.daysAgo <= 30).length;
+
+  // Group by muscle tag
+  const groups = {};
+  entries.forEach(e => {
+    const tag = hevyWorkoutTag(e.title);
+    const grp = tag ? tag.label : 'Other';
+    if (!groups[grp]) groups[grp] = { color: tag?.color || 'var(--text-muted)', items: [] };
+    groups[grp].items.push(e);
+  });
+
+  const groupOrder = ['Pull', 'Push', 'Legs', 'Upper', 'Lower', 'Full', 'Cardio', 'Other'];
+
+  const groupsHtml = groupOrder
+    .filter(g => groups[g])
+    .map(g => {
+      const { color, items } = groups[g];
+      const rows = items.map(({ title, pr, daysAgo }) => {
+        const isNew  = daysAgo <= 14;
+        const isWarm = daysAgo <= 30;
+        const ageBadge = isNew
+          ? `<span style="font-size:10px;padding:1px 7px;border-radius:99px;background:rgba(245,197,24,0.15);color:var(--primary-bright);font-weight:700;">NEW</span>`
+          : isWarm
+          ? `<span style="font-size:10px;padding:1px 7px;border-radius:99px;background:rgba(74,222,128,0.10);color:var(--green);">${daysAgo}d ago</span>`
+          : `<span style="font-size:11px;color:var(--text-muted);">${daysAgo}d ago</span>`;
+        const e1rmLbs = Math.round(pr.bestE1RM);
+        const topLbs  = Math.round(pr.bestWeight * 2.205);
+        return `<tr style="border-bottom:0.5px solid var(--border);">
+          <td style="padding:8px 0;font-size:13px;color:var(--text-primary);">${escHtml(title)}</td>
+          <td style="padding:8px 8px;font-family:var(--font-data);font-size:13px;font-weight:600;color:var(--primary-bright);">${topLbs} lbs <span style="font-weight:400;font-size:11px;color:var(--text-muted);">×${pr.bestWeightReps}</span></td>
+          <td style="padding:8px 8px;font-family:var(--font-data);font-size:13px;font-weight:600;color:var(--purple);">${e1rmLbs} lbs</td>
+          <td style="padding:8px 0;text-align:right;">${ageBadge}</td>
+        </tr>`;
+      }).join('');
+
+      return `<div class="card" style="margin-bottom:12px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+          <span style="font-size:11px;font-weight:700;letter-spacing:0.08em;color:${color};text-transform:uppercase;">${g}</span>
+          <span style="font-size:11px;color:var(--text-muted);">${items.length} exercises</span>
+        </div>
+        <table style="width:100%;border-collapse:collapse;">
+          <thead><tr style="border-bottom:0.5px solid var(--border);">
+            <th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;padding-bottom:6px;">Exercise</th>
+            <th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;padding-bottom:6px;padding-left:8px;">Best Set</th>
+            <th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;padding-bottom:6px;padding-left:8px;">Est. 1RM</th>
+            <th style="text-align:right;font-size:11px;color:var(--text-muted);font-weight:500;padding-bottom:6px;">PR Date</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+    }).join('');
+
+  content.innerHTML = `
+    <div style="display:flex;gap:14px;margin-bottom:14px;flex-wrap:wrap;">
+      <div class="metric-card" style="flex:1;min-width:120px;">
+        <div class="metric-label">EXERCISES TRACKED</div>
+        <div class="metric-value" style="color:var(--primary-bright);">${entries.length}</div>
+      </div>
+      <div class="metric-card" style="flex:1;min-width:120px;">
+        <div class="metric-label">PRs LAST 30 DAYS</div>
+        <div class="metric-value" style="color:var(--green);">${recentCount}</div>
+      </div>
+    </div>
+    ${groupsHtml}`;
+}
+
+function renderHevyE1RM(workouts) {
+  const content = document.getElementById('hevy-content');
+  if (!content) return;
+
+  const prMap = hevyBuildPRMap(workouts);
+
+  // Only exercises with 3+ data points for meaningful trend
+  const exercises = [...prMap.entries()]
+    .filter(([, pr]) => pr.sets.length >= 3 && pr.bestWeight > 0)
+    .map(([title]) => title)
+    .sort();
+
+  if (!exercises.length) {
+    content.innerHTML = `<div style="text-align:center;padding:40px 0;color:var(--text-muted);font-size:13px;">Not enough data for trends — sync more workouts.</div>`;
+    return;
+  }
+
+  if (!_hevyE1RMKey || !exercises.includes(_hevyE1RMKey)) _hevyE1RMKey = exercises[0];
+
+  const pills = exercises.map(ex => {
+    const tag = hevyWorkoutTag(ex);
+    const active = ex === _hevyE1RMKey;
+    const col = tag?.color || 'var(--text-muted)';
+    return `<button onclick="hevySetE1RM('${ex.replace(/'/g,"\\'")}') " style="padding:4px 12px;border-radius:99px;border:1.5px solid ${active?col:'var(--border)'};background:${active?col+'22':'transparent'};color:${active?col:'var(--text-muted)'};font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">${escHtml(ex)}</button>`;
+  }).join('');
+
+  // Build chart data: best e1rm per session for selected exercise
+  const pr       = prMap.get(_hevyE1RMKey);
+  const tag      = hevyWorkoutTag(_hevyE1RMKey);
+  const lineColor= tag?.color || '#F5C518';
+
+  // Group sets by date, take max e1rm per date
+  const byDate = {};
+  pr.sets.forEach(s => {
+    const e = hevyE1RM(s.weightKg, s.reps);
+    if (!byDate[s.date] || e > byDate[s.date]) byDate[s.date] = e;
+  });
+  const dates  = Object.keys(byDate).sort();
+  const e1rms  = dates.map(d => Math.round(byDate[d]));
+  const labels = dates.map(d => d.slice(5)); // MM-DD
+
+  const bestE1RM   = Math.max(...e1rms);
+  const latestE1RM = e1rms[e1rms.length - 1];
+  const firstE1RM  = e1rms[0];
+  const totalGain  = latestE1RM - firstE1RM;
+  const bestDate   = dates[e1rms.indexOf(bestE1RM)];
+  const daysAgo    = Math.floor((Date.now() - Date.parse(bestDate)) / 86400000);
+
+  content.innerHTML = `
+    <div style="overflow-x:auto;padding-bottom:8px;margin-bottom:14px;">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">${pills}</div>
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+      <div class="metric-card" style="flex:1;min-width:110px;">
+        <div class="metric-label">BEST E1RM</div>
+        <div class="metric-value" style="color:${lineColor};">${bestE1RM}</div>
+        <div class="metric-unit">lbs · ${daysAgo === 0 ? 'today' : daysAgo+'d ago'}</div>
+      </div>
+      <div class="metric-card" style="flex:1;min-width:110px;">
+        <div class="metric-label">CURRENT</div>
+        <div class="metric-value" style="color:var(--text-secondary);">${latestE1RM}</div>
+        <div class="metric-unit">lbs</div>
+      </div>
+      <div class="metric-card" style="flex:1;min-width:110px;">
+        <div class="metric-label">TOTAL GAIN</div>
+        <div class="metric-value" style="color:${totalGain >= 0 ? 'var(--green)' : 'var(--red)'};">${totalGain >= 0 ? '+' : ''}${totalGain}</div>
+        <div class="metric-unit">lbs e1rm</div>
+      </div>
+      <div class="metric-card" style="flex:1;min-width:110px;">
+        <div class="metric-label">SESSIONS</div>
+        <div class="metric-value" style="color:var(--text-secondary);">${dates.length}</div>
+        <div class="metric-unit">logged</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Est. 1RM — ${escHtml(_hevyE1RMKey)}</div>
+      <div style="height:240px;position:relative;"><canvas id="hevy-e1rm-chart"></canvas></div>
+    </div>`;
+
+  setTimeout(() => {
+    const canvas = document.getElementById('hevy-e1rm-chart');
+    if (!canvas) return;
+    if (_hevyE1RMChart) { _hevyE1RMChart.destroy(); _hevyE1RMChart = null; }
+    _hevyE1RMChart = new Chart(canvas, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          data: e1rms,
+          borderColor: lineColor,
+          backgroundColor: lineColor + '18',
+          fill: true,
+          tension: 0.3,
+          pointBackgroundColor: e1rms.map((v, i) => v === bestE1RM ? '#FFFFFF' : lineColor),
+          pointRadius: e1rms.map((v, i) => v === bestE1RM ? 7 : 4),
+          pointBorderWidth: e1rms.map((v, i) => v === bestE1RM ? 2 : 0),
+          pointBorderColor: e1rms.map((v, i) => v === bestE1RM ? lineColor : 'transparent'),
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y} lbs e1rm` } }
+        },
+        scales: {
+          x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#64748B', font: { size: 10 }, maxTicksLimit: 10 } },
+          y: {
+            grid: { color: 'rgba(255,255,255,0.04)' },
+            ticks: { color: '#64748B', font: { size: 10 } },
+            title: { display: true, text: 'Est. 1RM (lbs)', color: '#475569', font: { size: 10 } }
+          }
+        }
+      }
+    });
+  }, 50);
+}
+
+function hevySetE1RM(ex) {
+  _hevyE1RMKey = ex;
+  renderHevyE1RM(hevyCache());
 }
 
 // ── END HEVY ──────────────────────────────────────────────────────────────────
