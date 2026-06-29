@@ -871,6 +871,10 @@ body {
       <span class="nav-icon"><i class="ti ti-calendar-check"></i></span>
       <span class="nav-text">Compliance</span>
     </div>
+    <div class="nav-item" onclick="nav('healthkit')">
+      <span class="nav-icon"><i class="ti ti-activity"></i></span>
+      <span class="nav-text">HealthKit</span>
+    </div>
   </div>
 
   <div class="sidebar-footer">
@@ -1479,6 +1483,16 @@ body {
         <div id="compliance-range-pills" style="display:flex;gap:6px;"></div>
       </div>
       <div id="compliance-content"></div>
+    </section>
+
+    <!-- ── HEALTHKIT PAGE ── -->
+    <section class="page" id="page-healthkit">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding-bottom:12px;border-bottom:0.5px solid var(--border);flex-wrap:wrap;gap:8px;">
+        <div style="font-size:15px;font-weight:600;color:var(--text-primary);">Apple Health</div>
+        <div id="hk-last-sync" style="font-size:12px;color:var(--text-muted);"></div>
+      </div>
+      <div id="hk-kpi-row" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px;"></div>
+      <div id="hk-charts"></div>
     </section>
 
     <!-- ── PROTOCOLS PAGE ── -->
@@ -2824,7 +2838,7 @@ function nav(page) {
     dashboard: 'Dashboard', log: 'Log Entry', vitals: 'Health Log', bloodwork: 'Bloodwork',
     physique: 'Physique', workouts: 'Workouts', report: 'Coach Report', compliance: 'Dose Compliance',
     protocols: 'My Protocols', builder: 'Protocol Builder', compounds: 'Compound Library',
-    calculator: 'Dose Calculator', settings: 'Settings'
+    calculator: 'Dose Calculator', settings: 'Settings', healthkit: 'Apple Health'
   };
   document.getElementById('topbar-title').textContent = titles[page] || page;
   document.querySelectorAll('.nav-item').forEach(n => {
@@ -2845,6 +2859,7 @@ function nav(page) {
   if (page === 'workouts') renderWorkoutsPage();
   if (page === 'report') renderCoachReport();
   if (page === 'compliance') renderCompliancePage();
+  if (page === 'healthkit') renderHealthKitPage();
   if (page === 'calculator') setTimeout(() => { calcBuildCompoundSelect(); pepUpdate(); }, 100);
   if (page === 'dashboard') { renderVitalsToCards(); renderBwDashStrip(); renderPhysiqueDashStrip(); setTimeout(() => { if (_supa && _supaUser) renderRealCharts(); else renderDemoCharts(); }, 100); }
   // Load active protocol on dashboard
@@ -4518,6 +4533,182 @@ function isScheduledDay(compound, dateStr, protocolStart) {
 }
 
 // ── END COMPLIANCE ────────────────────────────────────────────────────────────
+
+// ── HEALTHKIT ─────────────────────────────────────────────────────────────────
+
+let _hkData = null; // cache so repeated nav visits don't re-fetch
+
+async function hkLoadCSV() {
+  if (_hkData) return _hkData;
+  const resp = await fetch('healthkit-data.csv');
+  const text = await resp.text();
+  const lines = text.trim().split('\n');
+  const headers = lines[0].split(',').map(h => h.trim());
+  _hkData = lines.slice(1).map(line => {
+    const vals = line.split(',');
+    const row = {};
+    headers.forEach((h, i) => row[h] = (vals[i] || '').trim());
+    return row;
+  }).filter(r => r['Date/Time']);
+  return _hkData;
+}
+
+async function renderHealthKitPage() {
+  const container = document.getElementById('hk-charts');
+  const kpiRow    = document.getElementById('hk-kpi-row');
+  const syncEl    = document.getElementById('hk-last-sync');
+  if (!container) return;
+
+  container.innerHTML = '<div style="color:var(--text-muted);font-size:13px;">Loading…</div>';
+  kpiRow.innerHTML = '';
+
+  let rows;
+  try { rows = await hkLoadCSV(); } catch(e) {
+    container.innerHTML = '<div style="color:var(--red);font-size:13px;">Could not load healthkit-data.csv</div>';
+    return;
+  }
+
+  const sorted = [...rows].sort((a, b) => a['Date/Time'].localeCompare(b['Date/Time']));
+  const last30 = sorted.slice(-30);
+  const latest = sorted[sorted.length - 1];
+  if (!latest) { container.innerHTML = '<div style="color:var(--text-muted);font-size:13px;">No data</div>'; return; }
+
+  if (syncEl) syncEl.textContent = 'Last entry: ' + latest['Date/Time'].split(' ')[0];
+
+  hkRenderKpis(kpiRow, latest, sorted);
+  hkRenderCharts(container, last30);
+}
+
+function hkVal(row, col) {
+  const v = parseFloat(row[col]);
+  return isNaN(v) ? null : v;
+}
+
+function hkRenderKpis(container, latest, all) {
+  const kpis = [
+    { label: 'HRV',         col: 'Heart Rate Variability (ms)', unit: 'ms',    color: 'var(--teal)',          note: 'Heart Rate Variability' },
+    { label: 'Resting HR',  col: 'Resting Heart Rate (bpm)',    unit: 'bpm',   color: 'var(--primary-bright)', note: 'Resting Heart Rate' },
+    { label: 'Weight',      col: 'Weight (lbs)',                unit: 'lbs',   color: 'var(--text-primary)',  note: '' },
+    { label: 'Body Fat',    col: 'Body Fat Percentage (%)',     unit: '%',     color: 'var(--amber)',         note: '' },
+    { label: 'Sleep',       col: 'Sleep Analysis [Total] (hr)', unit: 'hr',    color: 'var(--purple)',        note: 'Total sleep' },
+    { label: 'Steps',       col: 'Step Count (steps)',          unit: 'steps', color: 'var(--green)',         note: '' },
+  ];
+
+  // compute 7-day averages for delta
+  const recent7 = all.slice(-7);
+  const prev7   = all.slice(-14, -7);
+  const avg = (arr, col) => { const v = arr.map(r => hkVal(r, col)).filter(x => x !== null); return v.length ? v.reduce((a,b)=>a+b,0)/v.length : null; };
+
+  container.innerHTML = kpis.map(k => {
+    const val = hkVal(latest, k.col);
+    const disp = val !== null ? (k.unit === 'steps' ? val.toLocaleString() : val.toFixed(k.unit === '%' || k.unit === 'hr' ? 1 : 0)) : '—';
+    const a7 = avg(recent7, k.col);
+    const p7 = avg(prev7,   k.col);
+    let delta = '';
+    if (a7 !== null && p7 !== null) {
+      const diff = a7 - p7;
+      const sign = diff > 0 ? '+' : '';
+      const color = diff === 0 ? 'var(--text-muted)' : (diff > 0 ? 'var(--green)' : 'var(--red)');
+      delta = `<div style="font-size:11px;color:${color};margin-top:2px;">${sign}${diff.toFixed(1)} 7d avg</div>`;
+    }
+    return `<div class="card" style="padding:12px 14px;">
+      <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">${escHtml(k.label)}</div>
+      <div style="font-size:22px;font-family:var(--font-data);font-weight:600;color:${k.color};">${disp}</div>
+      <div style="font-size:11px;color:var(--text-muted);">${k.unit}</div>
+      ${delta}
+    </div>`;
+  }).join('');
+}
+
+function hkRenderCharts(container, rows) {
+  const labels = rows.map(r => r['Date/Time'].split(' ')[0]);
+
+  const charts = [
+    {
+      id: 'hk-chart-hrv', title: 'Heart Rate Variability',
+      type: 'line',
+      datasets: [{
+        label: 'HRV (ms)',
+        data: rows.map(r => hkVal(r, 'Heart Rate Variability (ms)')),
+        borderColor: 'var(--teal)', backgroundColor: 'rgba(34,211,238,0.08)',
+        borderWidth: 2, pointRadius: 2, fill: true, spanGaps: true,
+      }],
+    },
+    {
+      id: 'hk-chart-weight', title: 'Weight',
+      type: 'line',
+      datasets: [{
+        label: 'Weight (lbs)',
+        data: rows.map(r => hkVal(r, 'Weight (lbs)')),
+        borderColor: 'var(--primary-bright)', backgroundColor: 'rgba(245,197,24,0.08)',
+        borderWidth: 2, pointRadius: 2, fill: true, spanGaps: true,
+      }],
+    },
+    {
+      id: 'hk-chart-sleep', title: 'Sleep Breakdown',
+      type: 'bar',
+      datasets: [
+        {
+          label: 'Deep (hr)',
+          data: rows.map(r => hkVal(r, 'Sleep Analysis [Deep] (hr)')),
+          backgroundColor: 'rgba(192,132,252,0.85)', spanGaps: true,
+        },
+        {
+          label: 'REM (hr)',
+          data: rows.map(r => hkVal(r, 'Sleep Analysis [REM] (hr)')),
+          backgroundColor: 'rgba(34,211,238,0.75)', spanGaps: true,
+        },
+        {
+          label: 'Total (hr)',
+          data: rows.map(r => {
+            const d = hkVal(r, 'Sleep Analysis [Deep] (hr)');
+            const rem = hkVal(r, 'Sleep Analysis [REM] (hr)');
+            const tot = hkVal(r, 'Sleep Analysis [Total] (hr)');
+            if (tot === null) return null;
+            const accounted = (d || 0) + (rem || 0);
+            return Math.max(0, tot - accounted);
+          }),
+          backgroundColor: 'rgba(245,197,24,0.45)', spanGaps: true,
+          label: 'Core (hr)',
+        },
+      ],
+      opts: { scales: { x: { stacked: true }, y: { stacked: true } } },
+    },
+    {
+      id: 'hk-chart-steps', title: 'Daily Steps',
+      type: 'bar',
+      datasets: [{
+        label: 'Steps',
+        data: rows.map(r => hkVal(r, 'Step Count (steps)')),
+        backgroundColor: 'rgba(34,197,94,0.65)', spanGaps: true,
+      }],
+    },
+  ];
+
+  container.innerHTML = charts.map(c =>
+    `<div class="card" style="margin-bottom:12px;padding:14px 16px;">
+      <div style="font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:10px;">${escHtml(c.title)}</div>
+      <div style="position:relative;height:160px;"><canvas id="${c.id}"></canvas></div>
+    </div>`
+  ).join('');
+
+  const baseOpts = {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { ticks: { color: 'var(--text-muted)', font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { color: 'rgba(255,255,255,0.04)' } },
+      y: { ticks: { color: 'var(--text-muted)', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.06)' } },
+    },
+  };
+
+  charts.forEach(c => {
+    const opts = c.opts ? { ...baseOpts, scales: { ...baseOpts.scales, ...c.opts.scales } } : baseOpts;
+    if (c.datasets.length > 1) opts.plugins = { ...opts.plugins, legend: { display: true, labels: { color: 'var(--text-muted)', font: { size: 11 }, boxWidth: 10 } } };
+    makeChart(c.id, c.type, labels, c.datasets, opts);
+  });
+}
+
+// ── END HEALTHKIT ──────────────────────────────────────────────────────────────
 
 // ── HEVY WORKOUTS ─────────────────────────────────────────────────────────────
 
