@@ -2461,7 +2461,7 @@ async function loadUserData() {
       renderInsulinLog();
     }
 
-    // Restore protocol state from Supabase (Supabase wins on load)
+    // Restore all user settings from Supabase (Supabase wins on load)
     const settings = settingsRes.data;
     if (settings) {
       if (Array.isArray(settings.protocols) && settings.protocols.length)
@@ -2470,6 +2470,10 @@ async function loadUserData() {
         localStorage.setItem('hrt_active_protocol', settings.active_protocol_key);
       if (settings.active_protocol_data)
         localStorage.setItem('hrt_active_protocol_data', JSON.stringify(settings.active_protocol_data));
+      if (Array.isArray(settings.bloodwork_panels) && settings.bloodwork_panels.length)
+        localStorage.setItem('hrt_bloodwork', JSON.stringify(settings.bloodwork_panels));
+      if (Array.isArray(settings.physique_measurements) && settings.physique_measurements.length)
+        localStorage.setItem('hrt_measurements', JSON.stringify(settings.physique_measurements));
     }
 
     if (metricsRes.data?.length) renderMetrics(metricsRes.data);
@@ -2533,11 +2537,13 @@ async function loadUserData() {
 async function syncProtocolsToSupabase() {
   if (!_supa || !_supaUser) return;
   const { error } = await _supa.from('user_settings').upsert({
-    user_id:              _supaUser.id,
-    protocols:            lsGet('hrt_protocols', []),
-    active_protocol_key:  localStorage.getItem('hrt_active_protocol') || null,
-    active_protocol_data: lsGet('hrt_active_protocol_data', null),
-    updated_at:           new Date().toISOString()
+    user_id:               _supaUser.id,
+    protocols:             lsGet('hrt_protocols', []),
+    active_protocol_key:   localStorage.getItem('hrt_active_protocol') || null,
+    active_protocol_data:  lsGet('hrt_active_protocol_data', null),
+    bloodwork_panels:      lsGet('hrt_bloodwork', []),
+    physique_measurements: lsGet('hrt_measurements', []),
+    updated_at:            new Date().toISOString()
   }, { onConflict: 'user_id' });
   if (error) console.warn('[syncProtocols]', error.message);
 }
@@ -3416,7 +3422,7 @@ const BW_KPI_KEYS    = ['tt', 'hematocrit', 'e2', 'ldl', 'hdl'];
 const BW_KPI_COLORS  = { tt: 'mc-gold', hematocrit: 'mc-red', e2: 'mc-purple', ldl: 'mc-amber', hdl: 'mc-green' };
 
 function bwLoad()           { return lsGet('hrt_bloodwork', []); }
-function bwSaveAll(panels)  { localStorage.setItem('hrt_bloodwork', JSON.stringify(panels)); }
+function bwSaveAll(panels)  { localStorage.setItem('hrt_bloodwork', JSON.stringify(panels)); syncProtocolsToSupabase(); }
 
 function bwRangeStatus(key, value) {
   const m = BW_MARKERS[key];
@@ -3916,6 +3922,7 @@ function measLoad() {
 
 function measSaveAll(list) {
   localStorage.setItem('hrt_measurements', JSON.stringify(list));
+  syncProtocolsToSupabase();
 }
 
 function measShowForm(id) {
