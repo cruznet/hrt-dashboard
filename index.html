@@ -2452,15 +2452,21 @@ async function loadUserData() {
     // Sync today's checked doses from Supabase → hrt_doses_taken localStorage.
     // Without this, checkboxes appear unchecked on any new device/session even
     // though the doses were already recorded in administration_log.
+    // Use created_at to re-derive the local date instead of trusting row.date,
+    // which may have been stored as a UTC date before the localDate() fix.
     if (logsRes.data?.length) {
       const todayStr  = localDate();
-      const todayLogs = logsRes.data.filter(r => r.date === todayStr);
+      const todayLogs = logsRes.data.filter(r => {
+        const localD = r.created_at ? localDate(new Date(r.created_at)) : r.date;
+        return localD === todayStr;
+      });
       if (todayLogs.length) {
         const existing = lsGet('hrt_doses_taken', []);
         const merged   = [...existing];
         for (const row of todayLogs) {
-          if (!merged.some(t => t.label === row.compound_name && t.date === row.date)) {
-            merged.push({ label: row.compound_name, date: row.date, ts: row.created_at, id: row.id });
+          const correctDate = row.created_at ? localDate(new Date(row.created_at)) : row.date;
+          if (!merged.some(t => t.label === row.compound_name && t.date === correctDate)) {
+            merged.push({ label: row.compound_name, date: correctDate, ts: row.created_at, id: row.id });
           }
         }
         localStorage.setItem('hrt_doses_taken', JSON.stringify(merged));
