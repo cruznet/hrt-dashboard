@@ -2470,6 +2470,7 @@ function nav(page) {
     if (n.getAttribute('onclick') === `nav('${page}')`) n.classList.add('active');
   });
   currentPage = page;
+  localStorage.setItem('hrt_active_page', page);
   if (page === 'compounds') renderCompoundsTable();
   if (page === 'protocols') renderProtocolsPage();
   if (page === 'vitals') renderVitalsPage();
@@ -5304,6 +5305,7 @@ window.addEventListener('DOMContentLoaded', () => {
   initSupa();
   const savedMode = localStorage.getItem('hrt_mode') || 'trt';
   setMode(savedMode);
+  nav(localStorage.getItem('hrt_active_page') || 'dashboard');
   renderCompoundsTable();
   // Charts start in empty state — populated only when real data is available
 
