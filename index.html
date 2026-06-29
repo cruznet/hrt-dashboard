@@ -1125,7 +1125,10 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
     <section class="page" id="page-bloodwork">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding-bottom:12px;border-bottom:0.5px solid var(--border);">
         <div style="font-size:15px;font-weight:600;color:var(--text-primary);">Bloodwork</div>
-        <button class="btn-primary" onclick="bwShowForm()" style="padding:7px 16px;font-size:13px;">+ Log Panel</button>
+        <div style="display:flex;gap:8px;">
+          <button class="btn-secondary" onclick="bwCopySummary()" style="padding:7px 14px;font-size:13px;" id="bw-copy-btn">Copy Summary</button>
+          <button class="btn-primary" onclick="bwShowForm()" style="padding:7px 16px;font-size:13px;">+ Log Panel</button>
+        </div>
       </div>
 
       <!-- Add Panel Form -->
@@ -3160,16 +3163,36 @@ function renderBloodworkPage() {
     return s === 'high' || s === 'low';
   }).length;
 
+  const outKeys = Object.keys(latest.markers).filter(k => {
+    const s = bwRangeStatus(k, latest.markers[k]);
+    return s === 'high' || s === 'low';
+  });
+  const flaggedLabels = outKeys.map(k => {
+    const s = bwRangeStatus(k, latest.markers[k]);
+    return `${BW_MARKERS[k].label} <span style="color:var(--red);font-size:10px;font-weight:700;">${s.toUpperCase()}</span>`;
+  }).join(' &nbsp;·&nbsp; ');
+
+  const intervalDays = (parseInt(localStorage.getItem('hrt_labs_interval_weeks')) || 12) * 7;
+  const nextDue = Date.parse(latest.date) + intervalDays * 86400000;
+  const daysUntil = Math.ceil((nextDue - Date.now()) / 86400000);
+  const countdownHtml = daysUntil >= 0
+    ? `<span style="color:var(--text-muted);">Next labs in <strong style="color:var(--text-secondary);">${daysUntil}d</strong></span>`
+    : `<span style="color:var(--amber);font-weight:600;">Labs overdue by ${Math.abs(daysUntil)}d</span>`;
+
   const infoEl = document.getElementById('bw-last-info');
   if (infoEl) infoEl.innerHTML =
-    `Last panel: <strong style="color:var(--text-secondary);">${latest.date}</strong>${latest.lab ? ' · ' + latest.lab : ''} &nbsp;·&nbsp; ${daysAgo} day${daysAgo !== 1 ? 's' : ''} ago` +
-    (outCount ? ` &nbsp;·&nbsp; <span style="color:var(--red);font-weight:600;">${outCount} out of range</span>` : ' &nbsp;·&nbsp; <span style="color:var(--green);">All in range</span>');
+    `<div style="display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;">
+      <span>Last panel: <strong style="color:var(--text-secondary);">${latest.date}</strong>${latest.lab ? ' · ' + latest.lab : ''} &nbsp;·&nbsp; ${daysAgo}d ago</span>
+      ${outCount
+        ? `<span style="cursor:pointer;" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'inline':'none'"><span style="color:var(--red);font-weight:600;">${outCount} out of range</span> <span style="color:var(--text-muted);font-size:11px;">▾</span></span><span style="display:none;font-size:12px;color:var(--text-muted);"> ${flaggedLabels}</span>`
+        : `<span style="color:var(--green);">All in range</span>`}
+      ${countdownHtml}
+    </div>`;
 
   bwRenderKpiCards(latest, panels[1]);
   bwRenderPanelSelect(panels);
   bwRenderPanel();
   bwRenderHistory(panels);
-  renderBwTrendCharts();
 }
 
 function bwRenderKpiCards(latest, prev) {
@@ -3209,6 +3232,7 @@ function bwRenderPanel() {
   const panels = bwLoad().sort((a, b) => b.date.localeCompare(a.date));
   const sel    = document.getElementById('bw-panel-select');
   const idx    = sel ? parseInt(sel.value) || 0 : 0;
+  _bwSelectedPanelIdx = idx;
   const panel  = panels[idx];
   const prev   = panels[idx + 1];
   const el     = document.getElementById('bw-panel-detail');
@@ -3251,6 +3275,7 @@ function bwRenderPanel() {
     <button class="btn-secondary" onclick="bwDeletePanel('${panel.id}')" style="font-size:12px;padding:6px 12px;margin-top:16px;margin-left:8px;color:var(--red);border-color:rgba(248,113,113,0.3);">Delete</button>`;
 
   el.innerHTML = html + editBtn;
+  renderBwTrendCharts();
 }
 
 function bwRenderHistory(panels) {
@@ -3279,6 +3304,7 @@ function bwRenderHistory(panels) {
 
 // ── Bloodwork Trend Charts ────────────────────────────────────────────
 let _bwTrendKey = 'tt';
+let _bwSelectedPanelIdx = 0;
 
 const BW_TREND_MARKERS = [
   { key: 'tt',          label: 'TT',    color: '#F5C518' },
@@ -3322,36 +3348,45 @@ function renderBwTrendCharts() {
   });
   const values = panels.map(p => p.markers[_bwTrendKey] ?? null);
 
-  const pointBg = panels.map(p => {
+  // Highlight selected panel point
+  const n = panels.length;
+  const selectedAscIdx = n - 1 - _bwSelectedPanelIdx;
+  const pointBg = panels.map((p, i) => {
     const v = p.markers[_bwTrendKey];
     if (v == null) return 'transparent';
     const s = bwRangeStatus(_bwTrendKey, v);
     return s === 'ok' ? '#4ADE80' : '#F87171';
   });
+  const pointBorder = panels.map((p, i) => i === selectedAscIdx ? '#FFFFFF' : pointBg[i]);
+  const pointRadius = panels.map((_, i) => i === selectedAscIdx ? 8 : 5);
+  const pointBorderW = panels.map((_, i) => i === selectedAscIdx ? 2 : 0);
 
-  // Reference range as flat dashed datasets (no plugin needed)
+  // Reference range: shaded band when both lo+hi exist, dashed line otherwise
   const extraDatasets = [];
-  const n = panels.length;
-  if (m.hi && m.hi < 9000) {
+  const hasHi = m.hi && m.hi < 9000;
+  const hasLo = m.lo && m.lo > 0;
+  if (hasHi && hasLo) {
+    // hi line (invisible boundary) + lo line fills toward it = green band
     extraDatasets.push({
       data: Array(n).fill(m.hi),
-      borderColor: 'rgba(248,113,113,0.35)',
-      borderWidth: 1,
-      borderDash: [5, 5],
-      pointRadius: 0,
-      fill: false,
-      tension: 0,
+      borderWidth: 0, borderColor: 'transparent', pointRadius: 0, fill: false, tension: 0,
     });
-  }
-  if (m.lo && m.lo > 0) {
     extraDatasets.push({
       data: Array(n).fill(m.lo),
-      borderColor: 'rgba(248,113,113,0.35)',
-      borderWidth: 1,
-      borderDash: [5, 5],
-      pointRadius: 0,
-      fill: false,
-      tension: 0,
+      borderWidth: 0, borderColor: 'transparent', pointRadius: 0,
+      fill: '-1', backgroundColor: 'rgba(74,222,128,0.09)', tension: 0,
+    });
+  } else if (hasHi) {
+    extraDatasets.push({
+      data: Array(n).fill(m.hi),
+      borderColor: 'rgba(248,113,113,0.35)', borderWidth: 1, borderDash: [5,5],
+      pointRadius: 0, fill: false, tension: 0,
+    });
+  } else if (hasLo) {
+    extraDatasets.push({
+      data: Array(n).fill(m.lo),
+      borderColor: 'rgba(248,113,113,0.35)', borderWidth: 1, borderDash: [5,5],
+      pointRadius: 0, fill: false, tension: 0,
     });
   }
 
@@ -3361,9 +3396,10 @@ function renderBwTrendCharts() {
       borderColor: color,
       backgroundColor: color + '15',
       pointBackgroundColor: pointBg,
-      pointBorderColor: pointBg,
-      pointRadius: 5,
-      pointHoverRadius: 7,
+      pointBorderColor: pointBorder,
+      pointBorderWidth: pointBorderW,
+      pointRadius,
+      pointHoverRadius: 8,
       tension: 0.35,
       fill: true,
       spanGaps: false,
@@ -3388,6 +3424,60 @@ function renderBwTrendCharts() {
       y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#64748B', font: { family: "'JetBrains Mono', monospace", size: 11 } },
            title: { display: true, text: m.unit, color: '#475569', font: { size: 10 } } }
     }
+  });
+}
+
+function bwCopySummary() {
+  const panels = bwLoad().sort((a, b) => b.date.localeCompare(a.date));
+  if (!panels.length) return;
+  const sel = document.getElementById('bw-panel-select');
+  const idx = sel ? parseInt(sel.value) || 0 : 0;
+  const panel = panels[idx];
+
+  const flagged = Object.keys(panel.markers).filter(k => {
+    const s = bwRangeStatus(k, panel.markers[k]);
+    return s === 'high' || s === 'low';
+  });
+
+  const protocol = (() => {
+    try { return JSON.parse(localStorage.getItem('hrt_active_protocol_data')); } catch { return null; }
+  })();
+  const protocolLine = protocol
+    ? `Protocol: ${protocol.name} — ${(protocol.compounds||[]).map(c => `${c.name} ${c.phases?.[0]?.dose}${c.unit} ${Array.isArray(c.freq)?c.freq.join('/'):c.freq}`).join(' | ')}`
+    : '';
+
+  const keyLines = BW_KPI_KEYS
+    .filter(k => panel.markers[k] != null)
+    .map(k => {
+      const m = BW_MARKERS[k];
+      const s = bwRangeStatus(k, panel.markers[k]);
+      const flag = s !== 'ok' && s !== 'none' ? ` [${s.toUpperCase()}]` : '';
+      return `  ${m.label}: ${panel.markers[k]} ${m.unit}${flag}`;
+    }).join('\n');
+
+  const flagLines = flagged.map(k => {
+    const m = BW_MARKERS[k];
+    const s = bwRangeStatus(k, panel.markers[k]);
+    return `${m.label} ${s.toUpperCase()} (${panel.markers[k]} ${m.unit})`;
+  }).join(' · ');
+
+  const daysAgo = Math.floor((Date.now() - Date.parse(panel.date)) / 86400000);
+  const lines = [
+    `HRT Bloodwork Summary — ${panel.date}`,
+    `${panel.lab || 'Lab'}${daysAgo > 0 ? ' | ' + daysAgo + ' days ago' : ''}`,
+    '',
+    flagged.length ? `FLAGS (${flagged.length}): ${flagLines}` : 'All markers in range',
+    '',
+    'KEY VALUES:',
+    keyLines,
+    '',
+    protocolLine,
+    panel.notes ? `Notes: ${panel.notes}` : '',
+  ].filter(l => l !== undefined).join('\n').trim();
+
+  navigator.clipboard.writeText(lines).then(() => {
+    const btn = document.getElementById('bw-copy-btn');
+    if (btn) { btn.textContent = 'Copied!'; setTimeout(() => btn.textContent = 'Copy Summary', 2000); }
   });
 }
 
