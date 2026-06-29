@@ -263,6 +263,7 @@ body {
 .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
 .grid-2-1 { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; }
 .grid-1-2 { display: grid; grid-template-columns: 1fr 2fr; gap: 12px; }
+.grid-dash-main { display: grid; grid-template-columns: 3fr 2fr; gap: 12px; }
 
 /* ── Tables ── */
 .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -309,6 +310,18 @@ body {
 .alert-error { background: var(--red-dim);   border-color: rgba(239,68,68,0.3);  color: var(--red); }
 .alert-info  { background: var(--teal-dim);  border-color: var(--teal-border);   color: var(--teal); }
 .alert-good  { background: var(--green-dim); border-color: rgba(34,197,94,0.3);  color: var(--green); }
+
+/* ── Bloodwork badges ── */
+.bw-badge { display:inline-block;font-size:10.5px;padding:2px 7px;border-radius:20px;font-weight:600;font-family:var(--font-ui);letter-spacing:0; }
+.bw-ok      { background:rgba(34,197,94,0.13);  color:var(--green); }
+.bw-high    { background:rgba(248,113,113,0.13); color:var(--red); }
+.bw-low     { background:rgba(248,113,113,0.13); color:var(--red); }
+.bw-caution { background:rgba(251,146,60,0.13);  color:var(--amber); }
+.bw-none    { background:var(--bg-deep);         color:var(--text-muted); }
+.bw-marker-row { display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:0.5px solid var(--border); }
+.bw-marker-row:last-child { border-bottom:none; }
+.bw-group-label { font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.07em;font-weight:700;margin:14px 0 8px; }
+.bw-form-grid { display:grid;grid-template-columns:repeat(auto-fill, minmax(175px, 1fr));gap:10px;margin-top:8px; }
 
 /* ── Log modal ── */
 .modal-overlay {
@@ -514,7 +527,7 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
   #mob-backdrop.mob-open { display: block; }
   .topbar-btn-ghost .btn-text { display: none; }
   .topbar-badge { display: none; }
-  .grid-2, .grid-3, .grid-2-1, .grid-1-2 { grid-template-columns: 1fr; }
+  .grid-2, .grid-3, .grid-2-1, .grid-1-2, .grid-dash-main { grid-template-columns: 1fr; }
   #content { padding: 12px; }
   .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; }
   .form-row { grid-template-columns: 1fr; }
@@ -700,6 +713,10 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
       <span class="nav-icon"><i class="ti ti-heart-rate-monitor"></i></span>
       <span class="nav-text">Health Log</span>
     </div>
+    <div class="nav-item" onclick="nav('bloodwork')">
+      <span class="nav-icon"><i class="ti ti-test-pipe"></i></span>
+      <span class="nav-text">Bloodwork</span>
+    </div>
   </div>
 
   <div class="sidebar-footer">
@@ -771,62 +788,73 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
         </div>
       </div>
 
-      <div style="margin-bottom:14px;">
+      <!-- Latest Labs strip -->
+      <div id="bw-dash-strip" style="display:none;margin-bottom:12px;cursor:pointer;" onclick="nav('bloodwork')"></div>
+
+      <!-- ROW 2: Daily doses (left, primary action) + Protocol context (right) -->
+      <div class="grid-dash-main" style="margin-bottom:14px;">
+
+        <!-- Left: Today's dose checklist — the #1 daily interaction -->
         <div class="card">
-          <div class="card-title">Active Protocol</div>
-          <div id="protocol-display">
-            <div style="color:var(--text-muted);font-size:12px;">No active protocol. <a href="#" onclick="nav('builder');return false;" style="color:var(--primary-bright);">Build one →</a></div>
-          </div>
-          <hr class="divider">
-          <div class="card-title">Cycle Progress</div>
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-            <span style="font-size:12px;color:var(--text-secondary);" id="cycle-label">—</span>
-            <span style="font-size:12px;font-family:var(--font-data);color:var(--primary-bright);" id="cycle-pct">—</span>
-          </div>
-          <div class="progress-wrap">
-            <div class="progress-bar" id="cycle-bar" style="width:0%;background:var(--primary);"></div>
-          </div>
-          <div id="cycle-week-strip" style="overflow-x:auto;margin:8px 0;display:none;"></div>
-          <div style="margin-top:10px;">
-            <div style="font-size:10px;color:var(--text-muted);margin-bottom:3px;">Steady State</div>
-            <div class="progress-wrap">
-              <div class="progress-bar" id="ss-bar" style="width:0%;background:var(--teal);"></div>
+          <div class="card-title">Dose Schedule</div>
+          <div id="dose-schedule-content" style="line-height:1.9;"></div>
+        </div>
+
+        <!-- Right: Protocol + Cycle, stacked -->
+        <div style="display:flex;flex-direction:column;gap:12px;">
+
+          <div class="card">
+            <div class="card-title">Active Protocol</div>
+            <div id="protocol-display">
+              <div style="color:var(--text-muted);font-size:13px;">No active protocol. <a href="#" onclick="nav('builder');return false;" style="color:var(--primary-bright);">Build one →</a></div>
             </div>
-            <div style="font-size:11px;font-family:var(--font-data);color:var(--teal);margin-top:3px;" id="ss-label">—</div>
           </div>
-          <div id="cycle-active-compounds" style="margin-top:10px;"></div>
+
+          <div class="card">
+            <div class="card-title">Cycle Progress</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+              <span style="font-size:13px;color:var(--text-secondary);" id="cycle-label">—</span>
+              <span style="font-size:13px;font-family:var(--font-data);color:var(--primary-bright);" id="cycle-pct">—</span>
+            </div>
+            <div class="progress-wrap">
+              <div class="progress-bar" id="cycle-bar" style="width:0%;background:var(--primary-bright);"></div>
+            </div>
+            <div id="cycle-week-strip" style="overflow-x:auto;margin:8px 0;display:none;"></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;margin-bottom:6px;">
+              <span style="font-size:13px;color:var(--text-muted);">Steady State</span>
+              <span style="font-size:13px;font-family:var(--font-data);color:var(--primary-bright);" id="ss-label">—</span>
+            </div>
+            <div class="progress-wrap">
+              <div class="progress-bar" id="ss-bar" style="width:0%;background:var(--primary);"></div>
+            </div>
+            <!-- cycle-active-compounds hidden: dose schedule above is the canonical view -->
+            <div id="cycle-active-compounds" style="display:none;"></div>
+          </div>
+
         </div>
       </div>
 
-      <!-- Charts row -->
-      <div class="grid-2" style="margin-bottom:14px;">
-        <div class="card" style="min-height:212px;">
-          <div class="card-title">Dose Schedule</div>
-          <div id="dose-schedule-content" style="font-size:12px;line-height:1.6;"></div>
-        </div>
+      <!-- ROW 3: All trend charts in one row -->
+      <div class="grid-3" style="margin-bottom:14px;">
         <div class="card">
           <div class="card-title">Weight &amp; Body Comp</div>
           <div class="chart-wrap" style="height:180px;position:relative;">
             <canvas id="chart-weight" style="display:none;"></canvas>
             <div id="chart-weight-empty" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:6px;text-align:center;">
-              <i class="ti ti-weight" style="font-size:28px;color:var(--text-muted);opacity:0.4;"></i>
-              <div style="font-size:12px;color:var(--text-muted);">No weight data yet</div>
-              <div style="font-size:11px;color:var(--text-muted);opacity:0.7;">Log your weight via <a href="#" onclick="nav('log');return false;" style="color:var(--primary-bright);">Log Entry</a> to track body composition</div>
+              <i class="ti ti-weight" style="font-size:26px;color:var(--text-muted);opacity:0.4;"></i>
+              <div style="font-size:13px;color:var(--text-muted);">No weight data yet</div>
+              <div style="font-size:12px;color:var(--text-muted);opacity:0.8;">Log weight via <a href="#" onclick="nav('log');return false;" style="color:var(--primary-bright);">Log Entry</a></div>
             </div>
           </div>
         </div>
-      </div>
-
-      <!-- Mood & Energy charts row -->
-      <div class="grid-2" style="margin-bottom:14px;">
         <div class="card">
           <div class="card-title">Mood Trend</div>
           <div class="chart-wrap" style="height:180px;position:relative;">
             <canvas id="chart-mood" style="display:none;"></canvas>
             <div id="chart-mood-empty" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:6px;text-align:center;">
-              <i class="ti ti-mood-smile" style="font-size:28px;color:var(--text-muted);opacity:0.4;"></i>
-              <div style="font-size:12px;color:var(--text-muted);">No mood data yet</div>
-              <div style="font-size:11px;color:var(--text-muted);opacity:0.7;">Log your mood via <a href="#" onclick="nav('log');return false;" style="color:var(--primary-bright);">Log Entry</a></div>
+              <i class="ti ti-mood-smile" style="font-size:26px;color:var(--text-muted);opacity:0.4;"></i>
+              <div style="font-size:13px;color:var(--text-muted);">No mood data yet</div>
+              <div style="font-size:12px;color:var(--text-muted);opacity:0.8;">Log mood via <a href="#" onclick="nav('log');return false;" style="color:var(--primary-bright);">Log Entry</a></div>
             </div>
           </div>
         </div>
@@ -835,9 +863,9 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
           <div class="chart-wrap" style="height:180px;position:relative;">
             <canvas id="chart-energy" style="display:none;"></canvas>
             <div id="chart-energy-empty" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:6px;text-align:center;">
-              <i class="ti ti-bolt" style="font-size:28px;color:var(--text-muted);opacity:0.4;"></i>
-              <div style="font-size:12px;color:var(--text-muted);">No energy data yet</div>
-              <div style="font-size:11px;color:var(--text-muted);opacity:0.7;">Log your energy via <a href="#" onclick="nav('log');return false;" style="color:var(--primary-bright);">Log Entry</a></div>
+              <i class="ti ti-bolt" style="font-size:26px;color:var(--text-muted);opacity:0.4;"></i>
+              <div style="font-size:13px;color:var(--text-muted);">No energy data yet</div>
+              <div style="font-size:12px;color:var(--text-muted);opacity:0.8;">Log energy via <a href="#" onclick="nav('log');return false;" style="color:var(--primary-bright);">Log Entry</a></div>
             </div>
           </div>
         </div>
@@ -1089,6 +1117,64 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
         <div id="vitals-table-wrap">
           <div style="color:var(--text-muted);font-size:13px;text-align:center;padding:30px;">No vitals logged yet. Use Log Entry to add data.</div>
         </div>
+      </div>
+    </section>
+
+    <!-- ── BLOODWORK PAGE ── -->
+    <section class="page" id="page-bloodwork">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding-bottom:12px;border-bottom:0.5px solid var(--border);">
+        <div style="font-size:15px;font-weight:600;color:var(--text-primary);">Bloodwork</div>
+        <button class="btn-primary" onclick="bwShowForm()" style="padding:7px 16px;font-size:13px;">+ Log Panel</button>
+      </div>
+
+      <!-- Add Panel Form -->
+      <div id="bw-form" style="display:none;margin-bottom:16px;">
+        <div class="card">
+          <div class="card-title">Log New Panel</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:18px;">
+            <div><div class="form-label">Date</div><input type="date" class="form-input" id="bw-date"></div>
+            <div><div class="form-label">Lab / Clinic</div><input type="text" class="form-input" id="bw-lab" placeholder="e.g. LabCorp, Quest"></div>
+            <div><div class="form-label">Notes</div><input type="text" class="form-input" id="bw-notes" placeholder="Optional"></div>
+          </div>
+          <div id="bw-form-groups"></div>
+          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px;padding-top:14px;border-top:0.5px solid var(--border);">
+            <button class="btn-secondary" onclick="bwHideForm()">Cancel</button>
+            <button class="btn-primary" onclick="bwSavePanel()">Save Panel</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty state -->
+      <div id="bw-empty" style="text-align:center;padding:64px 0;">
+        <i class="ti ti-test-pipe" style="font-size:44px;color:var(--text-muted);opacity:0.25;"></i>
+        <div style="font-size:15px;color:var(--text-secondary);margin:14px 0 6px;font-weight:500;">No bloodwork logged yet</div>
+        <div style="font-size:13px;color:var(--text-muted);margin-bottom:22px;">Log your first panel to track key health markers over time</div>
+        <button class="btn-primary" onclick="bwShowForm()">+ Log First Panel</button>
+      </div>
+
+      <!-- Content (has panels) -->
+      <div id="bw-content" style="display:none;">
+
+        <div id="bw-last-info" style="font-size:13px;color:var(--text-muted);margin-bottom:14px;"></div>
+
+        <!-- Key KPI cards -->
+        <div class="metrics-grid" id="bw-kpi-row" style="margin-bottom:14px;"></div>
+
+        <!-- Panel detail + history -->
+        <div class="grid-2-1" style="margin-bottom:14px;">
+          <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+              <div class="card-title" style="margin-bottom:0;">Panel Results</div>
+              <select class="form-select" id="bw-panel-select" onchange="bwRenderPanel()" style="font-size:12px;padding:5px 8px;width:auto;"></select>
+            </div>
+            <div id="bw-panel-detail"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Panel History</div>
+            <div id="bw-history-list"></div>
+          </div>
+        </div>
+
       </div>
     </section>
 
@@ -2375,7 +2461,7 @@ function nav(page) {
   const pageEl = document.getElementById('page-' + page);
   if (pageEl) pageEl.classList.add('active');
   const titles = {
-    dashboard: 'Dashboard', log: 'Log Entry', vitals: 'Health Log',
+    dashboard: 'Dashboard', log: 'Log Entry', vitals: 'Health Log', bloodwork: 'Bloodwork',
     protocols: 'My Protocols', builder: 'Protocol Builder', compounds: 'Compound Library',
     calculator: 'Dose Calculator', settings: 'Settings'
   };
@@ -2387,8 +2473,9 @@ function nav(page) {
   if (page === 'compounds') renderCompoundsTable();
   if (page === 'protocols') renderProtocolsPage();
   if (page === 'vitals') renderVitalsPage();
+  if (page === 'bloodwork') renderBloodworkPage();
   if (page === 'calculator') setTimeout(() => { calcBuildCompoundSelect(); pepUpdate(); }, 100);
-  if (page === 'dashboard') { renderVitalsToCards(); setTimeout(() => { if (_supa && _supaUser) renderRealCharts(); else renderDemoCharts(); }, 100); }
+  if (page === 'dashboard') { renderVitalsToCards(); renderBwDashStrip(); setTimeout(() => { if (_supa && _supaUser) renderRealCharts(); else renderDemoCharts(); }, 100); }
   // Load active protocol on dashboard
   if (page === 'dashboard') {
     const activeData = localStorage.getItem('hrt_active_protocol_data');
@@ -2616,7 +2703,7 @@ function renderCycleProgress(rawProtocol) {
   const daysDone  = Math.max(0, (Date.now() - Date.parse(startDate)) / 86400000);
   const ssPct     = Math.min(100, Math.round((daysDone / (longestHL * 4)) * 100));
   if (ssBar) ssBar.style.width  = `${ssPct}%`;
-  if (ssLbl) ssLbl.textContent  = `${ssPct}% steady state`;
+  if (ssLbl) ssLbl.textContent  = `${ssPct}%`;
 
   // Active compounds this week + timing
   if (!protocol.compounds.length) return;
@@ -2872,6 +2959,341 @@ async function submitLog() {
   status.style.display = 'block';
   setTimeout(() => { status.style.display='none'; }, 3000);
 }
+
+// ── BLOODWORK ────────────────────────────────────────────────────────────────
+
+const BW_MARKERS = {
+  // Hormones
+  tt:            { label: 'Total Testosterone', unit: 'ng/dL',  lo: 300,  hi: 1000, group: 'Hormones' },
+  ft:            { label: 'Free Testosterone',  unit: 'pg/mL',  lo: 9,    hi: 30,   group: 'Hormones' },
+  e2:            { label: 'Estradiol (E2)',      unit: 'pg/mL',  lo: 10,   hi: 40,   group: 'Hormones' },
+  shbg:          { label: 'SHBG',               unit: 'nmol/L', lo: 10,   hi: 57,   group: 'Hormones' },
+  igf1:          { label: 'IGF-1',              unit: 'ng/mL',  lo: 100,  hi: 350,  group: 'Hormones' },
+  lh:            { label: 'LH',                 unit: 'mIU/mL', lo: 1.7,  hi: 8.6,  group: 'Hormones' },
+  fsh:           { label: 'FSH',                unit: 'mIU/mL', lo: 1.5,  hi: 12.4, group: 'Hormones' },
+  // CBC
+  hematocrit:    { label: 'Hematocrit',         unit: '%',      lo: 38,   hi: 52,   group: 'CBC' },
+  hemoglobin:    { label: 'Hemoglobin',         unit: 'g/dL',   lo: 13.5, hi: 17.5, group: 'CBC' },
+  rbc:           { label: 'RBC',                unit: 'M/µL',   lo: 4.5,  hi: 6.0,  group: 'CBC' },
+  wbc:           { label: 'WBC',                unit: 'K/µL',   lo: 3.5,  hi: 10.5, group: 'CBC' },
+  platelets:     { label: 'Platelets',          unit: 'K/µL',   lo: 150,  hi: 400,  group: 'CBC' },
+  // Metabolic
+  creatinine:    { label: 'Creatinine',         unit: 'mg/dL',  lo: 0.7,  hi: 1.3,  group: 'Metabolic' },
+  bun:           { label: 'BUN',                unit: 'mg/dL',  lo: 7,    hi: 25,   group: 'Metabolic' },
+  egfr:          { label: 'eGFR',               unit: 'mL/min', lo: 60,   hi: 9999, group: 'Metabolic', higherBetter: true },
+  glucose_f:     { label: 'Fasting Glucose',    unit: 'mg/dL',  lo: 70,   hi: 99,   group: 'Metabolic' },
+  hba1c:         { label: 'HbA1c',              unit: '%',      lo: 0,    hi: 5.6,  group: 'Metabolic' },
+  // Liver
+  alt:           { label: 'ALT',                unit: 'U/L',    lo: 7,    hi: 56,   group: 'Liver' },
+  ast:           { label: 'AST',                unit: 'U/L',    lo: 10,   hi: 40,   group: 'Liver' },
+  alp:           { label: 'ALP',                unit: 'U/L',    lo: 44,   hi: 147,  group: 'Liver' },
+  ggt:           { label: 'GGT',                unit: 'U/L',    lo: 8,    hi: 61,   group: 'Liver' },
+  bilirubin:     { label: 'Total Bilirubin',    unit: 'mg/dL',  lo: 0.2,  hi: 1.2,  group: 'Liver' },
+  // Lipids
+  cholesterol:   { label: 'Total Cholesterol',  unit: 'mg/dL',  lo: 0,    hi: 199,  group: 'Lipids' },
+  hdl:           { label: 'HDL',                unit: 'mg/dL',  lo: 40,   hi: 9999, group: 'Lipids', higherBetter: true },
+  ldl:           { label: 'LDL',                unit: 'mg/dL',  lo: 0,    hi: 129,  group: 'Lipids' },
+  triglycerides: { label: 'Triglycerides',      unit: 'mg/dL',  lo: 0,    hi: 149,  group: 'Lipids' },
+  // Lipids (extended)
+  apob:          { label: 'Apolipoprotein B',   unit: 'mg/dL',  lo: 0,    hi: 89,   group: 'Lipids' },
+  // Metabolic (extended)
+  insulin_f:     { label: 'Fasting Insulin',    unit: 'uIU/mL', lo: 0,    hi: 18.4, group: 'Metabolic' },
+  cystatinc:     { label: 'Cystatin C',         unit: 'mg/L',   lo: 0.52, hi: 1.31, group: 'Metabolic' },
+  // Hormones (extended)
+  dht:           { label: 'DHT',                unit: 'ng/dL',  lo: 12,   hi: 65,   group: 'Hormones' },
+  dheas:         { label: 'DHEA-S',             unit: 'mcg/dL', lo: 93,   hi: 415,  group: 'Hormones' },
+  prolactin:     { label: 'Prolactin',          unit: 'ng/mL',  lo: 2,    hi: 18,   group: 'Hormones' },
+  t3f:           { label: 'Free T3',            unit: 'pg/mL',  lo: 2.3,  hi: 4.2,  group: 'Hormones' },
+  t4:            { label: 'Total T4',           unit: 'mcg/dL', lo: 4.9,  hi: 10.5, group: 'Hormones' },
+  // Other
+  psa:           { label: 'PSA',                unit: 'ng/mL',  lo: 0,    hi: 4.0,  group: 'Other' },
+  ferritin:      { label: 'Ferritin',           unit: 'ng/mL',  lo: 24,   hi: 336,  group: 'Other' },
+  vitd:          { label: 'Vitamin D',          unit: 'ng/mL',  lo: 30,   hi: 100,  group: 'Other' },
+  tsh:           { label: 'TSH',                unit: 'mIU/L',  lo: 0.4,  hi: 4.0,  group: 'Other' },
+  crp:           { label: 'hs-CRP',             unit: 'mg/L',   lo: 0,    hi: 1.0,  group: 'Other' },
+};
+
+const BW_GROUP_ORDER = ['Hormones', 'CBC', 'Metabolic', 'Liver', 'Lipids', 'Other'];
+const BW_KPI_KEYS    = ['tt', 'hematocrit', 'e2', 'ldl']; // 4 key dashboard markers
+const BW_KPI_COLORS  = { tt: 'mc-gold', hematocrit: 'mc-red', e2: 'mc-purple', ldl: 'mc-amber' };
+
+function bwLoad()           { return lsGet('hrt_bloodwork', []); }
+function bwSaveAll(panels)  { localStorage.setItem('hrt_bloodwork', JSON.stringify(panels)); }
+
+function bwRangeStatus(key, value) {
+  const m = BW_MARKERS[key];
+  if (!m || value == null || value === '') return 'none';
+  const v = parseFloat(value);
+  if (isNaN(v)) return 'none';
+  if (m.higherBetter) return v >= m.lo ? 'ok' : 'low';
+  if (v < m.lo) return 'low';
+  if (m.hi < 9000 && v > m.hi) return 'high';
+  return 'ok';
+}
+
+function bwBadge(status) {
+  const cfg = { ok: ['In Range','bw-ok'], high: ['High','bw-high'], low: ['Low','bw-low'], none: ['No data','bw-none'] };
+  const [lbl, cls] = cfg[status] || cfg.none;
+  return `<span class="bw-badge ${cls}">${lbl}</span>`;
+}
+
+function bwShowForm(panelId) {
+  const formEl = document.getElementById('bw-form');
+  formEl.style.display = 'block';
+  document.getElementById('bw-date').value = new Date().toISOString().slice(0, 10);
+  document.getElementById('bw-lab').value = '';
+  document.getElementById('bw-notes').value = '';
+
+  if (panelId) {
+    formEl.dataset.editId = panelId;
+    const panel = bwLoad().find(p => p.id === panelId);
+    if (panel) {
+      document.getElementById('bw-date').value  = panel.date;
+      document.getElementById('bw-lab').value   = panel.lab || '';
+      document.getElementById('bw-notes').value = panel.notes || '';
+    }
+  } else {
+    delete formEl.dataset.editId;
+  }
+
+  bwBuildFormGroups(panelId ? bwLoad().find(p => p.id === panelId)?.markers : {});
+  formEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function bwHideForm() {
+  document.getElementById('bw-form').style.display = 'none';
+}
+
+function bwBuildFormGroups(prefill = {}) {
+  let html = '';
+  BW_GROUP_ORDER.forEach(group => {
+    const keys = Object.keys(BW_MARKERS).filter(k => BW_MARKERS[k].group === group);
+    html += `<div class="bw-group-label">${group}</div>
+      <div class="bw-form-grid">`;
+    keys.forEach(key => {
+      const m = BW_MARKERS[key];
+      const val = prefill[key] != null ? prefill[key] : '';
+      html += `<div>
+        <div class="form-label">${m.label} <span style="color:var(--text-muted);font-weight:400;">(${m.unit})</span></div>
+        <input type="number" class="form-input" id="bw-f-${key}" step="any" placeholder="—" value="${val}" style="font-family:var(--font-data);">
+      </div>`;
+    });
+    html += '</div>';
+  });
+  document.getElementById('bw-form-groups').innerHTML = html;
+}
+
+function bwSavePanel() {
+  const date = document.getElementById('bw-date').value;
+  if (!date) { alert('Please enter a panel date.'); return; }
+
+  const markers = {};
+  Object.keys(BW_MARKERS).forEach(key => {
+    const el = document.getElementById('bw-f-' + key);
+    if (el && el.value.trim() !== '') {
+      const v = parseFloat(el.value);
+      if (!isNaN(v)) markers[key] = v;
+    }
+  });
+
+  if (!Object.keys(markers).length) { alert('Please enter at least one marker value.'); return; }
+
+  const panels = bwLoad();
+  const formEl = document.getElementById('bw-form');
+  const editId = formEl.dataset.editId;
+
+  if (editId) {
+    const idx = panels.findIndex(p => p.id === editId);
+    if (idx >= 0) panels[idx] = { ...panels[idx], date, lab: document.getElementById('bw-lab').value.trim(), notes: document.getElementById('bw-notes').value.trim(), markers };
+  } else {
+    panels.push({
+      id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : Date.now().toString(36),
+      date,
+      lab:   document.getElementById('bw-lab').value.trim(),
+      notes: document.getElementById('bw-notes').value.trim(),
+      markers
+    });
+  }
+
+  bwSaveAll(panels);
+  bwHideForm();
+  renderBloodworkPage();
+}
+
+function bwDeletePanel(id) {
+  if (!confirm('Delete this panel? This cannot be undone.')) return;
+  bwSaveAll(bwLoad().filter(p => p.id !== id));
+  renderBloodworkPage();
+}
+
+function renderBloodworkPage() {
+  const panels = bwLoad().sort((a, b) => b.date.localeCompare(a.date));
+  const emptyEl   = document.getElementById('bw-empty');
+  const contentEl = document.getElementById('bw-content');
+  if (!emptyEl) return;
+
+  if (!panels.length) {
+    emptyEl.style.display   = 'block';
+    contentEl.style.display = 'none';
+    return;
+  }
+  emptyEl.style.display   = 'none';
+  contentEl.style.display = 'block';
+
+  const latest = panels[0];
+  const daysAgo = Math.floor((Date.now() - Date.parse(latest.date)) / 86400000);
+  const outCount = Object.keys(latest.markers).filter(k => {
+    const s = bwRangeStatus(k, latest.markers[k]);
+    return s === 'high' || s === 'low';
+  }).length;
+
+  const infoEl = document.getElementById('bw-last-info');
+  if (infoEl) infoEl.innerHTML =
+    `Last panel: <strong style="color:var(--text-secondary);">${latest.date}</strong>${latest.lab ? ' · ' + latest.lab : ''} &nbsp;·&nbsp; ${daysAgo} day${daysAgo !== 1 ? 's' : ''} ago` +
+    (outCount ? ` &nbsp;·&nbsp; <span style="color:var(--red);font-weight:600;">${outCount} out of range</span>` : ' &nbsp;·&nbsp; <span style="color:var(--green);">All in range</span>');
+
+  bwRenderKpiCards(latest, panels[1]);
+  bwRenderPanelSelect(panels);
+  bwRenderPanel();
+  bwRenderHistory(panels);
+}
+
+function bwRenderKpiCards(latest, prev) {
+  const el = document.getElementById('bw-kpi-row');
+  if (!el) return;
+  el.innerHTML = BW_KPI_KEYS.map(key => {
+    const m      = BW_MARKERS[key];
+    const val    = latest.markers[key];
+    const status = bwRangeStatus(key, val);
+    const prevVal = prev?.markers[key];
+    let deltaHtml = '';
+    if (val != null && prevVal != null) {
+      const diff = parseFloat((val - prevVal).toFixed(1));
+      const sign = diff > 0 ? '+' : '';
+      const cls  = status === 'ok' ? '' : diff > 0 ? 'delta-up' : 'delta-down';
+      deltaHtml = `<div class="metric-delta ${cls}">${sign}${diff}</div>`;
+    }
+    return `<div class="metric-card ${BW_KPI_COLORS[key] || 'mc-gold'}">
+      <div class="metric-label">${m.label}</div>
+      <div class="metric-value">${val != null ? val : '—'}</div>
+      <div class="metric-unit">${val != null ? m.unit : ''}</div>
+      ${bwBadge(val != null ? status : 'none')}
+      ${deltaHtml}
+    </div>`;
+  }).join('');
+}
+
+function bwRenderPanelSelect(panels) {
+  const sel = document.getElementById('bw-panel-select');
+  if (!sel) return;
+  sel.innerHTML = panels.map((p, i) =>
+    `<option value="${i}">${p.date}${p.lab ? ' · ' + p.lab : ''}</option>`
+  ).join('');
+}
+
+function bwRenderPanel() {
+  const panels = bwLoad().sort((a, b) => b.date.localeCompare(a.date));
+  const sel    = document.getElementById('bw-panel-select');
+  const idx    = sel ? parseInt(sel.value) || 0 : 0;
+  const panel  = panels[idx];
+  const prev   = panels[idx + 1];
+  const el     = document.getElementById('bw-panel-detail');
+  if (!panel || !el) return;
+
+  let html = '';
+  BW_GROUP_ORDER.forEach(group => {
+    const keys     = Object.keys(BW_MARKERS).filter(k => BW_MARKERS[k].group === group);
+    const withData = keys.filter(k => panel.markers[k] != null);
+    if (!withData.length) return;
+
+    html += `<div class="bw-group-label">${group}</div>`;
+    withData.forEach(key => {
+      const m      = BW_MARKERS[key];
+      const val    = panel.markers[key];
+      const status = bwRangeStatus(key, val);
+      const prevVal = prev?.markers[key];
+      const statusColor = status === 'ok' ? 'var(--green)' : status === 'none' ? 'var(--text-muted)' : 'var(--red)';
+      let delta = '';
+      if (prevVal != null && val != null) {
+        const diff = parseFloat((val - prevVal).toFixed(2));
+        const sign = diff >= 0 ? '+' : '';
+        const dc = status === 'ok' ? 'var(--text-muted)' : diff > 0 ? 'var(--red)' : 'var(--green)';
+        delta = `<span style="font-size:11px;font-family:var(--font-data);color:${dc};margin-left:6px;">${sign}${diff}</span>`;
+      }
+      html += `<div class="bw-marker-row">
+        <span style="font-size:13px;color:var(--text-secondary);">${m.label}</span>
+        <span style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:13px;font-family:var(--font-data);color:var(--text-primary);">${val} <span style="font-size:11px;color:var(--text-muted);">${m.unit}</span></span>
+          ${delta}
+          <span style="font-size:11px;font-weight:700;color:${statusColor};min-width:16px;text-align:right;">${status === 'ok' ? '✓' : status === 'none' ? '' : status.toUpperCase()}</span>
+        </span>
+      </div>`;
+    });
+  });
+
+  if (panel.notes) html += `<div style="margin-top:12px;font-size:12px;color:var(--text-muted);font-style:italic;">${panel.notes}</div>`;
+
+  const editBtn = `<button class="btn-secondary" onclick="bwShowForm('${panel.id}')" style="font-size:12px;padding:6px 12px;margin-top:16px;">Edit Panel</button>
+    <button class="btn-secondary" onclick="bwDeletePanel('${panel.id}')" style="font-size:12px;padding:6px 12px;margin-top:16px;margin-left:8px;color:var(--red);border-color:rgba(248,113,113,0.3);">Delete</button>`;
+
+  el.innerHTML = html + editBtn;
+}
+
+function bwRenderHistory(panels) {
+  const el = document.getElementById('bw-history-list');
+  if (!el) return;
+  if (!panels.length) { el.innerHTML = '<div style="color:var(--text-muted);font-size:13px;">No panels yet.</div>'; return; }
+
+  el.innerHTML = panels.map((p, i) => {
+    const daysAgo    = Math.floor((Date.now() - Date.parse(p.date)) / 86400000);
+    const count      = Object.keys(p.markers).filter(k => p.markers[k] != null).length;
+    const outOfRange = Object.keys(p.markers).filter(k => { const s = bwRangeStatus(k, p.markers[k]); return s === 'high' || s === 'low'; }).length;
+    return `<div style="padding:10px 0;border-bottom:0.5px solid var(--border);cursor:pointer;" onclick="document.getElementById('bw-panel-select').value=${i};bwRenderPanel();">
+      <div style="display:flex;justify-content:space-between;">
+        <span style="font-size:13px;color:var(--text-primary);font-weight:500;">${p.date}</span>
+        <span style="font-size:11px;color:var(--text-muted);">${daysAgo === 0 ? 'Today' : daysAgo + 'd ago'}</span>
+      </div>
+      <div style="margin-top:3px;display:flex;gap:8px;align-items:center;">
+        <span style="font-size:12px;color:var(--text-muted);">${p.lab || '—'}</span>
+        <span style="font-size:11px;color:var(--border-mid);">·</span>
+        <span style="font-size:12px;color:var(--text-muted);">${count} markers</span>
+        ${outOfRange ? `<span style="font-size:11px;color:var(--red);font-weight:600;">· ${outOfRange} flagged</span>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderBwDashStrip() {
+  const strip = document.getElementById('bw-dash-strip');
+  if (!strip) return;
+  const panels = bwLoad().sort((a, b) => b.date.localeCompare(a.date));
+  if (!panels.length) {
+    strip.style.display = 'none';
+    return;
+  }
+  const latest  = panels[0];
+  const daysAgo = Math.floor((Date.now() - Date.parse(latest.date)) / 86400000);
+  const outKeys = Object.keys(latest.markers).filter(k => { const s = bwRangeStatus(k, latest.markers[k]); return s === 'high' || s === 'low'; });
+  const cls     = outKeys.length ? 'alert-warn' : 'alert-good';
+  const icon    = outKeys.length ? 'ti-alert-triangle' : 'ti-check';
+  const keyVals = BW_KPI_KEYS.filter(k => latest.markers[k] != null).map(k => {
+    const m  = BW_MARKERS[k];
+    const st = bwRangeStatus(k, latest.markers[k]);
+    const c  = st === 'ok' ? 'var(--green)' : 'var(--red)';
+    return `<span style="color:var(--text-secondary);">${m.label.replace('Total ','')} <strong style="font-family:var(--font-data);color:${c};">${latest.markers[k]}</strong></span>`;
+  });
+  strip.style.display = 'block';
+  strip.innerHTML = `<div class="alert-strip ${cls}" style="margin-bottom:0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+    <span style="display:flex;align-items:center;gap:7px;">
+      <i class="ti ${icon}"></i>
+      <strong>Labs ${daysAgo === 0 ? 'today' : daysAgo + 'd ago'}</strong>${latest.lab ? ' · ' + latest.lab : ''}
+    </span>
+    <span style="display:flex;gap:14px;font-size:12px;flex-wrap:wrap;">${keyVals.join('')}</span>
+    <span style="font-size:12px;opacity:0.7;">View →</span>
+  </div>`;
+}
+
+// ── END BLOODWORK ─────────────────────────────────────────────────────────────
 
 function renderVitalsPage() {
   renderInsulinLog();
