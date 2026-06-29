@@ -206,9 +206,12 @@ The app is designed for native iOS home screen use:
 ## Known sharp edges
 
 - **Hevy timestamps** — `start_time` comes back as either a Unix integer or ISO string depending on endpoint. Always use `hevyParseMs(t)` — never `new Date(t * 1000)` directly.
-- **Dates must use local timezone** — `toISOString()` returns UTC and has caused multi-bug incidents. Always use `localDate()`.
+- **Dates must use local timezone** — `toISOString()` returns UTC and has caused multi-bug incidents. Always use `localDate()`. This includes `hevyBuildPRMap` — use `localDate(new Date(ms))` not `.toISOString().slice(0,10)`.
 - **Supabase `r.date` field is untrustworthy** — rows written before the timezone fix may have corrupted UTC dates. Always re-derive date from `r.created_at` using `localDate(new Date(r.created_at))`.
-- **localStorage dose migration** — a one-time migration IIFE runs on load to patch old UTC-dated entries.
+- **localStorage dose migration** — a one-time migration IIFE (`migrateDoseDates`) runs on first load only, guarded by `hrt_dose_migrate_v1` flag in localStorage.
+- **XSS: never embed Hevy data in onclick strings** — exercise names come from the Hevy API. Use `data-*` attributes + `escHtml()` for any Hevy-sourced value going into HTML. See E1RM pill pattern: `data-ex="${escHtml(ex)}" onclick="hevySetE1RM(this.dataset.ex)"`.
+- **Hevy `end_time` can be null** — in-progress or corrupt Hevy records have no `end_time`. Always guard duration math with `Math.max(0, hevyParseMs(end_time) - hevyParseMs(start_time))`.
+- **`_resetInactivityTimer` is throttled** — writes localStorage at most once per minute. Do not remove the throttle; `mousemove` fires at 60fps.
 
 ---
 
