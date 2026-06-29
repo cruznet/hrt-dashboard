@@ -309,7 +309,8 @@ body {
 .alert-warn  { background: var(--amber-dim); border-color: rgba(245,158,11,0.3); color: var(--amber); }
 .alert-error { background: var(--red-dim);   border-color: rgba(239,68,68,0.3);  color: var(--red); }
 .alert-info  { background: var(--teal-dim);  border-color: var(--teal-border);   color: var(--teal); }
-.alert-good  { background: var(--green-dim); border-color: rgba(34,197,94,0.3);  color: var(--green); }
+.alert-good    { background: var(--green-dim); border-color: rgba(34,197,94,0.3);  color: var(--green); }
+.alert-neutral { background: rgba(100,116,139,0.08); border-color: rgba(100,116,139,0.2); color: var(--text-secondary); }
 
 /* ── Bloodwork badges ── */
 .bw-badge { display:inline-block;font-size:10.5px;padding:2px 7px;border-radius:20px;font-weight:600;font-family:var(--font-ui);letter-spacing:0; }
@@ -718,6 +719,10 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
       <span class="nav-icon"><i class="ti ti-test-pipe"></i></span>
       <span class="nav-text">Bloodwork</span>
     </div>
+    <div class="nav-item" onclick="nav('physique')">
+      <span class="nav-icon"><i class="ti ti-ruler-measure"></i></span>
+      <span class="nav-text">Physique</span>
+    </div>
   </div>
 
   <div class="sidebar-footer">
@@ -790,7 +795,9 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
       </div>
 
       <!-- Latest Labs strip -->
-      <div id="bw-dash-strip" style="display:none;margin-bottom:12px;cursor:pointer;" onclick="nav('bloodwork')"></div>
+      <div id="bw-dash-strip" style="display:none;margin-bottom:8px;cursor:pointer;" onclick="nav('bloodwork')"></div>
+      <!-- Latest Physique strip -->
+      <div id="ph-dash-strip" style="display:none;margin-bottom:12px;cursor:pointer;" onclick="nav('physique')"></div>
 
       <!-- ROW 2: Daily doses (left, primary action) + Protocol context (right) -->
       <div class="grid-dash-main" style="margin-bottom:14px;">
@@ -1190,6 +1197,71 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
           </div>
         </div>
 
+      </div>
+    </section>
+
+    <!-- ── PHYSIQUE PAGE ── -->
+    <section class="page" id="page-physique">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding-bottom:12px;border-bottom:0.5px solid var(--border);">
+        <div style="font-size:15px;font-weight:600;color:var(--text-primary);">Physique</div>
+        <button class="btn-primary" onclick="measShowForm()" style="padding:7px 16px;font-size:13px;">+ Log Check-in</button>
+      </div>
+
+      <!-- Log Form -->
+      <div id="ph-form" style="display:none;margin-bottom:16px;">
+        <div class="card">
+          <div class="card-title">Log Check-in</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px;">
+            <div><div class="form-label">Date</div><input type="date" class="form-input" id="ph-date"></div>
+            <div><div class="form-label">Notes</div><input type="text" class="form-input" id="ph-notes" placeholder="e.g. AM fasted, DEXA scan"></div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:18px;">
+            <div><div class="form-label">Weight (lbs)</div><input type="number" step="0.1" class="form-input" id="ph-weight" placeholder="216.0"></div>
+            <div><div class="form-label">Body Fat %</div><input type="number" step="0.1" class="form-input" id="ph-bf" placeholder="14.5"></div>
+            <div><div class="form-label">Waist (in)</div><input type="number" step="0.25" class="form-input" id="ph-waist" placeholder="34.0"></div>
+            <div><div class="form-label">Chest (in)</div><input type="number" step="0.25" class="form-input" id="ph-chest" placeholder="44.0"></div>
+            <div><div class="form-label">Arms (in)</div><input type="number" step="0.125" class="form-input" id="ph-arms" placeholder="17.5"></div>
+            <div><div class="form-label">Quads (in)</div><input type="number" step="0.25" class="form-input" id="ph-quads" placeholder="26.0"></div>
+            <div><div class="form-label">Calves (in)</div><input type="number" step="0.25" class="form-input" id="ph-calves" placeholder="16.0"></div>
+          </div>
+          <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:14px;border-top:0.5px solid var(--border);">
+            <button class="btn-secondary" onclick="measHideForm()">Cancel</button>
+            <button class="btn-primary" onclick="measSaveCheckin()">Save Check-in</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty state -->
+      <div id="ph-empty" style="text-align:center;padding:64px 0;">
+        <i class="ti ti-ruler-measure" style="font-size:44px;color:var(--text-muted);opacity:0.25;"></i>
+        <div style="font-size:15px;color:var(--text-secondary);margin:14px 0 6px;font-weight:500;">No check-ins logged yet</div>
+        <div style="font-size:13px;color:var(--text-muted);margin-bottom:22px;">Log your first physique check-in to track body composition over time</div>
+        <button class="btn-primary" onclick="measShowForm()">+ Log First Check-in</button>
+      </div>
+
+      <!-- Content -->
+      <div id="ph-content" style="display:none;">
+        <div id="ph-last-info" style="font-size:13px;color:var(--text-muted);margin-bottom:14px;"></div>
+
+        <!-- KPI cards -->
+        <div class="metrics-grid" id="ph-kpi-row" style="margin-bottom:14px;"></div>
+
+        <!-- Trend chart -->
+        <div class="card" style="margin-bottom:14px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+            <div class="card-title" style="margin-bottom:0;">Trends</div>
+            <div id="ph-trend-pills" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+          </div>
+          <div style="height:220px;position:relative;">
+            <canvas id="ph-trend-chart"></canvas>
+          </div>
+        </div>
+
+        <!-- History -->
+        <div class="card">
+          <div class="card-title">Check-in History</div>
+          <div id="ph-history-list"></div>
+        </div>
       </div>
     </section>
 
@@ -2490,8 +2562,9 @@ function nav(page) {
   if (page === 'protocols') renderProtocolsPage();
   if (page === 'vitals') renderVitalsPage();
   if (page === 'bloodwork') renderBloodworkPage();
+  if (page === 'physique') renderPhysiquePage();
   if (page === 'calculator') setTimeout(() => { calcBuildCompoundSelect(); pepUpdate(); }, 100);
-  if (page === 'dashboard') { renderVitalsToCards(); renderBwDashStrip(); setTimeout(() => { if (_supa && _supaUser) renderRealCharts(); else renderDemoCharts(); }, 100); }
+  if (page === 'dashboard') { renderVitalsToCards(); renderBwDashStrip(); renderPhysiqueDashStrip(); setTimeout(() => { if (_supa && _supaUser) renderRealCharts(); else renderDemoCharts(); }, 100); }
   // Load active protocol on dashboard
   if (page === 'dashboard') {
     const activeData = localStorage.getItem('hrt_active_protocol_data');
@@ -3512,6 +3585,255 @@ function renderBwDashStrip() {
 }
 
 // ── END BLOODWORK ─────────────────────────────────────────────────────────────
+
+// ── PHYSIQUE TRACKER ──────────────────────────────────────────────────────────
+
+const MEAS_KEYS = [
+  { key: 'weight', label: 'Weight',    unit: 'lbs', color: '#F5C518', dir: 'neutral' },
+  { key: 'bf',     label: 'Body Fat',  unit: '%',   color: '#F87171', dir: 'down'    },
+  { key: 'waist',  label: 'Waist',     unit: 'in',  color: '#FB923C', dir: 'down'    },
+  { key: 'chest',  label: 'Chest',     unit: 'in',  color: '#4ADE80', dir: 'up'      },
+  { key: 'arms',   label: 'Arms',      unit: 'in',  color: '#A78BFA', dir: 'up'      },
+  { key: 'quads',  label: 'Quads',     unit: 'in',  color: '#38BDF8', dir: 'up'      },
+  { key: 'calves', label: 'Calves',    unit: 'in',  color: '#F472B6', dir: 'up'      },
+];
+
+let _phTrendKey = 'weight';
+let _phTrendChart = null;
+
+function measLoad() {
+  return lsGet('hrt_measurements', []);
+}
+
+function measSaveAll(list) {
+  localStorage.setItem('hrt_measurements', JSON.stringify(list));
+}
+
+function measShowForm(id) {
+  const form = document.getElementById('ph-form');
+  if (!form) return;
+  if (id) {
+    const list = measLoad();
+    const entry = list.find(e => e.id === id);
+    if (entry) {
+      document.getElementById('ph-date').value  = entry.date || '';
+      document.getElementById('ph-notes').value = entry.notes || '';
+      MEAS_KEYS.forEach(m => {
+        const el = document.getElementById('ph-' + m.key);
+        if (el) el.value = entry.measurements?.[m.key] ?? '';
+      });
+      form.dataset.editId = id;
+    }
+  } else {
+    document.getElementById('ph-date').value  = new Date().toISOString().slice(0,10);
+    document.getElementById('ph-notes').value = '';
+    MEAS_KEYS.forEach(m => { const el = document.getElementById('ph-' + m.key); if (el) el.value = ''; });
+    delete form.dataset.editId;
+  }
+  form.style.display = 'block';
+  document.getElementById('ph-date').focus();
+}
+
+function measHideForm() {
+  const form = document.getElementById('ph-form');
+  if (form) { form.style.display = 'none'; delete form.dataset.editId; }
+}
+
+function measSaveCheckin() {
+  const date  = document.getElementById('ph-date').value.trim();
+  if (!date) return alert('Date is required.');
+  const notes = document.getElementById('ph-notes').value.trim();
+  const meas  = {};
+  MEAS_KEYS.forEach(m => {
+    const v = parseFloat(document.getElementById('ph-' + m.key).value);
+    if (!isNaN(v)) meas[m.key] = v;
+  });
+  if (!Object.keys(meas).length) return alert('Enter at least one measurement.');
+
+  const list    = measLoad();
+  const form    = document.getElementById('ph-form');
+  const editId  = form?.dataset.editId;
+  if (editId) {
+    const idx = list.findIndex(e => e.id === editId);
+    if (idx >= 0) list[idx] = { ...list[idx], date, notes, measurements: meas };
+  } else {
+    list.push({ id: crypto.randomUUID(), date, notes, measurements: meas });
+  }
+  measSaveAll(list);
+  measHideForm();
+  renderPhysiquePage();
+}
+
+function measDeleteCheckin(id) {
+  if (!confirm('Delete this check-in?')) return;
+  measSaveAll(measLoad().filter(e => e.id !== id));
+  renderPhysiquePage();
+}
+
+function renderPhysiquePage() {
+  const list   = measLoad().sort((a, b) => a.date.localeCompare(b.date));
+  const empty  = document.getElementById('ph-empty');
+  const content= document.getElementById('ph-content');
+  if (!empty || !content) return;
+
+  if (!list.length) {
+    empty.style.display   = 'block';
+    content.style.display = 'none';
+    return;
+  }
+
+  empty.style.display   = 'none';
+  content.style.display = 'block';
+
+  const latest = list[list.length - 1];
+  const prev   = list.length > 1 ? list[list.length - 2] : null;
+  const daysAgo = Math.floor((Date.now() - Date.parse(latest.date)) / 86400000);
+
+  const info = document.getElementById('ph-last-info');
+  if (info) info.innerHTML = `<span>Last check-in <strong style="color:var(--text-secondary);">${latest.date}</strong> · ${daysAgo === 0 ? 'today' : daysAgo + 'd ago'}</span>${list.length > 1 ? `<span style="margin-left:12px;color:var(--text-muted);">${list.length} check-ins total</span>` : ''}`;
+
+  measRenderKpiCards(latest, prev);
+  measRenderTrend(list);
+  measRenderHistory(list);
+  renderPhysiqueDashStrip();
+}
+
+function measRenderKpiCards(latest, prev) {
+  const row = document.getElementById('ph-kpi-row');
+  if (!row) return;
+  row.innerHTML = MEAS_KEYS
+    .filter(m => latest.measurements?.[m.key] != null)
+    .map(m => {
+      const val    = latest.measurements[m.key];
+      const pval   = prev?.measurements?.[m.key];
+      const diff   = pval != null ? +(val - pval).toFixed(2) : null;
+      const isGood = diff == null ? null :
+        (m.dir === 'up' ? diff > 0 : m.dir === 'down' ? diff < 0 : null);
+      const diffHtml = diff != null
+        ? `<div style="font-size:11px;margin-top:2px;color:${isGood === null ? 'var(--text-muted)' : isGood ? 'var(--green)' : 'var(--red)'};">${diff > 0 ? '+' : ''}${diff} ${m.unit}</div>`
+        : '';
+      return `<div class="metric-card">
+        <div class="metric-label">${m.label.toUpperCase()}</div>
+        <div class="metric-value" style="color:${m.color};">${val}</div>
+        <div class="metric-unit">${m.unit}</div>
+        ${diffHtml}
+      </div>`;
+    }).join('');
+}
+
+function phSetTrendKey(key) {
+  _phTrendKey = key;
+  const list = measLoad().sort((a, b) => a.date.localeCompare(b.date));
+  measRenderTrend(list);
+}
+
+function measRenderTrend(list) {
+  const pills = document.getElementById('ph-trend-pills');
+  if (pills) {
+    pills.innerHTML = MEAS_KEYS
+      .filter(m => list.some(e => e.measurements?.[m.key] != null))
+      .map(m => `<button onclick="phSetTrendKey('${m.key}')" style="padding:4px 10px;border-radius:99px;border:1.5px solid ${_phTrendKey===m.key ? m.color : 'var(--border)'};background:${_phTrendKey===m.key ? m.color+'22' : 'transparent'};color:${_phTrendKey===m.key ? m.color : 'var(--text-muted)'};font-size:12px;font-weight:600;cursor:pointer;">${m.label}</button>`)
+      .join('');
+  }
+
+  const m      = MEAS_KEYS.find(x => x.key === _phTrendKey);
+  if (!m) return;
+  const pts    = list.filter(e => e.measurements?.[m.key] != null);
+  if (!pts.length) return;
+
+  const labels = pts.map(e => e.date.slice(5)); // MM-DD
+  const vals   = pts.map(e => e.measurements[m.key]);
+
+  const canvas = document.getElementById('ph-trend-chart');
+  if (!canvas) return;
+
+  if (_phTrendChart) { _phTrendChart.destroy(); _phTrendChart = null; }
+
+  _phTrendChart = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        data: vals,
+        borderColor: m.color,
+        backgroundColor: m.color + '18',
+        fill: true,
+        tension: 0.35,
+        pointBackgroundColor: m.color,
+        pointRadius: 5,
+        pointHoverRadius: 7,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: {
+        label: ctx => ` ${ctx.parsed.y} ${m.unit}`
+      }}},
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#64748B', font: { family: "'JetBrains Mono', monospace", size: 11 } } },
+        y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#64748B', font: { family: "'JetBrains Mono', monospace", size: 11 } },
+             title: { display: true, text: m.unit, color: '#475569', font: { size: 10 } } }
+      }
+    }
+  });
+}
+
+function measRenderHistory(list) {
+  const el = document.getElementById('ph-history-list');
+  if (!el) return;
+  const sorted = [...list].reverse();
+  el.innerHTML = sorted.map((entry, i) => {
+    const mvals = MEAS_KEYS.filter(m => entry.measurements?.[m.key] != null)
+      .map(m => `<span style="font-size:12px;color:var(--text-muted);">${m.label} <strong style="color:var(--text-secondary);font-family:var(--font-data);">${entry.measurements[m.key]}</strong><span style="color:var(--text-muted);font-size:11px;"> ${m.unit}</span></span>`)
+      .join('<span style="color:var(--border);margin:0 6px;">·</span>');
+    return `<div style="padding:12px 0;${i < sorted.length-1 ? 'border-bottom:0.5px solid var(--border);' : ''}display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          <span style="font-size:13px;font-weight:600;color:var(--text-primary);font-family:var(--font-data);">${entry.date}</span>
+          ${entry.notes ? `<span style="font-size:12px;color:var(--text-muted);">${escHtml(entry.notes)}</span>` : ''}
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;">${mvals}</div>
+      </div>
+      <button onclick="measDeleteCheckin('${entry.id}')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;padding:2px 4px;font-size:13px;flex-shrink:0;" title="Delete">
+        <i class="ti ti-trash"></i>
+      </button>
+    </div>`;
+  }).join('');
+}
+
+function renderPhysiqueDashStrip() {
+  const strip = document.getElementById('ph-dash-strip');
+  if (!strip) return;
+  const list = measLoad().sort((a, b) => b.date.localeCompare(a.date));
+  if (!list.length) { strip.style.display = 'none'; return; }
+
+  const latest  = list[0];
+  const prev    = list[1] || null;
+  const daysAgo = Math.floor((Date.now() - Date.parse(latest.date)) / 86400000);
+
+  const kpiKeys = ['weight', 'bf', 'waist', 'arms'];
+  const vals = kpiKeys.filter(k => latest.measurements?.[k] != null).map(k => {
+    const m     = MEAS_KEYS.find(x => x.key === k);
+    const val   = latest.measurements[k];
+    const pval  = prev?.measurements?.[k];
+    const diff  = pval != null ? +(val - pval).toFixed(1) : null;
+    const isGood = diff == null ? null : (m.dir === 'up' ? diff > 0 : m.dir === 'down' ? diff < 0 : null);
+    const trend = diff != null ? `<span style="font-size:10px;margin-left:2px;color:${isGood===null?'var(--text-muted)':isGood?'var(--green)':'var(--red)'};">${diff>0?'+':''}${diff}</span>` : '';
+    return `<span style="color:var(--text-secondary);">${m.label} <strong style="font-family:var(--font-data);color:${m.color};">${val}</strong>${trend}</span>`;
+  });
+
+  strip.style.display = 'block';
+  strip.innerHTML = `<div class="alert-strip alert-neutral" style="margin-bottom:0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+    <span style="display:flex;align-items:center;gap:7px;">
+      <i class="ti ti-ruler-measure"></i>
+      <strong>Physique ${daysAgo === 0 ? 'today' : daysAgo + 'd ago'}</strong>
+    </span>
+    <span style="display:flex;gap:14px;font-size:12px;flex-wrap:wrap;">${vals.join('')}</span>
+    <span style="font-size:12px;opacity:0.7;">View →</span>
+  </div>`;
+}
+
+// ── END PHYSIQUE ──────────────────────────────────────────────────────────────
 
 function renderVitalsPage() {
   renderInsulinLog();
