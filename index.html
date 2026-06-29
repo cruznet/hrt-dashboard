@@ -544,6 +544,20 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
   .gantt-label { width: 70px; }
 }
 
+@media print {
+  #sidebar, #topbar, #auth-overlay { display: none !important; }
+  body { background: #fff !important; color: #000 !important; overflow: auto !important; }
+  #content { overflow: visible !important; padding: 0 !important; }
+  .page { display: block !important; }
+  .page:not(#page-report) { display: none !important; }
+  #report-content { color: #000; }
+  #report-content .report-card { border: 1px solid #ddd; background: #fff; break-inside: avoid; }
+  #report-content .report-card-title { color: #000; border-bottom: 1px solid #ddd; }
+  #report-content .report-val { color: #000; }
+  #report-content .report-flag-high { color: #c00; }
+  #report-content .report-flag-low  { color: #00c; }
+}
+
 /* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -722,6 +736,14 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
     <div class="nav-item" onclick="nav('physique')">
       <span class="nav-icon"><i class="ti ti-ruler-measure"></i></span>
       <span class="nav-text">Physique</span>
+    </div>
+    <div class="nav-item" onclick="nav('report')">
+      <span class="nav-icon"><i class="ti ti-file-text"></i></span>
+      <span class="nav-text">Coach Report</span>
+    </div>
+    <div class="nav-item" onclick="nav('compliance')">
+      <span class="nav-icon"><i class="ti ti-calendar-check"></i></span>
+      <span class="nav-text">Compliance</span>
     </div>
   </div>
 
@@ -1263,6 +1285,27 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
           <div id="ph-history-list"></div>
         </div>
       </div>
+    </section>
+
+    <!-- ── COACH REPORT PAGE ── -->
+    <section class="page" id="page-report">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding-bottom:12px;border-bottom:0.5px solid var(--border);flex-wrap:wrap;gap:8px;">
+        <div style="font-size:15px;font-weight:600;color:var(--text-primary);">Coach Report</div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn-secondary" onclick="reportCopy()" id="report-copy-btn" style="padding:7px 14px;font-size:13px;"><i class="ti ti-clipboard"></i> Copy</button>
+          <button class="btn-secondary" onclick="window.print()" style="padding:7px 14px;font-size:13px;"><i class="ti ti-printer"></i> Print</button>
+        </div>
+      </div>
+      <div id="report-content"></div>
+    </section>
+
+    <!-- ── COMPLIANCE PAGE ── -->
+    <section class="page" id="page-compliance">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding-bottom:12px;border-bottom:0.5px solid var(--border);">
+        <div style="font-size:15px;font-weight:600;color:var(--text-primary);">Dose Compliance</div>
+        <div id="compliance-range-pills" style="display:flex;gap:6px;"></div>
+      </div>
+      <div id="compliance-content"></div>
     </section>
 
     <!-- ── PROTOCOLS PAGE ── -->
@@ -2549,6 +2592,7 @@ function nav(page) {
   if (pageEl) pageEl.classList.add('active');
   const titles = {
     dashboard: 'Dashboard', log: 'Log Entry', vitals: 'Health Log', bloodwork: 'Bloodwork',
+    physique: 'Physique', report: 'Coach Report', compliance: 'Dose Compliance',
     protocols: 'My Protocols', builder: 'Protocol Builder', compounds: 'Compound Library',
     calculator: 'Dose Calculator', settings: 'Settings'
   };
@@ -2563,6 +2607,8 @@ function nav(page) {
   if (page === 'vitals') renderVitalsPage();
   if (page === 'bloodwork') renderBloodworkPage();
   if (page === 'physique') renderPhysiquePage();
+  if (page === 'report') renderCoachReport();
+  if (page === 'compliance') renderCompliancePage();
   if (page === 'calculator') setTimeout(() => { calcBuildCompoundSelect(); pepUpdate(); }, 100);
   if (page === 'dashboard') { renderVitalsToCards(); renderBwDashStrip(); renderPhysiqueDashStrip(); setTimeout(() => { if (_supa && _supaUser) renderRealCharts(); else renderDemoCharts(); }, 100); }
   // Load active protocol on dashboard
@@ -3834,6 +3880,408 @@ function renderPhysiqueDashStrip() {
 }
 
 // ── END PHYSIQUE ──────────────────────────────────────────────────────────────
+
+// ── COACH REPORT ──────────────────────────────────────────────────────────────
+
+function renderCoachReport() {
+  const el = document.getElementById('report-content');
+  if (!el) return;
+
+  const protocol = (() => { try { return JSON.parse(localStorage.getItem('hrt_active_protocol_data')); } catch { return null; } })();
+  const panels   = bwLoad().sort((a, b) => b.date.localeCompare(a.date));
+  const bwLatest = panels[0] || null;
+  const measList = measLoad().sort((a, b) => b.date.localeCompare(a.date));
+  const phLatest = measList[0] || null;
+  const phPrev   = measList[1] || null;
+  const vitals   = lsGet('hrt_vitals_log', []).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
+
+  const today    = new Date().toISOString().slice(0, 10);
+  const sections = [];
+
+  // ── Active Protocol ──
+  if (protocol) {
+    const compounds = (protocol.compounds || []).map(c => {
+      const dose = c.phases?.[0]?.dose ?? c.dose ?? '?';
+      const freq = Array.isArray(c.freq) ? c.freq.join('/') : (c.freq || '');
+      return `<tr><td style="color:var(--text-primary);font-weight:500;">${escHtml(c.name)}</td><td style="font-family:var(--font-data);color:var(--primary-bright);">${dose}${escHtml(c.unit||'mg')}</td><td style="color:var(--text-muted);">${escHtml(freq)}</td></tr>`;
+    }).join('');
+    sections.push(`
+      <div class="report-card card" style="margin-bottom:14px;">
+        <div class="report-card-title card-title">Active Protocol — ${escHtml(protocol.name)}</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">Phase: ${escHtml(protocol.phase||'—')} · ${escHtml(String(protocol.weeks||'?'))} weeks · Started ${escHtml(protocol.startDate||'—')}</div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead><tr style="border-bottom:0.5px solid var(--border);">
+            <th style="text-align:left;padding:4px 0;font-size:11px;color:var(--text-muted);font-weight:500;">Compound</th>
+            <th style="text-align:left;padding:4px 0;font-size:11px;color:var(--text-muted);font-weight:500;">Dose</th>
+            <th style="text-align:left;padding:4px 0;font-size:11px;color:var(--text-muted);font-weight:500;">Frequency</th>
+          </tr></thead>
+          <tbody style="line-height:2;">${compounds}</tbody>
+        </table>
+      </div>`);
+  }
+
+  // ── Bloodwork ──
+  if (bwLatest) {
+    const daysAgo  = Math.floor((Date.now() - Date.parse(bwLatest.date)) / 86400000);
+    const flagKeys = Object.keys(bwLatest.markers).filter(k => { const s = bwRangeStatus(k, bwLatest.markers[k]); return s === 'high' || s === 'low'; });
+    const flagHtml = flagKeys.length
+      ? flagKeys.map(k => { const m = BW_MARKERS[k]; const s = bwRangeStatus(k, bwLatest.markers[k]); return `<span class="report-flag-${s}" style="font-size:12px;padding:2px 7px;border-radius:4px;background:${s==='high'?'rgba(248,113,113,0.12)':'rgba(96,165,250,0.12)'};">${m.label} <strong>${bwLatest.markers[k]} ${m.unit}</strong> <span style="font-size:10px;opacity:0.8;">${s.toUpperCase()}</span></span>`; }).join(' ')
+      : `<span style="color:var(--green);font-size:13px;">All tracked markers in range</span>`;
+
+    const markerRows = Object.keys(BW_MARKERS)
+      .filter(k => bwLatest.markers[k] != null)
+      .map(k => {
+        const m = BW_MARKERS[k];
+        const s = bwRangeStatus(k, bwLatest.markers[k]);
+        const col = s === 'high' ? 'var(--red)' : s === 'low' ? '#60A5FA' : 'var(--text-secondary)';
+        const ref = (m.lo && m.hi) ? `${m.lo}–${m.hi}` : m.hi ? `< ${m.hi}` : m.lo ? `> ${m.lo}` : '—';
+        return `<tr style="border-bottom:0.5px solid var(--border);"><td style="padding:5px 0;color:var(--text-muted);font-size:12px;">${m.label}</td><td style="font-family:var(--font-data);font-weight:600;color:${col};">${bwLatest.markers[k]}</td><td style="color:var(--text-muted);font-size:12px;">${m.unit}</td><td style="color:var(--text-muted);font-size:11px;">${ref}</td></tr>`;
+      }).join('');
+
+    sections.push(`
+      <div class="report-card card" style="margin-bottom:14px;">
+        <div class="report-card-title card-title">Bloodwork — ${bwLatest.date}${daysAgo > 0 ? ' <span style="font-size:12px;color:var(--text-muted);font-weight:400;">('+daysAgo+'d ago)</span>' : ''}</div>
+        ${bwLatest.lab ? `<div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">${escHtml(bwLatest.lab)}</div>` : ''}
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">${flagHtml}</div>
+        ${bwLatest.notes ? `<div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;padding:8px 10px;background:var(--surface-2);border-radius:var(--radius);">${escHtml(bwLatest.notes)}</div>` : ''}
+        <table style="width:100%;border-collapse:collapse;">
+          <thead><tr><th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;padding-bottom:4px;">Marker</th><th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;">Value</th><th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;">Unit</th><th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;">Reference</th></tr></thead>
+          <tbody>${markerRows}</tbody>
+        </table>
+      </div>`);
+  }
+
+  // ── Physique ──
+  if (phLatest) {
+    const daysAgo = Math.floor((Date.now() - Date.parse(phLatest.date)) / 86400000);
+    const rows = MEAS_KEYS.filter(m => phLatest.measurements?.[m.key] != null).map(m => {
+      const val  = phLatest.measurements[m.key];
+      const pval = phPrev?.measurements?.[m.key];
+      const diff = pval != null ? +(val - pval).toFixed(2) : null;
+      const isGood = diff == null ? null : (m.dir === 'up' ? diff > 0 : m.dir === 'down' ? diff < 0 : null);
+      const diffStr = diff != null ? `<span style="font-size:11px;margin-left:4px;color:${isGood===null?'var(--text-muted)':isGood?'var(--green)':'var(--red)'};">${diff>0?'+':''}${diff}</span>` : '';
+      return `<tr style="border-bottom:0.5px solid var(--border);"><td style="padding:5px 0;color:var(--text-muted);font-size:12px;">${m.label}</td><td style="font-family:var(--font-data);font-weight:600;color:${m.color};">${val}${diffStr}</td><td style="color:var(--text-muted);font-size:12px;">${m.unit}</td></tr>`;
+    }).join('');
+    sections.push(`
+      <div class="report-card card" style="margin-bottom:14px;">
+        <div class="report-card-title card-title">Physique — ${phLatest.date}${daysAgo > 0 ? ' <span style="font-size:12px;color:var(--text-muted);font-weight:400;">('+daysAgo+'d ago)</span>' : ''}</div>
+        ${phLatest.notes ? `<div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">${escHtml(phLatest.notes)}</div>` : ''}
+        <table style="width:100%;border-collapse:collapse;">
+          <thead><tr><th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;padding-bottom:4px;">Metric</th><th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;">Value</th><th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;">Unit</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`);
+  }
+
+  // ── Recent Vitals ──
+  if (vitals.length) {
+    const rows = vitals.map(v => `<tr style="border-bottom:0.5px solid var(--border);">
+      <td style="padding:5px 0;font-family:var(--font-data);font-size:12px;color:var(--text-muted);">${v.date}</td>
+      <td style="font-family:var(--font-data);color:var(--text-secondary);">${v.weight ? v.weight+' lbs' : '—'}</td>
+      <td style="font-family:var(--font-data);color:var(--text-secondary);">${v.bp || '—'}</td>
+      <td style="font-family:var(--font-data);color:var(--text-secondary);">${v.glucose ? v.glucose+' mg/dL' : '—'}</td>
+      <td style="font-family:var(--font-data);color:var(--text-secondary);">${v.mood ? v.mood+'/10' : '—'}</td>
+    </tr>`).join('');
+    sections.push(`
+      <div class="report-card card" style="margin-bottom:14px;">
+        <div class="report-card-title card-title">Recent Vitals</div>
+        <table style="width:100%;border-collapse:collapse;">
+          <thead><tr><th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;padding-bottom:4px;">Date</th><th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;">Weight</th><th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;">BP</th><th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;">Glucose</th><th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;">Mood</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`);
+  }
+
+  if (!sections.length) {
+    el.innerHTML = `<div style="text-align:center;padding:64px 0;">
+      <i class="ti ti-file-text" style="font-size:44px;color:var(--text-muted);opacity:0.25;"></i>
+      <div style="font-size:15px;color:var(--text-secondary);margin:14px 0 6px;font-weight:500;">No data yet</div>
+      <div style="font-size:13px;color:var(--text-muted);">Log bloodwork, physique, or vitals to generate a report</div>
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = `
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">Generated ${today}</div>
+    ${sections.join('')}`;
+}
+
+function reportCopy() {
+  const protocol = (() => { try { return JSON.parse(localStorage.getItem('hrt_active_protocol_data')); } catch { return null; } })();
+  const panels   = bwLoad().sort((a, b) => b.date.localeCompare(a.date));
+  const bwLatest = panels[0] || null;
+  const measList = measLoad().sort((a, b) => b.date.localeCompare(a.date));
+  const phLatest = measList[0] || null;
+  const phPrev   = measList[1] || null;
+  const vitals   = lsGet('hrt_vitals_log', []).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
+  const today    = new Date().toISOString().slice(0, 10);
+
+  const lines = [`HRT / Physique Report — ${today}`, '═'.repeat(44), ''];
+
+  if (protocol) {
+    lines.push(`PROTOCOL: ${protocol.name} (${protocol.phase} · ${protocol.weeks}wk)`);
+    (protocol.compounds || []).forEach(c => {
+      const dose = c.phases?.[0]?.dose ?? c.dose ?? '?';
+      const freq = Array.isArray(c.freq) ? c.freq.join('/') : (c.freq || '');
+      lines.push(`  ${c.name}  ${dose}${c.unit||'mg'}  ${freq}`);
+    });
+    lines.push('');
+  }
+
+  if (bwLatest) {
+    const flagKeys = Object.keys(bwLatest.markers).filter(k => { const s = bwRangeStatus(k, bwLatest.markers[k]); return s === 'high' || s === 'low'; });
+    lines.push(`BLOODWORK: ${bwLatest.date}${bwLatest.lab ? ' · ' + bwLatest.lab : ''}`);
+    if (flagKeys.length) lines.push(`  FLAGS: ${flagKeys.map(k => { const m=BW_MARKERS[k]; const s=bwRangeStatus(k,bwLatest.markers[k]); return `${m.label} ${bwLatest.markers[k]}${m.unit} [${s.toUpperCase()}]`; }).join(' · ')}`);
+    BW_KPI_KEYS.filter(k => bwLatest.markers[k] != null).forEach(k => {
+      const m = BW_MARKERS[k]; const s = bwRangeStatus(k, bwLatest.markers[k]);
+      lines.push(`  ${m.label}: ${bwLatest.markers[k]} ${m.unit}${s !== 'ok' && s !== 'none' ? ' ['+s.toUpperCase()+']' : ''}`);
+    });
+    if (bwLatest.notes) lines.push(`  Notes: ${bwLatest.notes}`);
+    lines.push('');
+  }
+
+  if (phLatest) {
+    lines.push(`PHYSIQUE: ${phLatest.date}`);
+    MEAS_KEYS.filter(m => phLatest.measurements?.[m.key] != null).forEach(m => {
+      const val = phLatest.measurements[m.key];
+      const pval = phPrev?.measurements?.[m.key];
+      const diff = pval != null ? +(val - pval).toFixed(2) : null;
+      lines.push(`  ${m.label}: ${val} ${m.unit}${diff != null ? ' ('+( diff>0?'+':'')+diff+')' : ''}`);
+    });
+    lines.push('');
+  }
+
+  if (vitals.length) {
+    lines.push('RECENT VITALS:');
+    vitals.forEach(v => lines.push(`  ${v.date}  Wt:${v.weight||'—'}  BP:${v.bp||'—'}  Gluc:${v.glucose||'—'}  Mood:${v.mood||'—'}/10`));
+  }
+
+  navigator.clipboard.writeText(lines.join('\n')).then(() => {
+    const btn = document.getElementById('report-copy-btn');
+    if (btn) { btn.innerHTML = '<i class="ti ti-check"></i> Copied!'; setTimeout(() => { btn.innerHTML = '<i class="ti ti-clipboard"></i> Copy'; }, 2000); }
+  });
+}
+
+// ── END COACH REPORT ──────────────────────────────────────────────────────────
+
+// ── DOSE COMPLIANCE ───────────────────────────────────────────────────────────
+
+let _complianceRange = 90;
+
+function renderCompliancePage() {
+  const rangeEl = document.getElementById('compliance-range-pills');
+  if (rangeEl) {
+    rangeEl.innerHTML = [30, 60, 90].map(d =>
+      `<button onclick="complianceSetRange(${d})" style="padding:4px 12px;border-radius:99px;border:1.5px solid ${_complianceRange===d?'var(--primary-bright)':'var(--border)'};background:${_complianceRange===d?'rgba(245,197,24,0.12)':'transparent'};color:${_complianceRange===d?'var(--primary-bright)':'var(--text-muted)'};font-size:12px;font-weight:600;cursor:pointer;">${d}d</button>`
+    ).join('');
+  }
+
+  const el = document.getElementById('compliance-content');
+  if (!el) return;
+
+  const protocol = (() => { try { return JSON.parse(localStorage.getItem('hrt_active_protocol_data')); } catch { return null; } })();
+  const doses    = lsGet('hrt_doses_taken', []);
+
+  if (!protocol || !protocol.compounds?.length) {
+    el.innerHTML = `<div style="text-align:center;padding:64px 0;">
+      <i class="ti ti-calendar-check" style="font-size:44px;color:var(--text-muted);opacity:0.25;"></i>
+      <div style="font-size:15px;color:var(--text-secondary);margin:14px 0 6px;font-weight:500;">No active protocol</div>
+      <div style="font-size:13px;color:var(--text-muted);">Set an active protocol to track compliance</div>
+    </div>`; return;
+  }
+
+  const now      = new Date();
+  const dayMs    = 86400000;
+  const endDate  = new Date(now.toISOString().slice(0, 10));
+  const startDate= new Date(endDate - (_complianceRange - 1) * dayMs);
+
+  // Build set of dose dates per compound label
+  const doseMap = {};
+  doses.forEach(d => {
+    if (!doseMap[d.label]) doseMap[d.label] = new Set();
+    doseMap[d.label].add(d.date);
+  });
+
+  // All compound names
+  const compounds = protocol.compounds.map(c => c.name);
+
+  // Overall adherence stats per compound
+  const statRows = compounds.map(name => {
+    const taken = doseMap[name] || new Set();
+    let scheduled = 0, checked = 0;
+    const compound = protocol.compounds.find(c => c.name === name);
+    for (let d = new Date(startDate); d <= endDate; d = new Date(+d + dayMs)) {
+      const dateStr = d.toISOString().slice(0, 10);
+      if (isScheduledDay(compound, dateStr, protocol.startDate)) {
+        scheduled++;
+        if (taken.has(dateStr)) checked++;
+      }
+    }
+    const pct = scheduled > 0 ? Math.round((checked / scheduled) * 100) : 0;
+    const col  = pct >= 90 ? 'var(--green)' : pct >= 70 ? 'var(--amber)' : 'var(--red)';
+    return { name, scheduled, checked, pct, col };
+  });
+
+  const totalSched   = statRows.reduce((s, r) => s + r.scheduled, 0);
+  const totalChecked = statRows.reduce((s, r) => s + r.checked, 0);
+  const overallPct   = totalSched > 0 ? Math.round((totalChecked / totalSched) * 100) : 0;
+  const overallCol   = overallPct >= 90 ? 'var(--green)' : overallPct >= 70 ? 'var(--amber)' : 'var(--red)';
+
+  // ── Heatmap (all compounds combined) ──
+  const days = [];
+  for (let d = new Date(startDate); d <= endDate; d = new Date(+d + dayMs)) {
+    const dateStr = d.toISOString().slice(0, 10);
+    const taken   = compounds.filter(n => doseMap[n]?.has(dateStr)).length;
+    const sched   = compounds.filter(n => {
+      const c = protocol.compounds.find(x => x.name === n);
+      return isScheduledDay(c, dateStr, protocol.startDate);
+    }).length;
+    days.push({ date: dateStr, taken, sched, dow: d.getDay() });
+  }
+
+  // Group into weeks (Sunday-first)
+  const firstDow = days[0].dow;
+  const padded   = [...Array(firstDow).fill(null), ...days];
+  const weeks    = [];
+  for (let i = 0; i < padded.length; i += 7) weeks.push(padded.slice(i, i + 7));
+
+  const cellSize = 14;
+  const gap      = 3;
+  const cols     = weeks.length;
+  const svgW     = cols * (cellSize + gap);
+  const svgH     = 7  * (cellSize + gap);
+
+  const cells = weeks.map((week, wi) => week.map((day, di) => {
+    if (!day) return '';
+    const pct  = day.sched > 0 ? day.taken / day.sched : 0;
+    const fill = day.sched === 0 ? 'rgba(255,255,255,0.04)' :
+                 pct === 0   ? 'rgba(248,113,113,0.25)' :
+                 pct < 0.5   ? 'rgba(251,146,60,0.40)'  :
+                 pct < 1     ? 'rgba(245,197,24,0.50)'  :
+                               'rgba(74,222,128,0.70)';
+    const x = wi * (cellSize + gap);
+    const y = di * (cellSize + gap);
+    return `<rect x="${x}" y="${y}" width="${cellSize}" height="${cellSize}" rx="2" fill="${fill}"><title>${day.date}: ${day.taken}/${day.sched} doses</title></rect>`;
+  }).join('')).join('');
+
+  // Month labels
+  const monthLabels = [];
+  let lastMonth = '';
+  weeks.forEach((week, wi) => {
+    const firstReal = week.find(d => d);
+    if (firstReal) {
+      const m = firstReal.date.slice(0, 7);
+      if (m !== lastMonth) {
+        const mon = new Date(firstReal.date + 'T00:00:00').toLocaleString('default', { month: 'short' });
+        monthLabels.push(`<text x="${wi * (cellSize + gap)}" y="-4" fill="var(--text-muted)" font-size="10" font-family="var(--font-ui)">${mon}</text>`);
+        lastMonth = m;
+      }
+    }
+  });
+
+  const dow = ['S','M','T','W','T','F','S'];
+  const dowLabels = dow.map((l, i) => i % 2 === 1
+    ? `<text x="-12" y="${i*(cellSize+gap)+cellSize-2}" fill="var(--text-muted)" font-size="9" font-family="var(--font-ui)" text-anchor="middle">${l}</text>`
+    : '').join('');
+
+  const heatmap = `
+    <svg width="${svgW + 20}" height="${svgH + 24}" style="overflow:visible;display:block;">
+      <g transform="translate(16,20)">
+        ${monthLabels.join('')}
+        ${dowLabels}
+        ${cells}
+      </g>
+    </svg>`;
+
+  const compoundRows = statRows.map(r => `
+    <div style="margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+        <span style="font-size:13px;color:var(--text-secondary);">${escHtml(r.name)}</span>
+        <span style="font-size:13px;font-family:var(--font-data);font-weight:600;color:${r.col};">${r.pct}%</span>
+      </div>
+      <div style="height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+        <div style="height:100%;width:${r.pct}%;background:${r.col};border-radius:3px;transition:width 0.4s;"></div>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">${r.checked} / ${r.scheduled} scheduled doses</div>
+    </div>`).join('');
+
+  el.innerHTML = `
+    <div class="metrics-grid" style="margin-bottom:16px;">
+      <div class="metric-card">
+        <div class="metric-label">OVERALL</div>
+        <div class="metric-value" style="color:${overallCol};">${overallPct}<span style="font-size:16px;">%</span></div>
+        <div class="metric-unit">last ${_complianceRange} days</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">DOSES TAKEN</div>
+        <div class="metric-value" style="color:var(--green);">${totalChecked}</div>
+        <div class="metric-unit">of ${totalSched} scheduled</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">MISSED</div>
+        <div class="metric-value" style="color:${totalSched-totalChecked>0?'var(--red)':'var(--text-secondary)'};">${totalSched - totalChecked}</div>
+        <div class="metric-unit">doses</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px;">
+      <div class="card-title">Daily Heatmap</div>
+      <div style="overflow-x:auto;padding-bottom:4px;">${heatmap}</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:11px;color:var(--text-muted);">
+        <span>Less</span>
+        <div style="width:12px;height:12px;border-radius:2px;background:rgba(248,113,113,0.25);"></div>
+        <div style="width:12px;height:12px;border-radius:2px;background:rgba(251,146,60,0.40);"></div>
+        <div style="width:12px;height:12px;border-radius:2px;background:rgba(245,197,24,0.50);"></div>
+        <div style="width:12px;height:12px;border-radius:2px;background:rgba(74,222,128,0.70);"></div>
+        <span>All</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Per Compound</div>
+      ${compoundRows}
+    </div>`;
+}
+
+function complianceSetRange(days) {
+  _complianceRange = days;
+  renderCompliancePage();
+}
+
+function isScheduledDay(compound, dateStr, protocolStart) {
+  if (!compound) return false;
+  const freq = compound.freq;
+  if (!freq) return false;
+  if (freq === 'ED' || freq === 'daily') return true;
+  if (Array.isArray(freq)) {
+    const dowNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const d = new Date(dateStr + 'T00:00:00');
+    return freq.includes(dowNames[d.getDay()]);
+  }
+  if (typeof freq === 'string') {
+    const dowNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const d = new Date(dateStr + 'T00:00:00');
+    const dayName = dowNames[d.getDay()];
+    if (freq.includes(dayName)) return true;
+    if (freq === 'EOD') {
+      if (!protocolStart) return true;
+      const startMs = Date.parse(protocolStart);
+      const dayMs   = 86400000;
+      const diff    = Math.floor((Date.parse(dateStr) - startMs) / dayMs);
+      return diff >= 0 && diff % 2 === 0;
+    }
+    if (freq === 'E3D') {
+      if (!protocolStart) return true;
+      const startMs = Date.parse(protocolStart);
+      const diff    = Math.floor((Date.parse(dateStr) - Date.parse(protocolStart)) / 86400000);
+      return diff >= 0 && diff % 3 === 0;
+    }
+    if (freq.includes('/')) return true; // e.g. "Mon/Thu" handled above
+  }
+  return true; // default: assume daily if unknown
+}
+
+// ── END COMPLIANCE ────────────────────────────────────────────────────────────
 
 function renderVitalsPage() {
   renderInsulinLog();
