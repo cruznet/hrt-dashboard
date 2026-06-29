@@ -1378,7 +1378,10 @@ body {
     <section class="page" id="page-physique">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding-bottom:12px;border-bottom:0.5px solid var(--border);">
         <div style="font-size:15px;font-weight:600;color:var(--text-primary);">Physique</div>
-        <button class="btn-primary" onclick="measShowForm()" style="padding:7px 16px;font-size:13px;">+ Log Check-in</button>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button class="btn-secondary" onclick="hevyMeasSync()" id="hevy-meas-sync-btn" style="padding:7px 14px;font-size:13px;"><i class="ti ti-refresh"></i> Sync from Hevy</button>
+          <button class="btn-primary" onclick="measShowForm()" style="padding:7px 16px;font-size:13px;">+ Log Check-in</button>
+        </div>
       </div>
 
       <!-- Log Form -->
@@ -2864,7 +2867,7 @@ function nav(page) {
   if (page === 'protocols') renderProtocolsPage();
   if (page === 'vitals') renderVitalsPage();
   if (page === 'bloodwork') renderBloodworkPage();
-  if (page === 'physique') renderPhysiquePage();
+  if (page === 'physique') { renderPhysiquePage(); hevyMeasAutoSync(); }
   if (page === 'workouts') { renderWorkoutsPage(); hevyAutoSync(); }
   if (page === 'report') renderCoachReport();
   if (page === 'compliance') renderCompliancePage();
@@ -4754,9 +4757,10 @@ function hkRenderCharts(container, rows) {
 
 // ── HEVY WORKOUTS ─────────────────────────────────────────────────────────────
 
-const HEVY_BASE    = 'https://api.hevyapp.com/v1';
-const HEVY_KEY_LS  = 'hrt_hevy_key';
-const HEVY_DATA_LS = 'hrt_hevy_workouts';
+const HEVY_BASE        = 'https://api.hevyapp.com/v1';
+const HEVY_KEY_LS      = 'hrt_hevy_key';
+const HEVY_DATA_LS     = 'hrt_hevy_workouts';
+const HEVY_MEAS_SYN_LS = 'hrt_hevy_meas_synced';
 
 let _hevyTab     = 'recent';
 let _hevyE1RMKey = null;   // selected exercise for E1RM chart
@@ -4835,6 +4839,89 @@ async function hevySync() {
     alert(`Hevy sync failed: ${e.message}`);
   } finally {
     if (btn) { btn.innerHTML = '<i class="ti ti-refresh"></i> Sync'; btn.disabled = false; }
+  }
+}
+
+function hevyMeasAutoSync() {
+  if (!hevyKey()) return;
+  const last = localStorage.getItem(HEVY_MEAS_SYN_LS);
+  const staleMs = 6 * 60 * 60 * 1000; // 6 hours — measurements change less often than workouts
+  if (!last || (Date.now() - new Date(last).getTime()) > staleMs) hevyMeasSync();
+}
+
+async function hevyMeasSync() {
+  const key = hevyKey();
+  if (!key) { hevyShowSettings(); return; }
+
+  const btn = document.getElementById('hevy-meas-sync-btn');
+  if (btn) { btn.innerHTML = '<i class="ti ti-loader-2" style="animation:spin 1s linear infinite;"></i> Syncing…'; btn.disabled = true; }
+
+  try {
+    let allEntries = [];
+    let page = 1;
+    let pageCount = 1;
+    do {
+      const res = await fetch(`${HEVY_BASE}/body_measurements?page=${page}&pageSize=100`, {
+        headers: { 'api-key': key, 'Content-Type': 'application/json' }
+      });
+      if (!res.ok) throw new Error(`API error ${res.status}`);
+      const data = await res.json();
+      const batch = data.body_measurements || [];
+      allEntries = allEntries.concat(batch);
+      pageCount = data.page_count || 1;
+      page++;
+    } while (page <= pageCount);
+
+    if (!allEntries.length) { alert('No body measurements found in Hevy.'); return; }
+
+    // Dedup by date — keep entry with most non-null fields (handles multiple weigh-ins per day)
+    const dedupMap = {};
+    for (const h of allEntries) {
+      const dateStr = (h.date || h.created_at || '').slice(0, 10);
+      if (!dateStr) continue;
+      const date = localDate(new Date(dateStr));
+      const prev = dedupMap[date];
+      const fields = (h.weight_kg ?? h.weight) != null ? 1 : 0 + (h.body_fat_percentage != null ? 1 : 0);
+      const prevFields = prev ? ((prev.weight_kg ?? prev.weight) != null ? 1 : 0) + (prev.body_fat_percentage != null ? 1 : 0) : -1;
+      if (!prev || fields >= prevFields) dedupMap[date] = h;
+    }
+
+    const list = measLoad();
+    // Build date index for O(1) lookup
+    const byDate = {};
+    list.forEach((e, i) => { byDate[e.date] = i; });
+
+    let added = 0, updated = 0;
+    for (const [date, h] of Object.entries(dedupMap)) {
+      const weightKg = h.weight_kg ?? h.weight ?? null;
+      const hevyMeas = {};
+      if (weightKg != null)                  hevyMeas.weight = +(weightKg * 2.20462).toFixed(1);
+      if (h.body_fat_percentage != null)      hevyMeas.bf     = +h.body_fat_percentage.toFixed(2);
+      if (!Object.keys(hevyMeas).length) continue;
+
+      if (byDate[date] !== undefined) {
+        // Merge: existing manual values always win — spread Hevy first, existing on top
+        const existing = list[byDate[date]];
+        const merged = { ...hevyMeas, ...(existing.measurements || {}) };
+        list[byDate[date]] = { ...existing, measurements: merged };
+        updated++;
+      } else {
+        list.push({ id: crypto.randomUUID(), date, notes: '', measurements: hevyMeas });
+        byDate[date] = list.length - 1;
+        added++;
+      }
+    }
+
+    measSaveAll(list);
+    localStorage.setItem(HEVY_MEAS_SYN_LS, new Date().toISOString());
+    renderPhysiquePage();
+
+    const parts = [added && `${added} added`, updated && `${updated} updated`].filter(Boolean);
+    if (parts.length) alert(`Hevy body sync complete: ${parts.join(', ')}.`);
+  } catch(e) {
+    alert(`Hevy body sync failed: ${e.message}`);
+  } finally {
+    if (btn) { btn.innerHTML = '<i class="ti ti-refresh"></i> Sync from Hevy'; btn.disabled = false; }
   }
 }
 
