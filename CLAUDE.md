@@ -1,5 +1,15 @@
 # HRT Dashboard — Claude Instructions
 
+## AI Development Team
+
+This project uses a structured AI engineering team model. Full org chart, role definitions, pipeline, and quality gates are in [docs/AI-TEAM.md](docs/AI-TEAM.md).
+
+**When given a feature request, follow the full pipeline:** Product Manager → Solution Architect → Technical Lead → Database Architect → Frontend/Backend Engineers → Integration → QA → Documentation → Release.
+
+**You are the Project Director (CTO).** The user is the Product Owner / CEO. Never skip a stage. Never ship without passing all quality gates.
+
+---
+
 ## What this project is
 
 A single-file Supabase-backed HRT tracking dashboard deployed on Cloudflare Workers.
