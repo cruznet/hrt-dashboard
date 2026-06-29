@@ -874,9 +874,9 @@ body {
       <span class="nav-icon"><i class="ti ti-calendar-check"></i></span>
       <span class="nav-text">Compliance</span>
     </div>
-    <div class="nav-item" onclick="nav('healthkit')">
-      <span class="nav-icon"><i class="ti ti-activity"></i></span>
-      <span class="nav-text">HealthKit</span>
+    <div class="nav-item" onclick="nav('wellness')">
+      <span class="nav-icon"><i class="ti ti-activity-heartbeat"></i></span>
+      <span class="nav-text">Wellness</span>
     </div>
   </div>
 
@@ -1491,10 +1491,10 @@ body {
       <div id="compliance-content"></div>
     </section>
 
-    <!-- ── HEALTHKIT PAGE ── -->
-    <section class="page" id="page-healthkit">
+    <!-- ── WELLNESS PAGE ── -->
+    <section class="page" id="page-wellness">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding-bottom:12px;border-bottom:0.5px solid var(--border);flex-wrap:wrap;gap:8px;">
-        <div style="font-size:15px;font-weight:600;color:var(--text-primary);">Apple Health</div>
+        <div style="font-size:15px;font-weight:600;color:var(--text-primary);">Wellness</div>
         <div id="hk-last-sync" style="font-size:12px;color:var(--text-muted);"></div>
       </div>
       <div id="hk-kpi-row" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px;"></div>
@@ -2860,7 +2860,7 @@ function nav(page) {
     dashboard: 'Dashboard', log: 'Log Entry', vitals: 'Health Log', bloodwork: 'Bloodwork',
     physique: 'Physique', workouts: 'Workouts', report: 'Coach Report', compliance: 'Dose Compliance',
     protocols: 'My Protocols', builder: 'Protocol Builder', compounds: 'Compound Library',
-    calculator: 'Dose Calculator', settings: 'Settings', healthkit: 'Apple Health'
+    calculator: 'Dose Calculator', settings: 'Settings', wellness: 'Wellness'
   };
   document.getElementById('topbar-title').textContent = titles[page] || page;
   document.querySelectorAll('.nav-item').forEach(n => {
@@ -2881,7 +2881,7 @@ function nav(page) {
   if (page === 'workouts') { renderWorkoutsPage(); hevyAutoSync(); }
   if (page === 'report') renderCoachReport();
   if (page === 'compliance') renderCompliancePage();
-  if (page === 'healthkit') renderHealthKitPage();
+  if (page === 'wellness') renderWellnessPage();
   if (page === 'calculator') setTimeout(() => { calcBuildCompoundSelect(); pepUpdate(); }, 100);
   if (page === 'dashboard') { renderVitalsToCards(); renderBwDashStrip(); renderPhysiqueDashStrip(); setTimeout(() => { if (_supa && _supaUser) renderRealCharts(); else renderDemoCharts(); }, 100); }
   // Load active protocol on dashboard
@@ -4780,7 +4780,7 @@ async function hkLoadCSV() {
   return _hkData;
 }
 
-async function renderHealthKitPage() {
+async function renderWellnessPage() {
   const container = document.getElementById('hk-charts');
   const kpiRow    = document.getElementById('hk-kpi-row');
   const syncEl    = document.getElementById('hk-last-sync');
@@ -4896,7 +4896,7 @@ function hkRenderCharts(container, rows) {
             return Math.max(0, tot - accounted);
           }),
           backgroundColor: 'rgba(245,197,24,0.45)', spanGaps: true,
-          label: 'Core (hr)',
+          label: 'Light (hr)',
         },
       ],
       opts: { scales: { x: { stacked: true }, y: { stacked: true } } },
