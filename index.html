@@ -2362,8 +2362,12 @@ async function supaSignOut() {
 const _INACTIVITY_MS = 8 * 60 * 60 * 1000; // 8 hours
 const _LAST_ACTIVE_KEY = 'hrt_last_active';
 
+let _lastActiveWrite = 0;
 function _resetInactivityTimer() {
-  localStorage.setItem(_LAST_ACTIVE_KEY, Date.now().toString());
+  const now = Date.now();
+  if (now - _lastActiveWrite < 60000) return; // throttle: write at most once per minute
+  _lastActiveWrite = now;
+  localStorage.setItem(_LAST_ACTIVE_KEY, now.toString());
 }
 
 function _checkInactivity() {
@@ -2400,6 +2404,7 @@ document.addEventListener('visibilitychange', () => {
 // local timezone. Fixes entries that were saved with the wrong UTC date before
 // the localDate() fix was deployed.
 (function migrateDoseDates() {
+  if (localStorage.getItem('hrt_dose_migrate_v1')) return;
   const doses = lsGet('hrt_doses_taken', []);
   let changed = false;
   const fixed = doses.map(d => {
@@ -2409,6 +2414,7 @@ document.addEventListener('visibilitychange', () => {
     return d;
   });
   if (changed) localStorage.setItem('hrt_doses_taken', JSON.stringify(fixed));
+  localStorage.setItem('hrt_dose_migrate_v1', '1');
 })();
 
 function showApp() {
@@ -4879,7 +4885,7 @@ function renderWorkoutsPage() {
   // ── Stats ──
   const totalVol   = workouts.reduce((s, w) => s + hevyWorkoutVolume(w), 0);
   const totalSets  = workouts.reduce((s, w) => s + w.exercises.reduce((ss, e) => ss + (e.sets?.length||0), 0), 0);
-  const avgDurMins = workouts.reduce((s, w) => s + (hevyParseMs(w.end_time) - hevyParseMs(w.start_time)), 0) / workouts.length / 60000;
+  const avgDurMins = workouts.reduce((s, w) => s + Math.max(0, hevyParseMs(w.end_time) - hevyParseMs(w.start_time)), 0) / workouts.length / 60000;
   // workouts per week over last 4 weeks
   const fourWeeksAgo = Date.now() - 28 * 86400000;
   const recentCount  = workouts.filter(w => hevyParseMs(w.start_time) >= fourWeeksAgo).length;
@@ -5067,7 +5073,7 @@ function hevyBuildPRMap(workouts) {
   const map = new Map();
   [...workouts].sort((a,b) => hevyParseMs(a.start_time) - hevyParseMs(b.start_time)).forEach(w => {
     const ms = hevyParseMs(w.start_time);
-    const date = ms ? new Date(ms).toISOString().slice(0,10) : '1970-01-01';
+    const date = ms ? localDate(new Date(ms)) : '1970-01-01';
     (w.exercises||[]).forEach(e => {
       const title = e.title || 'Unknown';
       if (!map.has(title)) map.set(title, { bestWeight:0, bestWeightReps:0, weightDate:'', bestE1RM:0, e1rmDate:'', sets:[] });
@@ -5192,9 +5198,9 @@ function renderHevyE1RM(workouts) {
     return;
   }
 
-  // Exercises with at least 1 weighted set
+  // Only exercises with data from at least 2 distinct sessions (need 2 points to draw a trend line)
   const exercises = [...prMap.entries()]
-    .filter(([, pr]) => pr.sets.length >= 1 && pr.bestWeight > 0)
+    .filter(([, pr]) => pr.bestWeight > 0 && new Set(pr.sets.map(s => s.date)).size >= 2)
     .map(([title]) => title)
     .sort();
 
@@ -5213,7 +5219,7 @@ function renderHevyE1RM(workouts) {
     const tag = hevyWorkoutTag(ex);
     const active = ex === _hevyE1RMKey;
     const col = tag?.color || 'var(--text-muted)';
-    return `<button onclick="hevySetE1RM('${ex.replace(/'/g,"\\'")}') " style="padding:4px 12px;border-radius:99px;border:1.5px solid ${active?col:'var(--border)'};background:${active?col+'22':'transparent'};color:${active?col:'var(--text-muted)'};font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">${escHtml(ex)}</button>`;
+    return `<button data-ex="${escHtml(ex)}" onclick="hevySetE1RM(this.dataset.ex)" style="padding:4px 12px;border-radius:99px;border:1.5px solid ${active?col:'var(--border)'};background:${active?col+'22':'transparent'};color:${active?col:'var(--text-muted)'};font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">${escHtml(ex)}</button>`;
   }).join('');
 
   // Build chart data: best e1rm per session for selected exercise
