@@ -558,6 +558,8 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
   #report-content .report-flag-low  { color: #00c; }
 }
 
+@keyframes spin { to { transform: rotate(360deg); } }
+
 /* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -736,6 +738,10 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
     <div class="nav-item" onclick="nav('physique')">
       <span class="nav-icon"><i class="ti ti-ruler-measure"></i></span>
       <span class="nav-text">Physique</span>
+    </div>
+    <div class="nav-item" onclick="nav('workouts')">
+      <span class="nav-icon"><i class="ti ti-barbell"></i></span>
+      <span class="nav-text">Workouts</span>
     </div>
     <div class="nav-item" onclick="nav('report')">
       <span class="nav-icon"><i class="ti ti-file-text"></i></span>
@@ -1283,6 +1289,39 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
         <div class="card">
           <div class="card-title">Check-in History</div>
           <div id="ph-history-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── WORKOUTS PAGE ── -->
+    <section class="page" id="page-workouts">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding-bottom:12px;border-bottom:0.5px solid var(--border);flex-wrap:wrap;gap:8px;">
+        <div style="font-size:15px;font-weight:600;color:var(--text-primary);">Workouts <span style="font-size:12px;color:var(--text-muted);font-weight:400;">via Hevy</span></div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button class="btn-secondary" onclick="hevySync()" id="hevy-sync-btn" style="padding:7px 14px;font-size:13px;"><i class="ti ti-refresh"></i> Sync</button>
+          <button class="btn-secondary" onclick="hevyShowSettings()" style="padding:7px 14px;font-size:13px;"><i class="ti ti-settings"></i></button>
+        </div>
+      </div>
+
+      <!-- API key setup -->
+      <div id="hevy-setup" style="display:none;margin-bottom:16px;">
+        <div class="card">
+          <div class="card-title">Connect Hevy</div>
+          <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">Get your API key from <strong style="color:var(--text-secondary);">hevy.com/settings → Developer</strong> (requires Hevy Pro)</div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input type="password" id="hevy-key-input" class="form-input" placeholder="Your Hevy API key" style="flex:1;">
+            <button class="btn-primary" onclick="hevySaveKey()" style="padding:8px 16px;font-size:13px;white-space:nowrap;">Save & Sync</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Content -->
+      <div id="hevy-content">
+        <div style="text-align:center;padding:64px 0;" id="hevy-empty">
+          <i class="ti ti-barbell" style="font-size:44px;color:var(--text-muted);opacity:0.25;"></i>
+          <div style="font-size:15px;color:var(--text-secondary);margin:14px 0 6px;font-weight:500;">No workouts loaded</div>
+          <div style="font-size:13px;color:var(--text-muted);margin-bottom:22px;">Connect your Hevy account to pull your training history</div>
+          <button class="btn-primary" onclick="hevyShowSettings()">Connect Hevy</button>
         </div>
       </div>
     </section>
@@ -2592,7 +2631,7 @@ function nav(page) {
   if (pageEl) pageEl.classList.add('active');
   const titles = {
     dashboard: 'Dashboard', log: 'Log Entry', vitals: 'Health Log', bloodwork: 'Bloodwork',
-    physique: 'Physique', report: 'Coach Report', compliance: 'Dose Compliance',
+    physique: 'Physique', workouts: 'Workouts', report: 'Coach Report', compliance: 'Dose Compliance',
     protocols: 'My Protocols', builder: 'Protocol Builder', compounds: 'Compound Library',
     calculator: 'Dose Calculator', settings: 'Settings'
   };
@@ -2607,6 +2646,7 @@ function nav(page) {
   if (page === 'vitals') renderVitalsPage();
   if (page === 'bloodwork') renderBloodworkPage();
   if (page === 'physique') renderPhysiquePage();
+  if (page === 'workouts') renderWorkoutsPage();
   if (page === 'report') renderCoachReport();
   if (page === 'compliance') renderCompliancePage();
   if (page === 'calculator') setTimeout(() => { calcBuildCompoundSelect(); pepUpdate(); }, 100);
@@ -4282,6 +4322,212 @@ function isScheduledDay(compound, dateStr, protocolStart) {
 }
 
 // ── END COMPLIANCE ────────────────────────────────────────────────────────────
+
+// ── HEVY WORKOUTS ─────────────────────────────────────────────────────────────
+
+const HEVY_BASE    = 'https://api.hevyapp.com/v1';
+const HEVY_KEY_LS  = 'hrt_hevy_key';
+const HEVY_DATA_LS = 'hrt_hevy_workouts';
+
+function hevyKey()  { return localStorage.getItem(HEVY_KEY_LS) || ''; }
+function hevyCache(){ return lsGet(HEVY_DATA_LS, []); }
+
+function hevyShowSettings() {
+  const setup = document.getElementById('hevy-setup');
+  if (!setup) return;
+  setup.style.display = 'block';
+  const inp = document.getElementById('hevy-key-input');
+  if (inp) { inp.value = hevyKey(); inp.focus(); }
+}
+
+function hevySaveKey() {
+  const key = (document.getElementById('hevy-key-input')?.value || '').trim();
+  if (!key) return;
+  localStorage.setItem(HEVY_KEY_LS, key);
+  document.getElementById('hevy-setup').style.display = 'none';
+  hevySync();
+}
+
+async function hevySync() {
+  const key = hevyKey();
+  if (!key) { hevyShowSettings(); return; }
+
+  const btn = document.getElementById('hevy-sync-btn');
+  if (btn) { btn.innerHTML = '<i class="ti ti-loader-2" style="animation:spin 1s linear infinite;"></i> Syncing…'; btn.disabled = true; }
+
+  try {
+    // Fetch pages until we have 50 workouts or run out
+    let allWorkouts = [];
+    let page = 1;
+    while (allWorkouts.length < 50) {
+      const res = await fetch(`${HEVY_BASE}/workouts?page=${page}&pageSize=10`, {
+        headers: { 'api-key': key, 'Content-Type': 'application/json' }
+      });
+      if (!res.ok) throw new Error(`API error ${res.status}: ${await res.text()}`);
+      const data = await res.json();
+      const batch = data.workouts || [];
+      allWorkouts = allWorkouts.concat(batch);
+      if (batch.length < 10 || page >= (data.page_count || 1)) break;
+      page++;
+    }
+    localStorage.setItem(HEVY_DATA_LS, JSON.stringify(allWorkouts));
+    localStorage.setItem('hrt_hevy_synced', new Date().toISOString());
+    renderWorkoutsPage();
+  } catch(e) {
+    alert(`Hevy sync failed: ${e.message}`);
+  } finally {
+    if (btn) { btn.innerHTML = '<i class="ti ti-refresh"></i> Sync'; btn.disabled = false; }
+  }
+}
+
+function renderWorkoutsPage() {
+  const setup  = document.getElementById('hevy-setup');
+  const content= document.getElementById('hevy-content');
+  if (!content) return;
+
+  const key      = hevyKey();
+  const workouts = hevyCache();
+
+  // Always hide setup unless explicitly opened
+  if (setup) setup.style.display = 'none';
+
+  if (!key && !workouts.length) {
+    content.innerHTML = `<div style="text-align:center;padding:64px 0;">
+      <i class="ti ti-barbell" style="font-size:44px;color:var(--text-muted);opacity:0.25;"></i>
+      <div style="font-size:15px;color:var(--text-secondary);margin:14px 0 6px;font-weight:500;">No workouts loaded</div>
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:22px;">Connect your Hevy account to pull your training history</div>
+      <button class="btn-primary" onclick="hevyShowSettings()">Connect Hevy</button>
+    </div>`;
+    return;
+  }
+
+  if (!workouts.length) {
+    content.innerHTML = `<div style="text-align:center;padding:40px 0;color:var(--text-muted);font-size:13px;">No workouts found. Hit Sync to pull from Hevy.</div>`;
+    return;
+  }
+
+  const synced = localStorage.getItem('hrt_hevy_synced');
+  const syncedStr = synced ? `Last synced ${new Date(synced).toLocaleString('default',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}` : '';
+
+  // Weekly volume chart data (last 12 weeks)
+  const volByWeek = {};
+  workouts.forEach(w => {
+    const d   = new Date((w.start_time || 0) * 1000);
+    // ISO week key: YYYY-Www
+    const jan = new Date(d.getFullYear(), 0, 1);
+    const wk  = Math.ceil(((d - jan) / 86400000 + jan.getDay() + 1) / 7);
+    const key = `${d.getFullYear()}-W${String(wk).padStart(2,'0')}`;
+    const vol = hevyWorkoutVolume(w);
+    volByWeek[key] = (volByWeek[key] || 0) + vol;
+  });
+  const weekKeys = Object.keys(volByWeek).sort().slice(-12);
+  const weekVols = weekKeys.map(k => volByWeek[k]);
+
+  // Stat cards
+  const totalVol   = workouts.reduce((s, w) => s + hevyWorkoutVolume(w), 0);
+  const totalSets  = workouts.reduce((s, w) => s + w.exercises.reduce((ss, e) => ss + (e.sets?.length||0), 0), 0);
+  const avgDurMins = workouts.reduce((s, w) => s + ((w.end_time||0)-(w.start_time||0)), 0) / workouts.length / 60;
+
+  const kpiHtml = `<div class="metrics-grid" style="margin-bottom:14px;">
+    <div class="metric-card">
+      <div class="metric-label">WORKOUTS</div>
+      <div class="metric-value" style="color:var(--primary-bright);">${workouts.length}</div>
+      <div class="metric-unit">synced</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">TOTAL VOLUME</div>
+      <div class="metric-value" style="color:var(--purple);">${(totalVol/1000).toFixed(1)}<span style="font-size:16px;">k</span></div>
+      <div class="metric-unit">lbs</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">TOTAL SETS</div>
+      <div class="metric-value" style="color:var(--teal);">${totalSets}</div>
+      <div class="metric-unit">sets</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">AVG DURATION</div>
+      <div class="metric-value" style="color:var(--amber);">${Math.round(avgDurMins)}</div>
+      <div class="metric-unit">min</div>
+    </div>
+  </div>`;
+
+  // Volume chart
+  const chartHtml = weekKeys.length > 1 ? `
+    <div class="card" style="margin-bottom:14px;">
+      <div class="card-title">Weekly Volume (lbs)</div>
+      <div style="height:160px;position:relative;"><canvas id="hevy-vol-chart"></canvas></div>
+    </div>` : '';
+
+  // Workout list
+  const listHtml = workouts.slice(0, 30).map(w => {
+    const start    = new Date((w.start_time || 0) * 1000);
+    const durMins  = Math.round(((w.end_time||0) - (w.start_time||0)) / 60);
+    const dateStr  = start.toLocaleDateString('default', { weekday:'short', month:'short', day:'numeric' });
+    const vol      = hevyWorkoutVolume(w);
+    const sets     = w.exercises.reduce((s, e) => s + (e.sets?.length||0), 0);
+    const exList   = (w.exercises||[]).slice(0, 4).map(e => {
+      const topSet = (e.sets||[]).filter(s => s.weight_kg > 0).sort((a,b) => b.weight_kg-a.weight_kg)[0];
+      const topStr = topSet ? ` <span style="color:var(--text-muted);font-size:11px;">${Math.round(topSet.weight_kg*2.205)}lbs×${topSet.reps}</span>` : '';
+      return `<span style="font-size:12px;color:var(--text-secondary);">${escHtml(e.title||'')}${topStr}</span>`;
+    }).join('<span style="color:var(--border);margin:0 6px;">·</span>');
+    const moreEx   = (w.exercises||[]).length > 4 ? `<span style="font-size:11px;color:var(--text-muted);margin-left:4px;">+${w.exercises.length-4} more</span>` : '';
+
+    return `<div style="padding:12px 0;border-bottom:0.5px solid var(--border);">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px;">
+        <div>
+          <span style="font-size:14px;font-weight:600;color:var(--text-primary);">${escHtml(w.title||'Workout')}</span>
+          <span style="font-size:12px;color:var(--text-muted);margin-left:8px;">${dateStr}</span>
+        </div>
+        <div style="display:flex;gap:12px;font-size:12px;color:var(--text-muted);flex-shrink:0;">
+          ${durMins > 0 ? `<span><i class="ti ti-clock" style="margin-right:3px;"></i>${durMins}m</span>` : ''}
+          <span><i class="ti ti-list" style="margin-right:3px;"></i>${sets} sets</span>
+          ${vol > 0 ? `<span style="color:var(--purple);font-family:var(--font-data);">${(vol/1000).toFixed(1)}k lbs</span>` : ''}
+        </div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;">${exList}${moreEx}</div>
+    </div>`;
+  }).join('');
+
+  content.innerHTML = `
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">${syncedStr}</div>
+    ${kpiHtml}
+    ${chartHtml}
+    <div class="card">
+      <div class="card-title">Recent Workouts</div>
+      ${listHtml}
+    </div>`;
+
+  // Render volume chart
+  if (weekKeys.length > 1) {
+    setTimeout(() => {
+      const canvas = document.getElementById('hevy-vol-chart');
+      if (!canvas) return;
+      new Chart(canvas, {
+        type: 'bar',
+        data: {
+          labels: weekKeys.map(k => k.replace(/^\d{4}-/, '')),
+          datasets: [{ data: weekVols, backgroundColor: 'rgba(167,139,250,0.6)', borderColor: '#A78BFA', borderWidth: 1, borderRadius: 3 }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false, animation: false,
+          plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${Math.round(ctx.parsed.y).toLocaleString()} lbs` } } },
+          scales: {
+            x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#64748B', font: { size: 10 } } },
+            y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#64748B', font: { size: 10 }, callback: v => (v/1000).toFixed(0)+'k' } }
+          }
+        }
+      });
+    }, 50);
+  }
+}
+
+function hevyWorkoutVolume(w) {
+  return (w.exercises||[]).reduce((total, e) =>
+    total + (e.sets||[]).reduce((s, set) =>
+      s + (set.weight_kg > 0 && set.reps > 0 ? set.weight_kg * 2.205 * set.reps : 0), 0), 0);
+}
+
+// ── END HEVY ──────────────────────────────────────────────────────────────────
 
 function renderVitalsPage() {
   renderInsulinLog();
