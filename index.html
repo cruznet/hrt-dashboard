@@ -2359,6 +2359,7 @@ async function supaSignIn() {
 }
 async function supaSignOut() {
   localStorage.removeItem(_LAST_ACTIVE_KEY);
+  _hkSupaData = null; // clear Supabase wellness cache on sign-out
   try { if (_supa) { const { error } = await _supa.auth.signOut(); if (error) console.error('[auth] signOut:', error); } }
   finally { showAuthOverlay(); }
 }
@@ -4763,7 +4764,8 @@ function isScheduledDay(compound, dateStr, protocolStart) {
 
 // ── HEALTHKIT ─────────────────────────────────────────────────────────────────
 
-let _hkData = null; // cache so repeated nav visits don't re-fetch
+let _hkData     = null; // cache for CSV data
+let _hkSupaData = null; // cache for Supabase cloud data
 
 async function hkLoadCSV() {
   if (_hkData) return _hkData;
@@ -4780,6 +4782,37 @@ async function hkLoadCSV() {
   return _hkData;
 }
 
+async function hkLoadFromSupabase() {
+  if (_hkSupaData) return _hkSupaData;
+  if (!_supa || !_supaUser) return null;
+  const { data, error } = await _supa
+    .from('healthkit_daily')
+    .select('date,weight_lbs,body_fat_pct,lean_mass_lbs,hrv_ms,resting_hr,hr_min,hr_avg,hr_max,sleep_total_hr,sleep_deep_hr,sleep_rem_hr,steps,active_energy_kcal,exercise_min')
+    .eq('user_id', _supaUser.id)
+    .order('date', { ascending: true });
+  if (error) { console.warn('[hk] Supabase error:', error.message); return null; }
+  if (!data || !data.length) return null;
+  // Normalize to same format as CSV rows so hkRenderKpis/hkRenderCharts work unchanged
+  _hkSupaData = data.map(r => ({
+    'Date/Time':                    r.date,
+    'Weight (lbs)':                 r.weight_lbs          ?? '',
+    'Body Fat Percentage (%)':      r.body_fat_pct        ?? '',
+    'Lean Body Mass (lbs)':         r.lean_mass_lbs       ?? '',
+    'Heart Rate Variability (ms)':  r.hrv_ms              ?? '',
+    'Resting Heart Rate (bpm)':     r.resting_hr          ?? '',
+    'Heart Rate [Min] (bpm)':       r.hr_min              ?? '',
+    'Heart Rate [Avg] (bpm)':       r.hr_avg              ?? '',
+    'Heart Rate [Max] (bpm)':       r.hr_max              ?? '',
+    'Sleep Analysis [Total] (hr)':  r.sleep_total_hr      ?? '',
+    'Sleep Analysis [Deep] (hr)':   r.sleep_deep_hr       ?? '',
+    'Sleep Analysis [REM] (hr)':    r.sleep_rem_hr        ?? '',
+    'Step Count (steps)':           r.steps               ?? '',
+    'Active Energy (kcal)':         r.active_energy_kcal  ?? '',
+    'Apple Exercise Time (min)':    r.exercise_min        ?? '',
+  }));
+  return _hkSupaData;
+}
+
 async function renderWellnessPage() {
   const container = document.getElementById('hk-charts');
   const kpiRow    = document.getElementById('hk-kpi-row');
@@ -4789,9 +4822,22 @@ async function renderWellnessPage() {
   container.innerHTML = '<div style="color:var(--text-muted);font-size:13px;">Loading…</div>';
   kpiRow.innerHTML = '';
 
-  let rows;
-  try { rows = await hkLoadCSV(); } catch(e) {
-    container.innerHTML = '<div style="color:var(--red);font-size:13px;">Could not load healthkit-data.csv</div>';
+  let rows  = null;
+  let source = 'csv';
+
+  // Cloud data first when signed in — merges CSV baseline with live Supabase rows
+  if (_supa && _supaUser) {
+    rows = await hkLoadFromSupabase();
+    if (rows && rows.length) source = 'cloud';
+  }
+
+  // Fall back to static CSV (no auth required)
+  if (!rows || !rows.length) {
+    try { rows = await hkLoadCSV(); } catch(e) { rows = null; }
+  }
+
+  if (!rows || !rows.length) {
+    container.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:24px 0;">No wellness data. Configure Health Auto Export on your iPhone to sync to this dashboard.</div>';
     return;
   }
 
@@ -4800,7 +4846,11 @@ async function renderWellnessPage() {
   const latest = sorted[sorted.length - 1];
   if (!latest) { container.innerHTML = '<div style="color:var(--text-muted);font-size:13px;">No data</div>'; return; }
 
-  if (syncEl) syncEl.textContent = 'Last entry: ' + latest['Date/Time'].split(' ')[0];
+  if (syncEl) {
+    const dateStr  = latest['Date/Time'].split(' ')[0];
+    const srcLabel = source === 'cloud' ? ' · Cloud' : ' · Local CSV';
+    syncEl.textContent = `Last entry: ${dateStr}${srcLabel}`;
+  }
 
   hkRenderKpis(kpiRow, latest, sorted);
   hkRenderCharts(container, last30);
