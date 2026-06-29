@@ -2198,20 +2198,32 @@ async function supaSignIn() {
   if (error) { console.error('[auth] signIn failed:', error); alert('Sign-in failed: ' + error.message); }
 }
 async function supaSignOut() {
-  clearTimeout(_inactivityTimer);
+  localStorage.removeItem(_LAST_ACTIVE_KEY);
   try { if (_supa) { const { error } = await _supa.auth.signOut(); if (error) console.error('[auth] signOut:', error); } }
   finally { showAuthOverlay(); }
 }
 
-let _inactivityTimer = null;
-const _INACTIVITY_MS = 60 * 60 * 1000; // 60 minutes
+const _INACTIVITY_MS = 8 * 60 * 60 * 1000; // 8 hours
+const _LAST_ACTIVE_KEY = 'hrt_last_active';
+
 function _resetInactivityTimer() {
-  clearTimeout(_inactivityTimer);
-  _inactivityTimer = setTimeout(() => { if (_supaUser) supaSignOut(); }, _INACTIVITY_MS);
+  localStorage.setItem(_LAST_ACTIVE_KEY, Date.now().toString());
 }
+
+function _checkInactivity() {
+  if (!_supaUser) return;
+  const last = parseInt(localStorage.getItem(_LAST_ACTIVE_KEY) || '0');
+  if (last && Date.now() - last > _INACTIVITY_MS) supaSignOut();
+}
+
 ['mousemove', 'keydown', 'click', 'touchstart'].forEach(evt =>
   document.addEventListener(evt, _resetInactivityTimer, { passive: true })
 );
+
+// Check elapsed time whenever the tab/window becomes visible (covers sleep/wake)
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) _checkInactivity();
+});
 
 function showApp() {
   document.getElementById('auth-overlay').classList.remove('visible');
