@@ -2321,6 +2321,7 @@ function getProfile() {
 }
 function saveProfile(profile) {
   localStorage.setItem('hrt_user_profile', JSON.stringify(profile));
+  syncProtocolsToSupabase();
 }
 
 function initSupa() {
@@ -2474,6 +2475,8 @@ async function loadUserData() {
         localStorage.setItem('hrt_bloodwork', JSON.stringify(settings.bloodwork_panels));
       if (Array.isArray(settings.physique_measurements) && settings.physique_measurements.length)
         localStorage.setItem('hrt_measurements', JSON.stringify(settings.physique_measurements));
+      if (settings.user_profile)
+        localStorage.setItem('hrt_user_profile', JSON.stringify(settings.user_profile));
     }
 
     if (metricsRes.data?.length) renderMetrics(metricsRes.data);
@@ -2543,6 +2546,7 @@ async function syncProtocolsToSupabase() {
     active_protocol_data:  lsGet('hrt_active_protocol_data', null),
     bloodwork_panels:      lsGet('hrt_bloodwork', []),
     physique_measurements: lsGet('hrt_measurements', []),
+    user_profile:          lsGet('hrt_user_profile', null),
     updated_at:            new Date().toISOString()
   }, { onConflict: 'user_id' });
   if (error) console.warn('[syncProtocols]', error.message);
