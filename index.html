@@ -1991,6 +1991,24 @@ async function loadUserData() {
     if (metricsRes.data?.length) renderMetrics(metricsRes.data);
     if (logsRes.data?.length) renderLastEntry(logsRes.data[0]);
 
+    // Sync today's checked doses from Supabase → hrt_doses_taken localStorage.
+    // Without this, checkboxes appear unchecked on any new device/session even
+    // though the doses were already recorded in administration_log.
+    if (logsRes.data?.length) {
+      const todayStr  = new Date().toISOString().split('T')[0];
+      const todayLogs = logsRes.data.filter(r => r.date === todayStr);
+      if (todayLogs.length) {
+        const existing = lsGet('hrt_doses_taken', []);
+        const merged   = [...existing];
+        for (const row of todayLogs) {
+          if (!merged.some(t => t.label === row.compound_name && t.date === row.date)) {
+            merged.push({ label: row.compound_name, date: row.date, ts: row.created_at, id: row.id });
+          }
+        }
+        localStorage.setItem('hrt_doses_taken', JSON.stringify(merged));
+      }
+    }
+
     // Re-render dashboard cards now that localStorage is populated from Supabase
     const _p = lsGet('hrt_active_protocol_data', null);
     if (_p) renderCycleProgress(_p);
