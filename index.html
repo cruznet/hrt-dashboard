@@ -530,6 +530,7 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
   .grid-2, .grid-3, .grid-2-1, .grid-1-2, .grid-dash-main { grid-template-columns: 1fr; }
   #content { padding: 12px; }
   .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; }
+  #bw-kpi-row   { grid-template-columns: 1fr 1fr 1fr; }
   .form-row { grid-template-columns: 1fr; }
   .modal { padding: 16px; }
   .col-secondary { display: none; }
@@ -3365,7 +3366,7 @@ function renderBwTrendCharts() {
       pointHoverRadius: 7,
       tension: 0.35,
       fill: true,
-      spanGaps: true,
+      spanGaps: false,
     },
     ...extraDatasets,
   ], {
