@@ -1039,6 +1039,9 @@ body {
       <span class="nav-icon"><i class="ti ti-barbell"></i></span>
       <span class="nav-text">Workouts</span>
     </div>
+    <div class="nav-item" onclick="nav('athletes')">
+      <i class="ti ti-users"></i><span>Athletes</span>
+    </div>
     <div class="nav-item" onclick="nav('report')">
       <span class="nav-icon"><i class="ti ti-file-text"></i></span>
       <span class="nav-text">Coach Report</span>
@@ -1547,6 +1550,15 @@ body {
     </section>
 
     <!-- ── COACH REPORT PAGE ── -->
+    <!-- ── ATHLETES PAGE ── -->
+    <section class="page" id="page-athletes">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding-bottom:12px;border-bottom:0.5px solid var(--border);flex-wrap:wrap;gap:8px;">
+        <div style="font-size:15px;font-weight:600;color:var(--text-primary);">Athletes</div>
+        <button class="btn-secondary" onclick="nav('settings')" style="padding:6px 12px;font-size:12px;"><i class="ti ti-link"></i> Link Athlete</button>
+      </div>
+      <div id="athletes-content"></div>
+    </section>
+
     <section class="page" id="page-report">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding-bottom:12px;border-bottom:0.5px solid var(--border);flex-wrap:wrap;gap:8px;">
         <div style="font-size:15px;font-weight:600;color:var(--text-primary);">Coach Report</div>
@@ -2299,6 +2311,28 @@ body {
             <button class="btn-secondary" onclick="clearShow()" style="padding:8px 12px;" title="Clear competition"><i class="ti ti-trash"></i></button>
           </div>
         </div>
+        <hr class="divider">
+        <div class="card-title">Coaching</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px;">Share your data with a coach, or link an athlete you coach. Self-coached athletes can use coach notes without linking anyone.</div>
+        <!-- Share token (athlete side) -->
+        <div style="margin-bottom:16px;">
+          <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;">My Share Token</div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <input type="text" class="form-input" id="share-token-display" readonly placeholder="Not generated yet" style="flex:1;font-family:var(--font-data);font-size:12px;letter-spacing:0.05em;">
+            <button class="btn-secondary" onclick="copyShareToken()" id="share-token-copy-btn" style="padding:8px 12px;font-size:13px;" title="Copy"><i class="ti ti-copy"></i></button>
+            <button class="btn-primary" onclick="generateShareToken()" style="padding:8px 14px;font-size:13px;">Generate</button>
+          </div>
+          <div id="share-token-hint" style="font-size:11px;color:var(--text-muted);margin-top:6px;">Give this token to your coach — they enter it below to link your account.</div>
+        </div>
+        <!-- Link athlete (coach side) -->
+        <div>
+          <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;">Link an Athlete</div>
+          <div style="display:flex;gap:8px;">
+            <input type="text" class="form-input" id="coach-token-input" placeholder="Paste athlete's share token" style="flex:1;font-family:var(--font-data);font-size:12px;">
+            <button class="btn-primary" onclick="submitCoachToken()" style="padding:8px 14px;font-size:13px;">Link</button>
+          </div>
+          <div id="coach-link-status" style="font-size:11px;margin-top:6px;color:var(--text-muted);"></div>
+        </div>
       </div>
     </section>
 
@@ -2362,9 +2396,13 @@ body {
     </div>
 
     <!-- Notes -->
+    <div class="form-group" style="margin-bottom:12px;">
+      <label class="form-label">Athlete Notes</label>
+      <textarea class="form-input" id="ci-notes" rows="2" style="resize:vertical;" placeholder="Conditioning updates, how you're feeling this week…"></textarea>
+    </div>
     <div class="form-group" style="margin-bottom:20px;">
-      <label class="form-label">Notes</label>
-      <textarea class="form-input" id="ci-notes" rows="3" style="resize:vertical;" placeholder="Conditioning updates, coach notes, anything notable this week…"></textarea>
+      <label class="form-label" style="color:var(--primary);">Coach Note</label>
+      <textarea class="form-input" id="ci-coach-note" rows="2" style="resize:vertical;border-color:rgba(245,197,24,0.3);" placeholder="Coaching feedback, protocol adjustments, directives…"></textarea>
     </div>
 
     <button class="btn-primary" style="width:100%;padding:12px;" onclick="submitWeeklyCheckin()">Save Check-In</button>
@@ -2516,6 +2554,9 @@ function lsGet(key, fallback) {
   try { return JSON.parse(raw); }
   catch (e) { console.error(`[localStorage] corrupt "${key}", resetting:`, e); localStorage.removeItem(key); return fallback; }
 }
+
+// Null-safe descending date comparator (YYYY-MM-DD strings)
+const dateCmp = (a, b) => (b || '').localeCompare(a || '');
 
 function getProfile() {
   return lsGet('hrt_user_profile', { sex: 'male', focus: 'trt' });
@@ -2866,7 +2907,20 @@ async function loadUserData() {
         updateTopbarBadge();
         if (currentPage === 'dashboard') renderShowCountdown();
       }
+      if (settings.share_token) {
+        localStorage.setItem('hrt_share_token', settings.share_token);
+        const el = document.getElementById('share-token-display');
+        if (el) el.value = settings.share_token;
+      }
     }
+
+    // Load coach_athletes roster
+    try {
+      const { data: caRows } = await _supa.from('coach_athletes')
+        .select('*, athlete:athlete_user_id(id)')
+        .or(`coach_user_id.eq.${uid},athlete_user_id.eq.${uid}`);
+      if (caRows) localStorage.setItem('hrt_coach_athletes', JSON.stringify(caRows));
+    } catch(e) { console.warn('[loadUserData] coach_athletes:', e.message); }
 
     if (logsRes.data?.length) renderLastEntry(logsRes.data[0]);
 
@@ -2942,6 +2996,7 @@ async function syncProtocolsToSupabase() {
     show_name:             localStorage.getItem('hrt_show_name') || null,
     show_federation:       localStorage.getItem('hrt_show_federation') || null,
     show_division:         localStorage.getItem('hrt_show_division') || null,
+    share_token:           localStorage.getItem('hrt_share_token') || null,
     updated_at:            new Date().toISOString()
   }, { onConflict: 'user_id' });
   if (error) console.warn('[syncProtocols]', error.message);
@@ -3364,7 +3419,7 @@ function nav(page) {
     dashboard: 'Dashboard', log: 'Log Entry', vitals: 'Health Log', bloodwork: 'Bloodwork',
     physique: 'Physique', workouts: 'Workouts', report: 'Coach Report', compliance: 'Dose Compliance',
     protocols: 'My Protocols', builder: 'Protocol Builder', compounds: 'Compound Library',
-    calculator: 'Dose Calculator', settings: 'Settings', wellness: 'Wellness'
+    calculator: 'Dose Calculator', settings: 'Settings', wellness: 'Wellness', athletes: 'Athletes'
   };
   document.getElementById('topbar-title').textContent = titles[page] || page;
   document.querySelectorAll('.nav-item').forEach(n => {
@@ -3383,6 +3438,7 @@ function nav(page) {
   if (page === 'bloodwork') renderBloodworkPage();
   if (page === 'physique') { renderPhysiquePage(); renderWeeklyCheckinSection(); hevyMeasAutoSync(); }
   if (page === 'workouts') { renderWorkoutsPage(); hevyAutoSync(); }
+  if (page === 'athletes') renderAthletesPage();
   if (page === 'report') renderCoachReport(); // async — shows loading state then renders
   if (page === 'compliance') renderCompliancePage();
   if (page === 'wellness') renderWellnessPage();
@@ -4898,6 +4954,8 @@ function openCheckinModal(existingDate) {
   if (cEl) cEl.value = existing?.cardio_sessions ?? '';
   const nEl = document.getElementById('ci-notes');
   if (nEl) nEl.value = existing?.notes ?? '';
+  const cnEl = document.getElementById('ci-coach-note');
+  if (cnEl) cnEl.value = existing?.coach_note ?? '';
 
   const cfg = [
     ['fullness',    'Fullness',    '#38BDF8'],
@@ -4939,6 +4997,7 @@ async function submitWeeklyCheckin() {
     sleep_score:    _ci.sleep,
     mood_score:     _ci.mood,
     notes:          document.getElementById('ci-notes')?.value.trim() || null,
+    coach_note:     document.getElementById('ci-coach-note')?.value.trim() || null,
   };
 
   // Persist locally first (optimistic)
@@ -4998,7 +5057,8 @@ function renderWeeklyCheckinSection() {
       ${condRow  ? `<div style="font-size:12px;color:var(--text-secondary);margin-bottom:3px;">${condRow}</div>`  : ''}
       ${compRow  ? `<div style="font-size:12px;color:var(--text-secondary);margin-bottom:3px;">${compRow}</div>`  : ''}
       ${wellRow  ? `<div style="font-size:12px;color:var(--text-secondary);margin-bottom:3px;">${wellRow}</div>`  : ''}
-      ${c.notes  ? `<div style="font-size:12px;color:var(--text-muted);font-style:italic;margin-top:4px;">${escHtml(c.notes)}</div>` : ''}
+      ${c.notes       ? `<div style="font-size:12px;color:var(--text-muted);font-style:italic;margin-top:4px;">${escHtml(c.notes)}</div>` : ''}
+      ${c.coach_note  ? `<div style="font-size:12px;color:var(--primary);font-style:italic;margin-top:3px;"><i class="ti ti-messages" style="font-size:10px;margin-right:3px;"></i>${escHtml(c.coach_note)}</div>` : ''}
     </div>`;
   }).join('');
 }
@@ -5231,7 +5291,6 @@ async function renderCoachReport() {
 
   try {
 
-  const dateCmp   = (a, b) => (b || '').localeCompare(a || '');
   const protocol  = (() => { try { return JSON.parse(localStorage.getItem('hrt_active_protocol_data')); } catch { return null; } })();
   const panels    = bwLoad().sort((a, b) => dateCmp(a.date, b.date));
   const bwLatest  = panels[0] || null;
@@ -5508,7 +5567,6 @@ async function renderCoachReport() {
 }
 
 function reportCopy() {
-  const dateCmp   = (a, b) => (b || '').localeCompare(a || '');
   const protocol  = (() => { try { return JSON.parse(localStorage.getItem('hrt_active_protocol_data')); } catch { return null; } })();
   const panels    = bwLoad().sort((a, b) => dateCmp(a.date, b.date));
   const bwLatest  = panels[0] || null;
@@ -8182,6 +8240,208 @@ function populateShowForm() {
   const d = document.getElementById('show-date');       if (d) d.value = show.date;
   const f = document.getElementById('show-federation'); if (f) f.value = show.federation;
   const v = document.getElementById('show-division');   if (v) v.value = show.division;
+  // Populate share token if it exists
+  const tok = localStorage.getItem('hrt_share_token');
+  const te = document.getElementById('share-token-display');
+  if (te && tok) te.value = tok;
+}
+
+// ── Coach / Share Token ────────────────────────────────────────────────────────
+
+function generateShareToken() {
+  const tok = 'hrt-' + ([...Array(4)].map(() => Math.random().toString(36).slice(2,6)).join('-'));
+  localStorage.setItem('hrt_share_token', tok);
+  const el = document.getElementById('share-token-display');
+  if (el) el.value = tok;
+  showToast('Token generated — share with your coach', 'success');
+  syncProtocolsToSupabase();
+}
+
+function copyShareToken() {
+  const tok = localStorage.getItem('hrt_share_token');
+  if (!tok) { showToast('Generate a token first', 'info'); return; }
+  navigator.clipboard.writeText(tok).then(() => showToast('Token copied', 'success')).catch(() => {
+    const el = document.getElementById('share-token-display');
+    if (el) { el.select(); document.execCommand('copy'); showToast('Token copied', 'success'); }
+  });
+}
+
+async function submitCoachToken() {
+  const tok = (document.getElementById('coach-token-input')?.value || '').trim();
+  if (!tok) { showToast('Paste an athlete share token first', 'info'); return; }
+  if (!_supa || !_supaUser) { showToast('Sign in to link athletes', 'info'); return; }
+
+  const statusEl = document.getElementById('coach-link-status');
+  if (statusEl) statusEl.textContent = 'Looking up athlete…';
+
+  // Find athlete by share token
+  const { data: settRows, error: settErr } = await _supa
+    .from('user_settings')
+    .select('user_id')
+    .eq('share_token', tok)
+    .maybeSingle();
+
+  if (settErr || !settRows) {
+    if (statusEl) statusEl.textContent = 'Token not found. Ask the athlete to generate one in Settings.';
+    showToast('Token not found', 'error');
+    return;
+  }
+
+  const athleteId = settRows.user_id;
+  if (athleteId === _supaUser.id) {
+    if (statusEl) statusEl.textContent = 'That\'s your own token — share it with a coach instead.';
+    return;
+  }
+
+  const { error: linkErr } = await _supa.from('coach_athletes').upsert(
+    { coach_user_id: _supaUser.id, athlete_user_id: athleteId },
+    { onConflict: 'coach_user_id,athlete_user_id' }
+  );
+
+  if (linkErr) {
+    console.error('[submitCoachToken]', linkErr);
+    if (statusEl) statusEl.textContent = 'Failed to link — ' + linkErr.message;
+    showToast('Link failed', 'error');
+    return;
+  }
+
+  if (statusEl) statusEl.textContent = 'Athlete linked successfully!';
+  const inp = document.getElementById('coach-token-input');
+  if (inp) inp.value = '';
+  showToast('Athlete linked', 'success');
+
+  // Reload coach_athletes and refresh athletes page
+  const { data: caRows } = await _supa.from('coach_athletes')
+    .select('*')
+    .or(`coach_user_id.eq.${_supaUser.id},athlete_user_id.eq.${_supaUser.id}`);
+  if (caRows) localStorage.setItem('hrt_coach_athletes', JSON.stringify(caRows));
+  if (currentPage === 'athletes') renderAthletesPage();
+}
+
+// ── Athletes / Roster Page ─────────────────────────────────────────────────────
+
+async function renderAthletesPage() {
+  const el = document.getElementById('athletes-content');
+  if (!el) return;
+
+  // Self card — always shown
+  const selfCheckins = lsGet('hrt_weekly_checkins', []).sort((a,b) => dateCmp(a.check_in_date, b.check_in_date));
+  const selfLatest   = selfCheckins[0] || null;
+  const selfPanels   = bwLoad().sort((a,b) => dateCmp(a.date, b.date));
+  const selfBw       = selfPanels[0] || null;
+  const show         = getShow();
+  const profile      = lsGet('hrt_user_profile', null);
+  const selfName     = profile?.name || _supaUser?.user_metadata?.full_name || 'You';
+
+  let html = `<div style="margin-bottom:10px;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);">My Overview</div>`;
+  html += athleteCard(selfName, selfLatest, selfBw, show, true);
+
+  // Load linked athletes
+  const caRows = lsGet('hrt_coach_athletes', []);
+  const athleteIds = caRows
+    .filter(r => r.coach_user_id === _supaUser?.id)
+    .map(r => r.athlete_user_id);
+
+  if (athleteIds.length) {
+    html += `<div style="margin:20px 0 10px;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);">My Athletes</div>`;
+    el.innerHTML = html + `<div id="athlete-cards-loading" style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px;"><i class="ti ti-loader-2" style="animation:spin 1s linear infinite;"></i> Loading athlete data…</div>`;
+
+    // Fetch athlete data in parallel
+    try {
+      const results = await Promise.all(athleteIds.map(aid =>
+        Promise.all([
+          _supa.from('user_settings').select('user_profile,show_date,show_name,show_federation,show_division').eq('user_id', aid).maybeSingle(),
+          _supa.from('weekly_checkins').select('*').eq('user_id', aid).order('check_in_date', { ascending: false }).limit(1).maybeSingle(),
+          _supa.from('user_settings').select('bloodwork_panels').eq('user_id', aid).maybeSingle(),
+        ])
+      ));
+
+      let athleteHtml = '';
+      results.forEach(([settRes, ciRes, bwRes]) => {
+        const aProfile = settRes.data?.user_profile;
+        const aName    = aProfile?.name || 'Athlete';
+        const aShow    = settRes.data?.show_date ? {
+          date: settRes.data.show_date, name: settRes.data.show_name || '',
+          federation: settRes.data.show_federation || '', division: settRes.data.show_division || ''
+        } : null;
+        const aCi      = ciRes.data || null;
+        const aBwPanels = Array.isArray(bwRes.data?.bloodwork_panels) ? bwRes.data.bloodwork_panels : [];
+        const aBw      = aBwPanels.sort((a,b) => dateCmp(a.date, b.date))[0] || null;
+        athleteHtml += athleteCard(aName, aCi, aBw, aShow, false);
+      });
+
+      document.getElementById('athlete-cards-loading')?.remove();
+      const container = document.getElementById('athletes-content');
+      if (container) container.innerHTML = html + athleteHtml;
+    } catch(e) {
+      console.error('[renderAthletesPage]', e);
+      document.getElementById('athlete-cards-loading')?.remove();
+    }
+  } else {
+    // No linked athletes yet
+    html += `<div style="margin-top:20px;padding:20px;text-align:center;background:rgba(255,255,255,0.02);border:0.5px dashed var(--border);border-radius:12px;">
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px;">No athletes linked yet</div>
+      <div style="font-size:12px;color:var(--text-muted);opacity:0.7;">Ask an athlete to generate a share token in their Settings, then paste it in the Link Athlete section.</div>
+    </div>`;
+    el.innerHTML = html;
+  }
+}
+
+function athleteCard(name, latestCheckin, latestBw, show, isSelf) {
+  const scoreClr = v => v == null ? 'var(--text-muted)' : v >= 8 ? 'var(--green)' : v >= 5 ? '#F5C518' : 'var(--red)';
+
+  // Weeks out
+  let weeksOutStr = '';
+  if (show?.date) {
+    const days = Math.round((new Date(show.date + 'T00:00:00') - new Date()) / 86400000);
+    if (days > 0) weeksOutStr = `<span style="font-size:11px;font-weight:700;color:var(--primary);margin-left:8px;">${Math.ceil(days/7)} wks out</span>`;
+    else if (days >= -6) weeksOutStr = `<span style="font-size:11px;font-weight:700;color:var(--green);margin-left:8px;">Post-Show</span>`;
+  }
+
+  // Check-in summary
+  let ciBlock = '<span style="font-size:12px;color:var(--text-muted);">No check-ins yet</span>';
+  if (latestCheckin) {
+    const ci = latestCheckin;
+    const avgCond = [ci.fullness, ci.dryness, ci.vascularity].filter(v => v != null);
+    const avgWell = [ci.energy_score, ci.sleep_score, ci.mood_score].filter(v => v != null);
+    const condAvg = avgCond.length ? (avgCond.reduce((a,b)=>a+b,0)/avgCond.length).toFixed(1) : null;
+    const wellAvg = avgWell.length ? (avgWell.reduce((a,b)=>a+b,0)/avgWell.length).toFixed(1) : null;
+    ciBlock = `<div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">${ci.check_in_date}</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        ${condAvg != null ? `<span style="font-size:12px;">Cond <strong style="color:${scoreClr(condAvg)};">${condAvg}</strong></span>` : ''}
+        ${wellAvg != null ? `<span style="font-size:12px;">Well <strong style="color:${scoreClr(wellAvg)};">${wellAvg}</strong></span>` : ''}
+        ${ci.diet_adherence != null ? `<span style="font-size:12px;">Diet <strong>${ci.diet_adherence}%</strong></span>` : ''}
+      </div>
+      ${ci.coach_note ? `<div style="font-size:11px;color:var(--primary);margin-top:4px;font-style:italic;"><i class="ti ti-messages" style="font-size:10px;"></i> ${escHtml(ci.coach_note)}</div>` : ''}`;
+  }
+
+  // Bloodwork grade
+  let bwGrade = '';
+  if (latestBw?.markers) {
+    const markers = latestBw.markers;
+    const keys = Object.keys(markers).filter(k => BW_MARKERS[k] && markers[k] != null);
+    const inRange = keys.filter(k => bwRangeStatus(k, markers[k]) === 'ok').length;
+    const pct = keys.length ? Math.round((inRange / keys.length) * 100) : null;
+    if (pct != null) {
+      const grade = pct === 100 ? 'A' : pct >= 90 ? 'B' : pct >= 75 ? 'C' : 'D';
+      const gc = grade === 'A' ? 'var(--green)' : grade === 'B' ? '#4ADE80' : grade === 'C' ? '#F5C518' : 'var(--red)';
+      bwGrade = `<span style="font-size:18px;font-weight:800;color:${gc};font-family:var(--font-data);">${grade}</span>`;
+    }
+  }
+
+  return `<div class="card" style="margin-bottom:12px;${isSelf ? 'border-color:rgba(245,197,24,0.2);' : ''}">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+      <div>
+        <div style="font-size:14px;font-weight:700;color:var(--text-primary);">${escHtml(name)}${isSelf ? ' <span style="font-size:10px;color:var(--text-muted);font-weight:400;">(you)</span>' : ''}${weeksOutStr}</div>
+        ${show?.name ? `<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${escHtml(show.name)}</div>` : ''}
+      </div>
+      ${bwGrade}
+    </div>
+    <div style="padding-top:8px;border-top:0.5px solid var(--border);">
+      ${ciBlock}
+    </div>
+    ${isSelf ? `<div style="margin-top:10px;"><button class="btn-secondary" onclick="openCheckinModal()" style="font-size:12px;padding:5px 12px;"><i class="ti ti-plus"></i> Log Check-In</button></div>` : ''}
+  </div>`;
 }
 
 function renderShowCountdown() {

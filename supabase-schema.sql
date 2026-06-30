@@ -1022,3 +1022,61 @@ CREATE POLICY "Users can manage their own lab markers"
   FOR ALL
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
+
+-- ============================================================
+-- PHASE 2 MIGRATION — Coach Layer
+-- Run in Supabase SQL editor
+-- ============================================================
+
+-- 1. Add share_token to user_settings
+ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS share_token TEXT UNIQUE;
+
+-- 2. Add coach_note to weekly_checkins
+ALTER TABLE weekly_checkins ADD COLUMN IF NOT EXISTS coach_note TEXT;
+
+-- 3. Coach-athlete relationship table
+CREATE TABLE IF NOT EXISTS coach_athletes (
+  id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  coach_user_id    UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  athlete_user_id  UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  created_at       TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(coach_user_id, athlete_user_id)
+);
+
+ALTER TABLE coach_athletes ENABLE ROW LEVEL SECURITY;
+
+-- Users can see/manage relationships they are part of
+CREATE POLICY "coach_athletes_own_rows" ON coach_athletes
+  FOR ALL USING (
+    coach_user_id = auth.uid() OR athlete_user_id = auth.uid()
+  );
+
+-- 4. Allow coaches to read their athletes' weekly_checkins
+DROP POLICY IF EXISTS "Users can manage their own check-ins" ON weekly_checkins;
+CREATE POLICY "own_or_coach_checkins" ON weekly_checkins
+  FOR SELECT USING (
+    user_id = auth.uid() OR
+    EXISTS (
+      SELECT 1 FROM coach_athletes
+      WHERE athlete_user_id = weekly_checkins.user_id
+        AND coach_user_id = auth.uid()
+    )
+  );
+CREATE POLICY "own_checkins_write" ON weekly_checkins
+  FOR ALL USING (user_id = auth.uid())
+  WITH CHECK (user_id = auth.uid());
+
+-- 5. Allow coaches to read their athletes' user_settings (name, show, bloodwork)
+DROP POLICY IF EXISTS "Users can manage their own settings" ON user_settings;
+CREATE POLICY "own_settings_write" ON user_settings
+  FOR ALL USING (user_id = auth.uid())
+  WITH CHECK (user_id = auth.uid());
+CREATE POLICY "coach_read_athlete_settings" ON user_settings
+  FOR SELECT USING (
+    user_id = auth.uid() OR
+    EXISTS (
+      SELECT 1 FROM coach_athletes
+      WHERE athlete_user_id = user_settings.user_id
+        AND coach_user_id = auth.uid()
+    )
+  );
