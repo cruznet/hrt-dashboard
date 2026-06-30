@@ -1,0 +1,1449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="description" content="HRT Tracker — The only protocol tracking platform built for competitive bodybuilders, TRT athletes, and performance-focused individuals.">
+<meta name="theme-color" content="#0D0D15">
+<link rel="icon" href="/apple-touch-icon.png" type="image/png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<title>HRT Tracker — Your Protocol. Your Data. Your Edge.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── Tokens ── */
+:root {
+  --bg:          #0D0D15;
+  --bg-2:        #111119;
+  --bg-card:     rgba(255,255,255,0.03);
+  --border:      rgba(255,255,255,0.08);
+  --border-gold: rgba(245,197,24,0.25);
+  --gold:        #F5C518;
+  --gold-dim:    rgba(245,197,24,0.12);
+  --gold-glow:   rgba(245,197,24,0.06);
+  --text:        #E8E8ED;
+  --text-2:      rgba(232,232,237,0.6);
+  --text-3:      rgba(232,232,237,0.35);
+  --radius:      10px;
+  --radius-lg:   16px;
+  --nav-h:       64px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: rgba(245,197,24,0.2); border-radius: 3px; }
+
+/* ── Utility ── */
+.container { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+.gold { color: var(--gold); }
+.mono { font-family: 'JetBrains Mono', monospace; }
+
+/* ──────────────────────────────────────────
+   NAV
+────────────────────────────────────────── */
+#nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 100;
+  height: var(--nav-h);
+  border-bottom: 0.5px solid var(--border);
+  background: rgba(13,13,21,0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transition: border-color 0.2s;
+}
+.nav-inner {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.nav-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+.nav-logo img { width: 32px; height: 32px; border-radius: 8px; }
+.nav-logo-text { font-size: 15px; font-weight: 600; color: var(--text); letter-spacing: -0.2px; }
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  list-style: none;
+}
+.nav-links a {
+  font-size: 13.5px;
+  color: var(--text-2);
+  text-decoration: none;
+  transition: color 0.15s;
+  white-space: nowrap;
+}
+.nav-links a:hover { color: var(--text); }
+.nav-ctas { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: inherit; font-size: 13.5px; font-weight: 500;
+  border-radius: var(--radius); cursor: pointer; text-decoration: none;
+  transition: all 0.15s; white-space: nowrap; border: none;
+  padding: 8px 18px;
+}
+.btn-ghost {
+  background: transparent;
+  border: 0.5px solid var(--border);
+  color: var(--text-2);
+}
+.btn-ghost:hover { border-color: rgba(255,255,255,0.2); color: var(--text); }
+.btn-gold {
+  background: var(--gold);
+  color: #0D0D15;
+  font-weight: 600;
+}
+.btn-gold:hover { background: #ffd700; transform: translateY(-1px); box-shadow: 0 4px 20px rgba(245,197,24,0.3); }
+.btn-gold-outline {
+  background: transparent;
+  border: 0.5px solid var(--border-gold);
+  color: var(--gold);
+}
+.btn-gold-outline:hover { background: var(--gold-dim); }
+.btn-lg { padding: 13px 28px; font-size: 15px; border-radius: 12px; }
+
+/* Mobile nav toggle */
+.nav-toggle {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--text);
+  cursor: pointer;
+  padding: 4px;
+}
+.mobile-menu {
+  display: none;
+  position: fixed;
+  top: var(--nav-h);
+  left: 0; right: 0;
+  background: rgba(13,13,21,0.97);
+  backdrop-filter: blur(20px);
+  border-bottom: 0.5px solid var(--border);
+  padding: 20px 24px;
+  flex-direction: column;
+  gap: 16px;
+  z-index: 99;
+}
+.mobile-menu.open { display: flex; }
+.mobile-menu a {
+  font-size: 15px; color: var(--text-2);
+  text-decoration: none; padding: 8px 0;
+  border-bottom: 0.5px solid var(--border);
+}
+.mobile-menu-ctas { display: flex; gap: 10px; padding-top: 8px; }
+.mobile-menu-ctas .btn { flex: 1; justify-content: center; }
+
+@media (max-width: 768px) {
+  .nav-links { display: none; }
+  .nav-ctas { display: none; }
+  .nav-toggle { display: flex; }
+}
+
+/* ──────────────────────────────────────────
+   HERO
+────────────────────────────────────────── */
+#hero {
+  position: relative;
+  padding-top: calc(var(--nav-h) + 80px);
+  padding-bottom: 80px;
+  text-align: center;
+  overflow: hidden;
+}
+
+/* Radial glow behind headline */
+#hero::before {
+  content: '';
+  position: absolute;
+  top: var(--nav-h);
+  left: 50%; transform: translateX(-50%);
+  width: 800px; height: 500px;
+  background: radial-gradient(ellipse at center, rgba(245,197,24,0.07) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 14px 5px 6px;
+  border-radius: 99px;
+  border: 0.5px solid var(--border-gold);
+  background: var(--gold-dim);
+  font-size: 12px;
+  color: var(--gold);
+  margin-bottom: 32px;
+  letter-spacing: 0.02em;
+}
+.hero-badge-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--gold);
+  animation: pulse 2s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+.hero-headline {
+  font-size: clamp(38px, 6vw, 72px);
+  font-weight: 600;
+  line-height: 1.08;
+  letter-spacing: -0.04em;
+  background: linear-gradient(180deg, #fff 0%, rgba(255,255,255,0.65) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  max-width: 760px;
+  margin: 0 auto 24px;
+}
+.hero-headline em {
+  font-style: normal;
+  -webkit-text-fill-color: var(--gold);
+}
+
+.hero-sub {
+  font-size: clamp(15px, 2vw, 18px);
+  color: var(--text-2);
+  max-width: 560px;
+  margin: 0 auto 40px;
+  line-height: 1.65;
+}
+
+.hero-ctas {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 72px;
+}
+
+/* Dashboard mockup */
+.hero-mockup-wrap {
+  position: relative;
+  max-width: 900px;
+  margin: 0 auto;
+}
+.hero-mockup-glow {
+  position: absolute;
+  top: -40px; left: 50%;
+  transform: translateX(-50%);
+  width: 700px; height: 300px;
+  background: radial-gradient(ellipse, rgba(245,197,24,0.12) 0%, transparent 65%);
+  pointer-events: none;
+  z-index: 0;
+}
+.hero-mockup {
+  position: relative;
+  z-index: 1;
+  border-radius: 16px;
+  border: 0.5px solid var(--border-gold);
+  background: #111119;
+  overflow: hidden;
+  box-shadow: 0 32px 80px rgba(0,0,0,0.6), 0 0 0 0.5px rgba(245,197,24,0.1);
+}
+.mockup-topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 0.5px solid var(--border);
+  background: rgba(255,255,255,0.02);
+}
+.mockup-dots { display: flex; gap: 6px; }
+.mockup-dots span {
+  width: 10px; height: 10px; border-radius: 50%;
+}
+.mockup-dots span:nth-child(1) { background: #FF5F57; }
+.mockup-dots span:nth-child(2) { background: #FEBC2E; }
+.mockup-dots span:nth-child(3) { background: #28C840; }
+.mockup-title { font-size: 12px; color: var(--text-3); font-family: 'JetBrains Mono', monospace; }
+.mockup-badge {
+  font-size: 10px; padding: 2px 8px; border-radius: 99px;
+  background: var(--gold-dim); border: 0.5px solid var(--border-gold);
+  color: var(--gold); font-weight: 600;
+}
+.mockup-body {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  min-height: 360px;
+}
+.mockup-sidebar {
+  border-right: 0.5px solid var(--border);
+  padding: 16px 12px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.mock-nav-item {
+  padding: 7px 10px; border-radius: 7px;
+  font-size: 11.5px; color: var(--text-3);
+  display: flex; align-items: center; gap: 8px;
+}
+.mock-nav-item.active { background: var(--gold-dim); color: var(--gold); }
+.mock-nav-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: currentColor; flex-shrink: 0;
+}
+.mockup-content { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.mock-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.mock-card {
+  background: rgba(255,255,255,0.03);
+  border: 0.5px solid var(--border);
+  border-radius: 10px; padding: 12px;
+}
+.mock-card-label { font-size: 9px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+.mock-card-val { font-size: 22px; font-weight: 600; color: var(--text); line-height: 1; margin-bottom: 2px; }
+.mock-card-sub { font-size: 10px; color: var(--text-3); }
+.mock-card-val.gold { color: var(--gold); }
+.mock-chart {
+  background: rgba(255,255,255,0.02);
+  border: 0.5px solid var(--border);
+  border-radius: 10px; padding: 12px;
+  grid-column: span 3;
+}
+.mock-chart-label { font-size: 9px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
+.mock-sparkline {
+  height: 48px; display: flex; align-items: flex-end; gap: 4px;
+}
+.mock-bar {
+  flex: 1; border-radius: 3px 3px 0 0;
+  background: rgba(245,197,24,0.2);
+  transition: height 0.3s;
+}
+.mock-bar.hi { background: rgba(245,197,24,0.7); }
+
+@media (max-width: 600px) {
+  .mockup-body { grid-template-columns: 1fr; }
+  .mockup-sidebar { display: none; }
+  .mock-row { grid-template-columns: 1fr 1fr; }
+}
+
+/* ──────────────────────────────────────────
+   STATS BAR
+────────────────────────────────────────── */
+#stats {
+  border-top: 0.5px solid var(--border);
+  border-bottom: 0.5px solid var(--border);
+  padding: 48px 0;
+}
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  text-align: center;
+}
+.stat-item {
+  padding: 0 24px;
+  border-right: 0.5px solid var(--border);
+}
+.stat-item:last-child { border-right: none; }
+.stat-num {
+  font-size: clamp(36px, 5vw, 56px);
+  font-weight: 300;
+  color: var(--gold);
+  line-height: 1;
+  margin-bottom: 8px;
+  letter-spacing: -0.03em;
+}
+.stat-label { font-size: 13px; color: var(--text-2); }
+
+@media (max-width: 600px) {
+  .stats-grid { grid-template-columns: 1fr; gap: 32px; }
+  .stat-item { border-right: none; border-bottom: 0.5px solid var(--border); padding-bottom: 32px; }
+  .stat-item:last-child { border-bottom: none; padding-bottom: 0; }
+}
+
+/* ──────────────────────────────────────────
+   SECTION SHARED
+────────────────────────────────────────── */
+.section { padding: 96px 0; }
+.section-tag {
+  display: inline-block;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 16px;
+}
+.section-title {
+  font-size: clamp(28px, 4vw, 44px);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  color: var(--text);
+  margin-bottom: 16px;
+}
+.section-sub {
+  font-size: 16px;
+  color: var(--text-2);
+  line-height: 1.65;
+  max-width: 520px;
+}
+.section-header { margin-bottom: 56px; }
+.section-header.center { text-align: center; }
+.section-header.center .section-sub { margin: 0 auto; }
+
+/* ──────────────────────────────────────────
+   FEATURES GRID
+────────────────────────────────────────── */
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.feature-cell {
+  padding: 32px;
+  border-right: 0.5px solid var(--border);
+  border-bottom: 0.5px solid var(--border);
+  transition: background 0.2s;
+}
+.feature-cell:hover { background: rgba(245,197,24,0.03); }
+.feature-cell:nth-child(3n) { border-right: none; }
+.feature-cell:nth-child(4), .feature-cell:nth-child(5), .feature-cell:nth-child(6) { border-bottom: none; }
+.feature-icon {
+  width: 40px; height: 40px; border-radius: 10px;
+  background: var(--gold-dim);
+  border: 0.5px solid var(--border-gold);
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 16px;
+}
+.feature-icon svg { width: 18px; height: 18px; color: var(--gold); }
+.feature-title { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
+.feature-desc { font-size: 13.5px; color: var(--text-2); line-height: 1.6; }
+
+@media (max-width: 900px) {
+  .features-grid { grid-template-columns: repeat(2, 1fr); }
+  .feature-cell:nth-child(3n) { border-right: 0.5px solid var(--border); }
+  .feature-cell:nth-child(2n) { border-right: none; }
+  .feature-cell:nth-child(5), .feature-cell:nth-child(6) { border-bottom: none; }
+  .feature-cell:nth-child(4) { border-bottom: 0.5px solid var(--border); }
+}
+@media (max-width: 600px) {
+  .features-grid { grid-template-columns: 1fr; }
+  .feature-cell { border-right: none !important; border-bottom: 0.5px solid var(--border) !important; }
+  .feature-cell:last-child { border-bottom: none !important; }
+}
+
+/* ──────────────────────────────────────────
+   MODES
+────────────────────────────────────────── */
+#modes { background: var(--bg-2); }
+.modes-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+.mode-card {
+  border-radius: var(--radius-lg);
+  border: 0.5px solid var(--border);
+  padding: 32px 28px;
+  background: var(--bg-card);
+  transition: border-color 0.2s, transform 0.2s;
+  cursor: default;
+}
+.mode-card:hover { border-color: var(--border-gold); transform: translateY(-2px); }
+.mode-pill {
+  display: inline-block;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 3px 10px; border-radius: 99px;
+  margin-bottom: 20px;
+}
+.mode-card.trt .mode-pill    { background: rgba(139,92,246,0.15); color: #a78bfa; border: 0.5px solid rgba(139,92,246,0.3); }
+.mode-card.offseason .mode-pill { background: rgba(34,197,94,0.12); color: #4ade80; border: 0.5px solid rgba(34,197,94,0.25); }
+.mode-card.perf .mode-pill   { background: rgba(245,197,24,0.12); color: var(--gold); border: 0.5px solid var(--border-gold); }
+.mode-title { font-size: 20px; font-weight: 600; color: var(--text); margin-bottom: 10px; letter-spacing: -0.02em; }
+.mode-desc { font-size: 13.5px; color: var(--text-2); line-height: 1.65; margin-bottom: 24px; }
+.mode-metrics { display: flex; flex-direction: column; gap: 8px; }
+.mode-metric {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 12.5px; color: var(--text-2);
+}
+.mode-metric-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--text-3); flex-shrink: 0; }
+.mode-card.trt .mode-metric-dot    { background: #a78bfa; }
+.mode-card.offseason .mode-metric-dot { background: #4ade80; }
+.mode-card.perf .mode-metric-dot   { background: var(--gold); }
+
+@media (max-width: 860px) {
+  .modes-grid { grid-template-columns: 1fr; max-width: 480px; margin: 0 auto; }
+}
+
+/* ──────────────────────────────────────────
+   HOW IT WORKS
+────────────────────────────────────────── */
+.steps-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  position: relative;
+}
+.steps-grid::before {
+  content: '';
+  position: absolute;
+  top: 28px; left: calc(33.33% / 2);
+  right: calc(33.33% / 2);
+  height: 0.5px;
+  background: linear-gradient(90deg, transparent, var(--border-gold), transparent);
+  z-index: 0;
+}
+.step {
+  position: relative; z-index: 1;
+  text-align: center; padding: 0 24px;
+}
+.step-num {
+  width: 56px; height: 56px; border-radius: 50%;
+  background: var(--bg);
+  border: 0.5px solid var(--border-gold);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; font-weight: 600; color: var(--gold);
+  margin: 0 auto 20px;
+  box-shadow: 0 0 20px var(--gold-glow);
+}
+.step-title { font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 10px; }
+.step-desc  { font-size: 13.5px; color: var(--text-2); line-height: 1.6; }
+
+@media (max-width: 700px) {
+  .steps-grid { grid-template-columns: 1fr; gap: 40px; }
+  .steps-grid::before { display: none; }
+  .step { text-align: left; display: flex; gap: 20px; padding: 0; }
+  .step-num { flex-shrink: 0; margin: 0; }
+}
+
+/* ──────────────────────────────────────────
+   COACH LAYER
+────────────────────────────────────────── */
+#coach { background: var(--bg-2); }
+.coach-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 64px;
+  align-items: center;
+}
+.coach-visual {
+  border-radius: var(--radius-lg);
+  border: 0.5px solid var(--border-gold);
+  background: #111119;
+  overflow: hidden;
+}
+.coach-visual-header {
+  padding: 12px 16px;
+  border-bottom: 0.5px solid var(--border);
+  font-size: 11px; color: var(--text-3);
+  font-family: 'JetBrains Mono', monospace;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.coach-athlete-list { padding: 8px; }
+.coach-athlete {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 10px; border-radius: 8px;
+  transition: background 0.15s; cursor: default;
+}
+.coach-athlete:hover { background: rgba(255,255,255,0.04); }
+.athlete-avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--gold-dim);
+  border: 0.5px solid var(--border-gold);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 600; color: var(--gold);
+  flex-shrink: 0;
+}
+.athlete-name { font-size: 13px; font-weight: 500; color: var(--text); }
+.athlete-meta { font-size: 11px; color: var(--text-3); margin-top: 1px; }
+.athlete-badge {
+  margin-left: auto; flex-shrink: 0;
+  font-size: 9.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 2px 8px; border-radius: 99px;
+}
+.badge-perf { background: rgba(245,197,24,0.12); color: var(--gold); border: 0.5px solid var(--border-gold); }
+.badge-off  { background: rgba(34,197,94,0.1); color: #4ade80; border: 0.5px solid rgba(34,197,94,0.2); }
+.badge-trt  { background: rgba(139,92,246,0.12); color: #a78bfa; border: 0.5px solid rgba(139,92,246,0.25); }
+
+.coach-features { display: flex; flex-direction: column; gap: 20px; margin-top: 32px; }
+.coach-feature {
+  display: flex; gap: 14px; align-items: flex-start;
+}
+.coach-feature-icon {
+  width: 36px; height: 36px; border-radius: 9px;
+  background: var(--gold-dim); border: 0.5px solid var(--border-gold);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.coach-feature-icon svg { width: 16px; height: 16px; color: var(--gold); }
+.coach-feature-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+.coach-feature-desc  { font-size: 13px; color: var(--text-2); line-height: 1.55; }
+
+@media (max-width: 800px) {
+  .coach-split { grid-template-columns: 1fr; gap: 40px; }
+}
+
+/* ──────────────────────────────────────────
+   TESTIMONIALS
+────────────────────────────────────────── */
+.testimonials-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+.testimonial-card {
+  background: var(--bg-card);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+  transition: border-color 0.2s;
+}
+.testimonial-card:hover { border-color: var(--border-gold); }
+.testimonial-stars {
+  display: flex; gap: 3px; margin-bottom: 16px;
+}
+.testimonial-stars span { color: var(--gold); font-size: 13px; }
+.testimonial-quote {
+  font-size: 14px; color: var(--text-2); line-height: 1.7;
+  margin-bottom: 20px; font-style: italic;
+}
+.testimonial-author { display: flex; align-items: center; gap: 10px; }
+.author-avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--gold-dim); border: 0.5px solid var(--border-gold);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 600; color: var(--gold);
+}
+.author-name  { font-size: 13px; font-weight: 600; color: var(--text); }
+.author-title { font-size: 11px; color: var(--text-3); }
+
+@media (max-width: 860px) {
+  .testimonials-grid { grid-template-columns: 1fr; max-width: 480px; margin: 0 auto; }
+}
+
+/* ──────────────────────────────────────────
+   PRICING
+────────────────────────────────────────── */
+#pricing { background: var(--bg-2); }
+.pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  max-width: 760px;
+  margin: 0 auto;
+}
+.pricing-card {
+  border-radius: var(--radius-lg);
+  border: 0.5px solid var(--border);
+  padding: 36px 32px;
+  background: var(--bg-card);
+  position: relative;
+}
+.pricing-card.featured {
+  border-color: var(--border-gold);
+  background: linear-gradient(135deg, rgba(245,197,24,0.05) 0%, transparent 60%);
+}
+.pricing-featured-badge {
+  position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+  font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 4px 14px; border-radius: 99px;
+  background: var(--gold); color: #0D0D15;
+  white-space: nowrap;
+}
+.pricing-tier  { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-3); margin-bottom: 8px; }
+.pricing-price { font-size: 48px; font-weight: 300; color: var(--text); letter-spacing: -0.03em; line-height: 1; margin-bottom: 4px; }
+.pricing-price span { font-size: 20px; vertical-align: super; font-weight: 400; }
+.pricing-cadence { font-size: 13px; color: var(--text-3); margin-bottom: 24px; }
+.pricing-divider { height: 0.5px; background: var(--border); margin-bottom: 24px; }
+.pricing-features { display: flex; flex-direction: column; gap: 12px; margin-bottom: 32px; }
+.pricing-feature {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 13.5px; color: var(--text-2);
+}
+.pricing-check {
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--gold-dim); border: 0.5px solid var(--border-gold);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.pricing-check svg { width: 10px; height: 10px; color: var(--gold); }
+.pricing-cta { width: 100%; text-align: center; justify-content: center; padding: 12px; font-size: 14px; border-radius: 10px; }
+
+@media (max-width: 600px) {
+  .pricing-grid { grid-template-columns: 1fr; }
+}
+
+/* ──────────────────────────────────────────
+   FAQ
+────────────────────────────────────────── */
+.faq-list { max-width: 680px; margin: 0 auto; display: flex; flex-direction: column; gap: 0; }
+.faq-item {
+  border-bottom: 0.5px solid var(--border);
+}
+.faq-q {
+  width: 100%; background: none; border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 22px 0; text-align: left;
+  font-family: inherit; font-size: 15px; font-weight: 500; color: var(--text);
+  transition: color 0.15s;
+}
+.faq-q:hover { color: var(--gold); }
+.faq-q svg {
+  width: 18px; height: 18px; flex-shrink: 0;
+  color: var(--text-3); transition: transform 0.2s;
+}
+.faq-item.open .faq-q svg { transform: rotate(45deg); color: var(--gold); }
+.faq-a {
+  font-size: 14px; color: var(--text-2); line-height: 1.7;
+  max-height: 0; overflow: hidden;
+  transition: max-height 0.3s ease, padding 0.3s;
+}
+.faq-item.open .faq-a { max-height: 300px; padding-bottom: 20px; }
+
+/* ──────────────────────────────────────────
+   CTA BANNER
+────────────────────────────────────────── */
+#cta-banner {
+  padding: 96px 0;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+#cta-banner::before {
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 600px; height: 400px;
+  background: radial-gradient(ellipse, rgba(245,197,24,0.08) 0%, transparent 65%);
+  pointer-events: none;
+}
+.cta-banner-title {
+  font-size: clamp(28px, 4vw, 48px);
+  font-weight: 600; letter-spacing: -0.03em;
+  line-height: 1.15; margin-bottom: 16px;
+  background: linear-gradient(180deg, #fff 0%, rgba(255,255,255,0.65) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.cta-banner-sub { font-size: 16px; color: var(--text-2); margin-bottom: 36px; }
+.cta-banner-ctas { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+
+/* ──────────────────────────────────────────
+   FOOTER
+────────────────────────────────────────── */
+footer {
+  border-top: 0.5px solid var(--border);
+  padding: 48px 0;
+}
+.footer-inner {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 1fr 1fr;
+  gap: 48px;
+}
+.footer-brand-logo {
+  display: flex; align-items: center; gap: 10px;
+  text-decoration: none; margin-bottom: 14px;
+}
+.footer-brand-logo img { width: 28px; height: 28px; border-radius: 7px; }
+.footer-brand-name { font-size: 14px; font-weight: 600; color: var(--text); }
+.footer-brand-desc { font-size: 13px; color: var(--text-3); line-height: 1.6; max-width: 220px; }
+.footer-col-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-3); margin-bottom: 16px; }
+.footer-links { display: flex; flex-direction: column; gap: 10px; }
+.footer-links a { font-size: 13px; color: var(--text-2); text-decoration: none; transition: color 0.15s; }
+.footer-links a:hover { color: var(--text); }
+.footer-bottom {
+  margin-top: 48px;
+  padding-top: 24px;
+  border-top: 0.5px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  flex-wrap: wrap;
+}
+.footer-copy { font-size: 12px; color: var(--text-3); }
+.footer-legal { display: flex; gap: 20px; }
+.footer-legal a { font-size: 12px; color: var(--text-3); text-decoration: none; }
+.footer-legal a:hover { color: var(--text-2); }
+
+@media (max-width: 860px) {
+  .footer-inner { grid-template-columns: 1fr 1fr; gap: 32px; }
+}
+@media (max-width: 520px) {
+  .footer-inner { grid-template-columns: 1fr; }
+  .footer-bottom { flex-direction: column; align-items: flex-start; }
+}
+
+/* ──────────────────────────────────────────
+   ANIMATIONS
+────────────────────────────────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-up { animation: fadeUp 0.6s ease-out both; }
+.fade-up-2 { animation: fadeUp 0.6s 0.1s ease-out both; }
+.fade-up-3 { animation: fadeUp 0.6s 0.2s ease-out both; }
+.fade-up-4 { animation: fadeUp 0.6s 0.3s ease-out both; }
+</style>
+</head>
+<body>
+
+<!-- ── NAV ── -->
+<nav id="nav">
+  <div class="container nav-inner">
+    <a class="nav-logo" href="/">
+      <img src="/apple-touch-icon.png" alt="HRT Tracker">
+      <span class="nav-logo-text">HRT Tracker</span>
+    </a>
+
+    <ul class="nav-links">
+      <li><a href="#features">Features</a></li>
+      <li><a href="#modes">Modes</a></li>
+      <li><a href="#how-it-works">How It Works</a></li>
+      <li><a href="#coach">For Coaches</a></li>
+      <li><a href="#pricing">Pricing</a></li>
+    </ul>
+
+    <div class="nav-ctas">
+      <a class="btn btn-ghost" href="/index.html">Sign In</a>
+      <a class="btn btn-gold" href="/index.html">Get Started</a>
+    </div>
+
+    <button class="nav-toggle" onclick="toggleMobileMenu()" aria-label="Toggle menu">
+      <svg id="nav-icon-open" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      <svg id="nav-icon-close" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+</nav>
+
+<!-- Mobile Menu -->
+<div class="mobile-menu" id="mobile-menu">
+  <a href="#features" onclick="closeMobileMenu()">Features</a>
+  <a href="#modes" onclick="closeMobileMenu()">Modes</a>
+  <a href="#how-it-works" onclick="closeMobileMenu()">How It Works</a>
+  <a href="#coach" onclick="closeMobileMenu()">For Coaches</a>
+  <a href="#pricing" onclick="closeMobileMenu()">Pricing</a>
+  <div class="mobile-menu-ctas">
+    <a class="btn btn-ghost" href="/index.html">Sign In</a>
+    <a class="btn btn-gold" href="/index.html">Get Started</a>
+  </div>
+</div>
+
+<!-- ── HERO ── -->
+<section id="hero">
+  <div class="container">
+    <div class="hero-badge fade-up">
+      <span class="hero-badge-dot"></span>
+      Now in Beta &mdash; Free for Early Athletes
+    </div>
+
+    <h1 class="hero-headline fade-up-2">
+      Your Protocol.<br>Your Data.<br><em>Your Edge.</em>
+    </h1>
+
+    <p class="hero-sub fade-up-3">
+      The only tracking platform built for competitive bodybuilders, TRT athletes, and performance-focused individuals. Every injection, bloodwork panel, check-in, and workout &mdash; one private dashboard.
+    </p>
+
+    <div class="hero-ctas fade-up-4">
+      <a class="btn btn-gold btn-lg" href="/index.html">Start Tracking Free</a>
+      <a class="btn btn-ghost btn-lg" href="#features">See the Features &rarr;</a>
+    </div>
+
+    <!-- App Mockup -->
+    <div class="hero-mockup-wrap fade-up-4">
+      <div class="hero-mockup-glow"></div>
+      <div class="hero-mockup">
+        <div class="mockup-topbar">
+          <div class="mockup-dots">
+            <span></span><span></span><span></span>
+          </div>
+          <span class="mockup-title">hrt.cruznetllc.com</span>
+          <span class="mockup-badge">Performance</span>
+        </div>
+        <div class="mockup-body">
+          <div class="mockup-sidebar">
+            <div class="mock-nav-item active"><span class="mock-nav-dot"></span>Dashboard</div>
+            <div class="mock-nav-item"><span class="mock-nav-dot"></span>Check-In</div>
+            <div class="mock-nav-item"><span class="mock-nav-dot"></span>Bloodwork</div>
+            <div class="mock-nav-item"><span class="mock-nav-dot"></span>Protocols</div>
+            <div class="mock-nav-item"><span class="mock-nav-dot"></span>Workouts</div>
+            <div class="mock-nav-item"><span class="mock-nav-dot"></span>Coach Report</div>
+          </div>
+          <div class="mockup-content">
+            <div class="mock-row">
+              <div class="mock-card">
+                <div class="mock-card-label">Readiness</div>
+                <div class="mock-card-val gold">82</div>
+                <div class="mock-card-sub">+6 vs yesterday</div>
+              </div>
+              <div class="mock-card">
+                <div class="mock-card-label">HRV</div>
+                <div class="mock-card-val">67<span style="font-size:11px;color:var(--text-3)"> ms</span></div>
+                <div class="mock-card-sub">7-day avg: 61</div>
+              </div>
+              <div class="mock-card">
+                <div class="mock-card-label">Streak</div>
+                <div class="mock-card-val">14<span style="font-size:11px;color:var(--text-3)"> d</span></div>
+                <div class="mock-card-sub">🔥 Personal best</div>
+              </div>
+            </div>
+            <div class="mock-chart">
+              <div class="mock-chart-label">Weekly Compliance</div>
+              <div class="mock-sparkline">
+                <div class="mock-bar" style="height:60%"></div>
+                <div class="mock-bar hi" style="height:100%"></div>
+                <div class="mock-bar" style="height:80%"></div>
+                <div class="mock-bar hi" style="height:100%"></div>
+                <div class="mock-bar" style="height:70%"></div>
+                <div class="mock-bar hi" style="height:95%"></div>
+                <div class="mock-bar" style="height:85%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── STATS BAR ── -->
+<section id="stats">
+  <div class="container">
+    <div class="stats-grid">
+      <div class="stat-item">
+        <div class="stat-num">50+</div>
+        <div class="stat-label">Health metrics tracked per day</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num">3</div>
+        <div class="stat-label">Training modes: TRT · Offseason · Performance</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num">100%</div>
+        <div class="stat-label">Private — your data never leaves your account</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FEATURES ── -->
+<section class="section" id="features">
+  <div class="container">
+    <div class="section-header center">
+      <div class="section-tag">Features</div>
+      <h2 class="section-title">Everything your prep demands</h2>
+      <p class="section-sub">Built for athletes who take their protocols as seriously as their training.</p>
+    </div>
+
+    <div class="features-grid">
+      <div class="feature-cell">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg>
+        </div>
+        <div class="feature-title">Bloodwork Tracking</div>
+        <div class="feature-desc">Log every panel and trend key markers over time. Sparklines, grade ratings, and reference ranges so you always know where you stand.</div>
+      </div>
+      <div class="feature-cell">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+        </div>
+        <div class="feature-title">Protocol Management</div>
+        <div class="feature-desc">Track compounds, doses, and frequencies with pinpoint accuracy. Compliance streaks keep you accountable every single day.</div>
+      </div>
+      <div class="feature-cell">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg>
+        </div>
+        <div class="feature-title">Weekly Check-Ins</div>
+        <div class="feature-desc">Mood, sleep quality, libido, pumps, energy, and body condition — all captured in one fast check-in tap. Built for busy athletes.</div>
+      </div>
+      <div class="feature-cell">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m12 2-1.5 5H5l4.5 3.5L8 16l4-2.5L16 16l-1.5-5.5L19 7h-5.5Z"/></svg>
+        </div>
+        <div class="feature-title">Hevy Integration</div>
+        <div class="feature-desc">Auto-sync workouts directly from Hevy. No manual logging. Your training volume, PRs, and exercise history live right alongside your protocol data.</div>
+      </div>
+      <div class="feature-cell">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <div class="feature-title">Coach Layer</div>
+        <div class="feature-desc">Self-coach or connect a real coach to your dashboard. Share your data via secure token. Coaches get their own athlete roster with full protocol visibility.</div>
+      </div>
+      <div class="feature-cell">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        </div>
+        <div class="feature-title">Daily Readiness Score</div>
+        <div class="feature-desc">HRV + sleep + compliance + wellness averaged into one actionable number every morning. Know when to push hard and when to recover smart.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── MODES ── -->
+<section class="section" id="modes">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-tag">Training Modes</div>
+      <h2 class="section-title">Your dashboard adapts<br>to where you are</h2>
+      <p class="section-sub">Switch modes anytime. Your focus, metrics, and coaching insights shift automatically to match your current phase.</p>
+    </div>
+
+    <div class="modes-grid">
+      <div class="mode-card trt">
+        <div class="mode-pill">TRT / Cruise</div>
+        <div class="mode-title">Recovery & Baseline</div>
+        <div class="mode-desc">Time off cycle, TRT maintenance, or post-blast recovery. Track bloodwork health, baseline wellness, and hormone stability. No show pressure — just sustainability.</div>
+        <div class="mode-metrics">
+          <div class="mode-metric"><span class="mode-metric-dot"></span>Bloodwork health grade</div>
+          <div class="mode-metric"><span class="mode-metric-dot"></span>Baseline HRV & sleep trends</div>
+          <div class="mode-metric"><span class="mode-metric-dot"></span>Hormone stability tracking</div>
+          <div class="mode-metric"><span class="mode-metric-dot"></span>Recovery indicators</div>
+        </div>
+      </div>
+      <div class="mode-card offseason">
+        <div class="mode-pill">Offseason</div>
+        <div class="mode-title">Growth & Volume</div>
+        <div class="mode-desc">No show on the calendar. Full focus on building. Track body composition changes, training volume, nutrition markers, and progressive overload week over week.</div>
+        <div class="mode-metrics">
+          <div class="mode-metric"><span class="mode-metric-dot"></span>Body composition trends</div>
+          <div class="mode-metric"><span class="mode-metric-dot"></span>Training volume tracking</div>
+          <div class="mode-metric"><span class="mode-metric-dot"></span>Strength & PR progression</div>
+          <div class="mode-metric"><span class="mode-metric-dot"></span>Caloric surplus indicators</div>
+        </div>
+      </div>
+      <div class="mode-card perf">
+        <div class="mode-pill">Performance / Prep</div>
+        <div class="mode-title">Show-Ready Precision</div>
+        <div class="mode-desc">Show date is set. Every day counts. Live countdown to stage, peak week protocol tracking, condition check-ins, and shareable weekly progress cards for your coach.</div>
+        <div class="mode-metrics">
+          <div class="mode-metric"><span class="mode-metric-dot"></span>Show date countdown</div>
+          <div class="mode-metric"><span class="mode-metric-dot"></span>Condition check-ins</div>
+          <div class="mode-metric"><span class="mode-metric-dot"></span>Peak week protocol log</div>
+          <div class="mode-metric"><span class="mode-metric-dot"></span>Shareable progress cards</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── HOW IT WORKS ── -->
+<section class="section" id="how-it-works">
+  <div class="container">
+    <div class="section-header center">
+      <div class="section-tag">How It Works</div>
+      <h2 class="section-title">Up and running in 3 minutes</h2>
+      <p class="section-sub">No spreadsheets. No manual exports. Just log in and start tracking.</p>
+    </div>
+
+    <div class="steps-grid">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div>
+          <div class="step-title">Set Your Mode</div>
+          <div class="step-desc">Choose TRT/Cruise, Offseason, or Performance on your first login. Your dashboard and metrics configure instantly. Change anytime.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div>
+          <div class="step-title">Log Your Data</div>
+          <div class="step-desc">Daily check-ins take under 60 seconds. Connect Hevy for automatic workout sync. Upload bloodwork whenever panels come back.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div>
+          <div class="step-title">See Your Trends</div>
+          <div class="step-desc">Watch your readiness, compliance streak, and bloodwork markers trend over time. Share your Coach Report with one link.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── COACH LAYER ── -->
+<section class="section" id="coach">
+  <div class="container">
+    <div class="coach-split">
+      <!-- Visual -->
+      <div class="coach-visual">
+        <div class="coach-visual-header">
+          <span>Athletes &mdash; Coach View</span>
+          <span style="color:var(--gold);font-size:10px;">3 active</span>
+        </div>
+        <div class="coach-athlete-list">
+          <div class="coach-athlete">
+            <div class="athlete-avatar">JR</div>
+            <div>
+              <div class="athlete-name">J. Rodriguez</div>
+              <div class="athlete-meta">Check-in: 2 days ago</div>
+            </div>
+            <span class="athlete-badge badge-perf">Performance</span>
+          </div>
+          <div class="coach-athlete">
+            <div class="athlete-avatar">MB</div>
+            <div>
+              <div class="athlete-name">M. Brooks</div>
+              <div class="athlete-meta">Check-in: Today</div>
+            </div>
+            <span class="athlete-badge badge-off">Offseason</span>
+          </div>
+          <div class="coach-athlete">
+            <div class="athlete-avatar">DK</div>
+            <div>
+              <div class="athlete-name">D. Kim</div>
+              <div class="athlete-meta">Check-in: Yesterday</div>
+            </div>
+            <span class="athlete-badge badge-trt">TRT</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Copy -->
+      <div>
+        <div class="section-tag">For Coaches</div>
+        <h2 class="section-title">Built for coaches,<br>not just athletes</h2>
+        <p class="section-sub">Manage your entire roster from one dashboard. Get the full picture on every athlete without back-and-forth messages.</p>
+
+        <div class="coach-features">
+          <div class="coach-feature">
+            <div class="coach-feature-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            </div>
+            <div>
+              <div class="coach-feature-title">Secure Share Tokens</div>
+              <div class="coach-feature-desc">Athletes connect to your roster with a unique token. No email sharing, no manual linking, no security gaps.</div>
+            </div>
+          </div>
+          <div class="coach-feature">
+            <div class="coach-feature-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            </div>
+            <div>
+              <div class="coach-feature-title">Coach Notes on Check-Ins</div>
+              <div class="coach-feature-desc">Leave coaching feedback directly on each weekly check-in. Athletes see your notes in context with their data.</div>
+            </div>
+          </div>
+          <div class="coach-feature">
+            <div class="coach-feature-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            </div>
+            <div>
+              <div class="coach-feature-title">Full Coach Report</div>
+              <div class="coach-feature-desc">One-page snapshot of each athlete's bloodwork, compliance, wellness trends, and protocols. Print-ready or shareable link.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── TESTIMONIALS ── -->
+<section class="section" id="testimonials">
+  <div class="container">
+    <div class="section-header center">
+      <div class="section-tag">Early Athletes</div>
+      <h2 class="section-title">What the community is saying</h2>
+    </div>
+
+    <div class="testimonials-grid">
+      <div class="testimonial-card">
+        <div class="testimonial-stars">
+          <span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>
+        </div>
+        <div class="testimonial-quote">"Finally a tool that actually gets prep tracking. My coach and I are on the same page every single week. The coach report alone is worth it."</div>
+        <div class="testimonial-author">
+          <div class="author-avatar">AK</div>
+          <div>
+            <div class="author-name">Alex K.</div>
+            <div class="author-title">NPC Competitor · Men's Physique</div>
+          </div>
+        </div>
+      </div>
+      <div class="testimonial-card">
+        <div class="testimonial-stars">
+          <span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>
+        </div>
+        <div class="testimonial-quote">"I've tried spreadsheets, notes apps, everything. HRT Tracker is the first thing that actually stuck. The readiness score changed how I plan my training weeks."</div>
+        <div class="testimonial-author">
+          <div class="author-avatar">SR</div>
+          <div>
+            <div class="author-name">Sofia R.</div>
+            <div class="author-title">IFBB Pro · Women's Figure</div>
+          </div>
+        </div>
+      </div>
+      <div class="testimonial-card">
+        <div class="testimonial-stars">
+          <span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>
+        </div>
+        <div class="testimonial-quote">"As a coach managing 12 athletes, the roster view saves me hours a week. Every athlete's check-in, bloodwork, and protocol in one place. Game changer."</div>
+        <div class="testimonial-author">
+          <div class="author-avatar">MT</div>
+          <div>
+            <div class="author-name">Marcus T.</div>
+            <div class="author-title">Competition Coach · 12 Athletes</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── PRICING ── -->
+<section class="section" id="pricing">
+  <div class="container">
+    <div class="section-header center">
+      <div class="section-tag">Pricing</div>
+      <h2 class="section-title">Start free. Scale when ready.</h2>
+      <p class="section-sub">Early athletes get full access while we're in beta. No credit card required.</p>
+    </div>
+
+    <div class="pricing-grid">
+      <div class="pricing-card">
+        <div class="pricing-tier">Free Beta</div>
+        <div class="pricing-price">$0</div>
+        <div class="pricing-cadence">While in beta &mdash; full access</div>
+        <div class="pricing-divider"></div>
+        <div class="pricing-features">
+          <div class="pricing-feature">
+            <div class="pricing-check">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            All 3 training modes
+          </div>
+          <div class="pricing-feature">
+            <div class="pricing-check">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            Bloodwork & protocol tracking
+          </div>
+          <div class="pricing-feature">
+            <div class="pricing-check">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            Weekly check-ins & readiness score
+          </div>
+          <div class="pricing-feature">
+            <div class="pricing-check">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            Hevy workout sync
+          </div>
+          <div class="pricing-feature">
+            <div class="pricing-check">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            Coach report (1 coach connection)
+          </div>
+        </div>
+        <a href="/index.html" class="btn btn-gold-outline pricing-cta">Get Started Free</a>
+      </div>
+
+      <div class="pricing-card featured">
+        <div class="pricing-featured-badge">Coming Soon</div>
+        <div class="pricing-tier">Pro</div>
+        <div class="pricing-price"><span>$</span>19</div>
+        <div class="pricing-cadence">per month, billed monthly</div>
+        <div class="pricing-divider"></div>
+        <div class="pricing-features">
+          <div class="pricing-feature">
+            <div class="pricing-check">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            Everything in Free
+          </div>
+          <div class="pricing-feature">
+            <div class="pricing-check">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            Unlimited athlete roster (coaches)
+          </div>
+          <div class="pricing-feature">
+            <div class="pricing-check">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            Advanced bloodwork analytics
+          </div>
+          <div class="pricing-feature">
+            <div class="pricing-check">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            Shareable progress cards
+          </div>
+          <div class="pricing-feature">
+            <div class="pricing-check">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            Priority support
+          </div>
+        </div>
+        <a href="/index.html" class="btn btn-gold pricing-cta">Join Waitlist</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FAQ ── -->
+<section class="section" id="faq">
+  <div class="container">
+    <div class="section-header center">
+      <div class="section-tag">FAQ</div>
+      <h2 class="section-title">Common questions</h2>
+    </div>
+
+    <div class="faq-list">
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          Is my data private and secure?
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+        <div class="faq-a">Absolutely. All data is stored in your private Supabase account, protected by Google OAuth and row-level security. Your coach can only see what you explicitly share via your token. We never sell, share, or analyze your personal health data.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          Do I need a coach to use HRT Tracker?
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+        <div class="faq-a">No. HRT Tracker is designed for self-coaching athletes too. You get the full dashboard, all tracking features, and your own Coach Report — it just means you're both the athlete and the coach. Many of our users never connect an external coach.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          Does it work on mobile?
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+        <div class="faq-a">Yes — it's a PWA (Progressive Web App) fully optimized for iOS and Android. Add it to your home screen from Safari or Chrome for a native app experience with offline support. All data syncs instantly across your devices.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          How does Hevy integration work?
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+        <div class="faq-a">Enter your Hevy API key once in Settings and your workouts sync automatically. No manual logging required. Your training volume, exercise history, and PRs appear alongside your protocol and bloodwork data so you see the full performance picture.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          What does the TRT/Cruise mode track differently?
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+        <div class="faq-a">TRT/Cruise mode shifts dashboard focus to bloodwork health, baseline wellness, and hormone stability rather than peak performance metrics. It's designed for recovery phases, maintenance TRT, or time off a PED cycle — no show countdown, no aggressive compliance pressure, just sustainable health tracking.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          When will the Pro plan be available?
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+        <div class="faq-a">Pro is currently in development. Athletes who sign up during beta will receive early-access pricing when Pro launches — significantly below the standard rate. Get in now and lock in your founder pricing.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── CTA BANNER ── -->
+<section id="cta-banner">
+  <div class="container">
+    <div class="cta-banner-title">Ready to track like a pro?</div>
+    <div class="cta-banner-sub">Join athletes who have already moved past spreadsheets.</div>
+    <div class="cta-banner-ctas">
+      <a class="btn btn-gold btn-lg" href="/index.html">Start Tracking Free</a>
+      <a class="btn btn-ghost btn-lg" href="#faq">Still have questions &rarr;</a>
+    </div>
+  </div>
+</section>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div>
+        <a class="footer-brand-logo" href="/">
+          <img src="/apple-touch-icon.png" alt="HRT Tracker">
+          <span class="footer-brand-name">HRT Tracker</span>
+        </a>
+        <div class="footer-brand-desc">The protocol tracking platform built for competitive athletes who demand precision.</div>
+      </div>
+      <div>
+        <div class="footer-col-title">Product</div>
+        <div class="footer-links">
+          <a href="#features">Features</a>
+          <a href="#modes">Training Modes</a>
+          <a href="#pricing">Pricing</a>
+          <a href="/index.html">Sign In</a>
+        </div>
+      </div>
+      <div>
+        <div class="footer-col-title">For Athletes</div>
+        <div class="footer-links">
+          <a href="#how-it-works">How It Works</a>
+          <a href="#coach">For Coaches</a>
+          <a href="#faq">FAQ</a>
+          <a href="#testimonials">Community</a>
+        </div>
+      </div>
+      <div>
+        <div class="footer-col-title">Company</div>
+        <div class="footer-links">
+          <a href="#">About</a>
+          <a href="#">Privacy Policy</a>
+          <a href="#">Terms of Service</a>
+          <a href="mailto:support@cruznetllc.com">Contact</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <div class="footer-copy">&copy; 2026 CruzNet LLC. All rights reserved.</div>
+      <div class="footer-legal">
+        <a href="#">Privacy</a>
+        <a href="#">Terms</a>
+        <a href="#">Cookies</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+function toggleMobileMenu() {
+  const menu = document.getElementById('mobile-menu');
+  const open = document.getElementById('nav-icon-open');
+  const close = document.getElementById('nav-icon-close');
+  const isOpen = menu.classList.toggle('open');
+  open.style.display = isOpen ? 'none' : 'block';
+  close.style.display = isOpen ? 'block' : 'none';
+}
+function closeMobileMenu() {
+  document.getElementById('mobile-menu').classList.remove('open');
+  document.getElementById('nav-icon-open').style.display = 'block';
+  document.getElementById('nav-icon-close').style.display = 'none';
+}
+function toggleFaq(btn) {
+  const item = btn.closest('.faq-item');
+  const wasOpen = item.classList.contains('open');
+  document.querySelectorAll('.faq-item.open').forEach(i => i.classList.remove('open'));
+  if (!wasOpen) item.classList.add('open');
+}
+
+// Nav border on scroll
+window.addEventListener('scroll', () => {
+  document.getElementById('nav').style.borderBottomColor =
+    window.scrollY > 10 ? 'rgba(245,197,24,0.12)' : 'rgba(255,255,255,0.08)';
+}, { passive: true });
+</script>
+</body>
+</html>
