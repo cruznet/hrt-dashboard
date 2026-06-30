@@ -5546,9 +5546,27 @@ async function renderCoachReport() {
   const today     = localDate();
   const sections  = [];
 
+  // ── Section header helper ──
+  const rptHeader = (iconSvg, title, meta, badgeHtml = '') => `
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;padding-bottom:12px;border-bottom:0.5px solid rgba(255,255,255,0.06);">
+      <div style="display:flex;align-items:center;gap:9px;">
+        <div style="width:30px;height:30px;border-radius:8px;background:rgba(245,197,24,0.1);border:0.5px solid rgba(245,197,24,0.22);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--primary-bright)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${iconSvg}</svg>
+        </div>
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--text-primary);line-height:1.2;">${title}</div>
+          ${meta ? `<div style="font-size:11px;color:var(--text-muted);margin-top:1px;">${meta}</div>` : ''}
+        </div>
+      </div>
+      ${badgeHtml}
+    </div>`;
+
   // ── 1. Athlete + Show Header ──
   {
     const athleteName = profile?.name || _supaUser?.user_metadata?.full_name || '';
+    const mode = localStorage.getItem('hrt_mode') || 'performance';
+    const modeLabel = mode === 'trt' ? 'TRT / Cruise' : mode === 'offseason' ? 'Offseason' : 'Performance';
+    const modeClr   = mode === 'trt' ? '#a78bfa' : mode === 'offseason' ? '#4ade80' : 'var(--primary-bright)';
     let showBlock = '';
     if (show?.date) {
       const showD  = new Date(show.date + 'T00:00:00');
@@ -5557,25 +5575,34 @@ async function renderCoachReport() {
       const wks    = Math.ceil(days / 7);
       const meta   = [show.federation, show.division].filter(Boolean).join(' · ');
       showBlock = `
-        <div style="margin-top:8px;padding-top:8px;border-top:0.5px solid rgba(245,197,24,0.2);">
-          ${meta ? `<div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--primary);margin-bottom:3px;">${escHtml(meta)}</div>` : ''}
-          ${show.name ? `<div style="font-size:13px;font-weight:600;color:var(--text-primary);">${escHtml(show.name)}</div>` : ''}
-          <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">${days > 0 ? `<strong style="color:var(--primary-bright);">${wks} weeks out</strong> · ` : ''}Show date: ${show.date}</div>
+        <div style="margin-top:12px;padding-top:12px;border-top:0.5px solid rgba(245,197,24,0.15);display:flex;align-items:center;gap:12px;">
+          <div>
+            ${meta ? `<div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--primary);margin-bottom:2px;">${escHtml(meta)}</div>` : ''}
+            ${show.name ? `<div style="font-size:13px;font-weight:600;color:var(--text-primary);">${escHtml(show.name)}</div>` : ''}
+            <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Show date: ${show.date}</div>
+          </div>
+          ${days > 0 ? `<div style="margin-left:auto;text-align:center;flex-shrink:0;background:rgba(245,197,24,0.1);border:0.5px solid rgba(245,197,24,0.25);border-radius:10px;padding:8px 14px;">
+            <div style="font-size:24px;font-weight:800;font-family:var(--font-data);color:var(--primary-bright);line-height:1;">${wks}</div>
+            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--primary);margin-top:2px;">Weeks Out</div>
+          </div>` : ''}
         </div>`;
     }
     sections.push(`
-      <div class="report-card card" style="background:linear-gradient(135deg,rgba(245,197,24,0.07) 0%,rgba(245,197,24,0.01) 100%);border-color:rgba(245,197,24,0.28);margin-bottom:14px;">
+      <div class="report-card card" style="background:linear-gradient(135deg,rgba(245,197,24,0.07) 0%,rgba(245,197,24,0.01) 100%);border-color:rgba(245,197,24,0.28);margin-bottom:14px;padding:16px 18px;">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
           <div style="flex:1;">
-            <div style="font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--primary);margin-bottom:4px;">Prep Report</div>
-            ${athleteName ? `<div style="font-size:18px;font-weight:700;color:var(--text-primary);">${escHtml(athleteName)}</div>` : ''}
-            ${showBlock}
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+              <img src="/apple-touch-icon.png" style="width:28px;height:28px;border-radius:7px;" alt="">
+              <div style="font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--primary);">Coach Report</div>
+            </div>
+            ${athleteName ? `<div style="font-size:20px;font-weight:700;color:var(--text-primary);letter-spacing:-0.3px;">${escHtml(athleteName)}</div>` : ''}
           </div>
           <div style="text-align:right;flex-shrink:0;">
-            <div style="font-size:10px;color:var(--text-muted);">Generated</div>
-            <div style="font-size:12px;font-weight:600;color:var(--text-secondary);">${today}</div>
+            <div style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:99px;background:${modeClr}18;color:${modeClr};border:0.5px solid ${modeClr}40;margin-bottom:6px;">${modeLabel}</div>
+            <div style="font-size:11px;color:var(--text-muted);">${today}</div>
           </div>
         </div>
+        ${showBlock}
       </div>`);
   }
 
@@ -5601,8 +5628,8 @@ async function renderCoachReport() {
     ).join('');
 
     sections.push(`
-      <div class="report-card card" style="margin-bottom:14px;">
-        <div class="report-card-title card-title">Weekly Check-Ins</div>
+      <div class="report-card card" style="margin-bottom:14px;padding:16px 18px;">
+        ${rptHeader('<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/>', 'Weekly Check-Ins', `${checkins.length} entries · last ${checkins.length > 0 ? checkins[0].check_in_date : ''}`)}
         <div style="overflow-x:auto;">
           <table style="width:100%;border-collapse:collapse;min-width:460px;">
             <thead><tr style="border-bottom:1px solid var(--border);">
@@ -5633,9 +5660,9 @@ async function renderCoachReport() {
       return `<tr style="border-bottom:0.5px solid var(--border);"><td style="padding:5px 0;color:var(--text-muted);font-size:12px;">${m.label}</td><td style="font-family:var(--font-data);font-weight:600;color:${m.color};">${val}${diffStr}</td><td style="color:var(--text-muted);font-size:12px;">${m.unit}</td></tr>`;
     }).join('');
     sections.push(`
-      <div class="report-card card" style="margin-bottom:14px;">
-        <div class="report-card-title card-title">Physique — ${phLatest.date}${daysAgo > 0 ? ` <span style="font-size:12px;color:var(--text-muted);font-weight:400;">(${daysAgo}d ago)</span>` : ''}</div>
-        ${phLatest.notes ? `<div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">${escHtml(phLatest.notes)}</div>` : ''}
+      <div class="report-card card" style="margin-bottom:14px;padding:16px 18px;">
+        ${rptHeader('<path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/>', 'Physique', `${phLatest.date}${daysAgo > 0 ? ` · ${daysAgo}d ago` : ''}`)}
+        ${phLatest.notes ? `<div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;font-style:italic;">${escHtml(phLatest.notes)}</div>` : ''}
         <table style="width:100%;border-collapse:collapse;">
           <thead><tr><th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;padding-bottom:4px;">Metric</th><th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;">Value</th><th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;">Unit</th></tr></thead>
           <tbody>${rows}</tbody>
@@ -5670,14 +5697,8 @@ async function renderCoachReport() {
       }).join('');
 
     sections.push(`
-      <div class="report-card card" style="margin-bottom:14px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-          <div class="report-card-title card-title" style="margin-bottom:0;">Bloodwork — ${bwLatest.date}${daysAgo > 0 ? ` <span style="font-size:12px;color:var(--text-muted);font-weight:400;">(${daysAgo}d ago)</span>` : ''}</div>
-          <div style="text-align:center;flex-shrink:0;">
-            <div style="font-size:24px;font-weight:800;font-family:var(--font-data);color:${gradeClr};line-height:1;">${grade}</div>
-            <div style="font-size:9px;font-weight:700;letter-spacing:0.1em;color:${gradeClr};text-transform:uppercase;">${okCount}/${allKeys.length} OK</div>
-          </div>
-        </div>
+      <div class="report-card card" style="margin-bottom:14px;padding:16px 18px;">
+        ${rptHeader('<path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/>', 'Bloodwork', `${bwLatest.date}${daysAgo > 0 ? ` · ${daysAgo}d ago` : ''}`, `<div style="text-align:center;background:${gradeClr}18;border:0.5px solid ${gradeClr}40;border-radius:10px;padding:6px 12px;"><div style="font-size:22px;font-weight:800;font-family:var(--font-data);color:${gradeClr};line-height:1;">${grade}</div><div style="font-size:9px;font-weight:700;color:${gradeClr};text-transform:uppercase;letter-spacing:0.08em;margin-top:1px;">${okCount}/${allKeys.length} OK</div></div>`)}
         ${bwLatest.lab ? `<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">${escHtml(bwLatest.lab)}</div>` : ''}
         <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px;">${flagHtml}</div>
         ${bwLatest.notes ? `<div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;padding:8px 10px;background:var(--surface-2);border-radius:var(--radius);">${escHtml(bwLatest.notes)}</div>` : ''}
@@ -5702,9 +5723,9 @@ async function renderCoachReport() {
       return `<tr><td style="color:var(--text-primary);font-weight:500;">${escHtml(c.name)}</td><td style="font-family:var(--font-data);color:var(--primary-bright);">${dose}${escHtml(c.unit||'mg')}</td><td style="color:var(--text-muted);">${escHtml(freq)}</td></tr>`;
     }).join('');
     sections.push(`
-      <div class="report-card card" style="margin-bottom:14px;">
-        <div class="report-card-title card-title">Active Protocol — ${escHtml(protocol.name)}</div>
-        <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">Phase: ${escHtml(protocol.phase||'—')} · ${escHtml(String(protocol.weeks||'?'))} weeks · Started ${escHtml(protocol.startDate||'—')}</div>
+      <div class="report-card card" style="margin-bottom:14px;padding:16px 18px;">
+        ${rptHeader('<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>', 'Active Protocol', `${escHtml(protocol.name || '—')} · Phase ${escHtml(protocol.phase||'—')} · ${escHtml(String(protocol.weeks||'?'))}wk`)}
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">Started ${escHtml(protocol.startDate||'—')}</div>
         <table style="width:100%;border-collapse:collapse;font-size:13px;">
           <thead><tr style="border-bottom:0.5px solid var(--border);">
             <th style="text-align:left;padding:4px 0;font-size:11px;color:var(--text-muted);font-weight:500;">Compound</th>
@@ -5728,9 +5749,9 @@ async function renderCoachReport() {
       <td style="font-family:var(--font-data);color:var(--text-secondary);">${v.energy ? v.energy+'/10' : '—'}</td>
     </tr>`).join('');
     sections.push(`
-      <div class="report-card card" style="margin-bottom:14px;">
-        <div class="report-card-title card-title">Recent Vitals Log</div>
-        <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">Manual log entries — weight &amp; resting HR tracked via Apple Health</div>
+      <div class="report-card card" style="margin-bottom:14px;padding:16px 18px;">
+        ${rptHeader('<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>', 'Recent Vitals', 'Manual log · weight &amp; resting HR via Apple Health')}
+
         <table style="width:100%;border-collapse:collapse;">
           <thead><tr><th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;padding-bottom:4px;">Date</th><th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;">BP</th><th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;">Glucose</th><th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;">Mood</th><th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;">Energy</th></tr></thead>
           <tbody>${rows}</tbody>
@@ -5769,8 +5790,8 @@ async function renderCoachReport() {
     if (hkRows.length) {
       sections.push(`
         <div class="report-card card" style="margin-bottom:14px;">
-          <div class="report-card-title card-title">Apple Health</div>
-          <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">Most recent readings imported from Apple Health</div>
+          ${rptHeader('<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>', 'Apple Health', 'Most recent readings imported from HealthKit')}
+
           <table style="width:100%;border-collapse:collapse;">
             <thead><tr>
               <th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;padding-bottom:4px;">Metric</th>
