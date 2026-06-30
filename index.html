@@ -906,6 +906,10 @@ body {
           <i class="ti ti-shield-check" style="color:var(--green);"></i>
           Your data is private and encrypted. Only you can access it.
         </div>
+        <div id="auth-pwa-note" style="display:none;margin-top:14px;padding:10px 12px;border-radius:8px;background:rgba(245,197,24,0.07);border:0.5px solid rgba(245,197,24,0.2);font-size:12px;color:var(--text-muted);line-height:1.55;text-align:left;">
+          <i class="ti ti-brand-apple" style="color:var(--primary-bright);margin-right:4px;"></i>
+          <strong style="color:var(--text-secondary);">Home screen app?</strong> This app has its own separate session from Safari. Sign in here to load your data.
+        </div>
       </div>
     </div>
 
@@ -2367,8 +2371,16 @@ async function _initSupaAuth() {
 }
 
 async function supaSignIn() {
-  const { error } = await _supa.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } });
+  // Use full current URL (minus hash) so iOS PWA receives the redirect in the same webview context
+  const redirectTo = window.location.href.split('#')[0];
+  const { error } = await _supa.auth.signInWithOAuth({ provider: 'google', options: { redirectTo } });
   if (error) { console.error('[auth] signIn failed:', error); showToast('Sign-in failed: ' + error.message, 'error'); }
+}
+
+function _checkPwaAuthNote() {
+  const isPwa = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+  const el = document.getElementById('auth-pwa-note');
+  if (isPwa && el) el.style.display = 'block';
 }
 async function supaSignOut() {
   localStorage.removeItem(_LAST_ACTIVE_KEY);
@@ -2439,7 +2451,7 @@ function showApp() {
   document.getElementById('auth-overlay').classList.remove('visible');
   _resetInactivityTimer();
 }
-function showAuthOverlay() { document.getElementById('auth-overlay').classList.add('visible'); }
+function showAuthOverlay() { document.getElementById('auth-overlay').classList.add('visible'); _checkPwaAuthNote(); }
 
 async function loadUserData() {
   if (!_supa || !_supaUser) return;
@@ -4638,26 +4650,73 @@ function renderCoachReport() {
   if (vitals.length) {
     const rows = vitals.map(v => `<tr style="border-bottom:0.5px solid var(--border);">
       <td style="padding:5px 0;font-family:var(--font-data);font-size:12px;color:var(--text-muted);">${v.date}</td>
-      <td style="font-family:var(--font-data);color:var(--text-secondary);">${v.weight ? v.weight+' lbs' : '—'}</td>
       <td style="font-family:var(--font-data);color:var(--text-secondary);">${v.bp || '—'}</td>
       <td style="font-family:var(--font-data);color:var(--text-secondary);">${v.glucose ? v.glucose+' mg/dL' : '—'}</td>
       <td style="font-family:var(--font-data);color:var(--text-secondary);">${v.mood ? v.mood+'/10' : '—'}</td>
+      <td style="font-family:var(--font-data);color:var(--text-secondary);">${v.energy ? v.energy+'/10' : '—'}</td>
     </tr>`).join('');
     sections.push(`
       <div class="report-card card" style="margin-bottom:14px;">
-        <div class="report-card-title card-title">Recent Vitals</div>
+        <div class="report-card-title card-title">Recent Vitals Log</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">Manual log entries — weight &amp; resting HR tracked via Apple Health</div>
         <table style="width:100%;border-collapse:collapse;">
-          <thead><tr><th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;padding-bottom:4px;">Date</th><th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;">Weight</th><th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;">BP</th><th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;">Glucose</th><th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;">Mood</th></tr></thead>
+          <thead><tr><th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;padding-bottom:4px;">Date</th><th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;">BP</th><th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;">Glucose</th><th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;">Mood</th><th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;">Energy</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>`);
+  }
+
+  // ── Apple Health ──
+  {
+    const hkPairs = [
+      ['hrv_ms',             'HRV',           'ms',    v => v >= 50 ? 'var(--green)' : v >= 30 ? 'var(--amber)' : 'var(--red)'],
+      ['resting_hr',         'Resting HR',    'bpm',   v => v <= 60 ? 'var(--green)' : v <= 80 ? 'var(--amber)' : 'var(--red)'],
+      ['spo2_pct',           'SpO₂',          '%',     v => v >= 97 ? 'var(--green)' : v >= 94 ? 'var(--amber)' : 'var(--red)'],
+      ['sleep_total_hr',     'Sleep Total',   'hr',    v => v >= 7.5 ? 'var(--green)' : v >= 6 ? 'var(--amber)' : 'var(--red)'],
+      ['sleep_deep_hr',      'Deep Sleep',    'hr',    null],
+      ['sleep_rem_hr',       'REM Sleep',     'hr',    null],
+      ['steps',              'Steps',         'steps', v => v >= 10000 ? 'var(--green)' : v >= 7000 ? 'var(--amber)' : 'var(--red)'],
+      ['active_energy_kcal', 'Active Energy', 'kcal',  null],
+      ['body_fat_pct',       'Body Fat',      '%',     v => v < 18 ? 'var(--green)' : v < 25 ? 'var(--amber)' : 'var(--red)'],
+      ['weight_lbs',         'Weight',        'lbs',   null],
+    ];
+    const hkRows = [];
+    for (const [key, label, unit, colorFn] of hkPairs) {
+      const latest = hkLatest(key);
+      if (!latest) continue;
+      const v = latest.value;
+      const displayVal = unit === 'steps' ? Math.round(v).toLocaleString() : unit === 'hr' ? v.toFixed(1) : unit === '%' ? v.toFixed(1) : Math.round(v);
+      const color = colorFn ? colorFn(v) : 'var(--text-secondary)';
+      hkRows.push(`<tr style="border-bottom:0.5px solid var(--border);">
+        <td style="padding:5px 0;color:var(--text-muted);font-size:12px;">${label}</td>
+        <td style="font-family:var(--font-data);font-weight:600;color:${color};">${displayVal}</td>
+        <td style="color:var(--text-muted);font-size:12px;">${unit}</td>
+        <td style="color:var(--text-muted);font-size:11px;">${latest.date}</td>
+      </tr>`);
+    }
+    if (hkRows.length) {
+      sections.push(`
+        <div class="report-card card" style="margin-bottom:14px;">
+          <div class="report-card-title card-title">Apple Health</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">Most recent readings imported from Apple Health</div>
+          <table style="width:100%;border-collapse:collapse;">
+            <thead><tr>
+              <th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;padding-bottom:4px;">Metric</th>
+              <th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;">Value</th>
+              <th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;">Unit</th>
+              <th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;">Date</th>
+            </tr></thead>
+            <tbody>${hkRows.join('')}</tbody>
+          </table>
+        </div>`);
+    }
   }
 
   if (!sections.length) {
     el.innerHTML = `<div style="text-align:center;padding:64px 0;">
       <i class="ti ti-file-text" style="font-size:44px;color:var(--text-muted);opacity:0.25;"></i>
       <div style="font-size:15px;color:var(--text-secondary);margin:14px 0 6px;font-weight:500;">No data yet</div>
-      <div style="font-size:13px;color:var(--text-muted);">Log bloodwork, physique, or vitals to generate a report</div>
+      <div style="font-size:13px;color:var(--text-muted);">Log bloodwork, physique, or vitals — or import data via Apple Health to generate a report</div>
     </div>`;
     return;
   }
