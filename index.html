@@ -2232,6 +2232,18 @@ body {
         </div>
         <div style="font-size:11px;color:var(--text-muted);margin-top:8px;">Performance mode unlocks AAS compounds, cycle tracking, and advanced calculators.</div>
         <hr class="divider">
+        <div class="card-title">Password</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">Set or change your password to enable email sign-in alongside Google.</div>
+        <div class="form-group">
+          <label class="form-label">New Password</label>
+          <input type="password" class="form-input" id="settings-pw" placeholder="8+ characters" autocomplete="new-password">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Confirm Password</label>
+          <input type="password" class="form-input" id="settings-pw-confirm" placeholder="Re-enter password" autocomplete="new-password">
+        </div>
+        <button class="btn-primary" onclick="settingsSetPassword()" id="settings-pw-btn">Set Password</button>
+        <hr class="divider">
         <div class="card-title">Supabase</div>
         <div class="form-group">
           <label class="form-label">Supabase URL</label>
@@ -2501,6 +2513,24 @@ async function supaEmailAuth() {
     btn.disabled    = false;
     btn.textContent = origText;
   }
+}
+
+async function settingsSetPassword() {
+  const pw  = document.getElementById('settings-pw').value;
+  const pw2 = document.getElementById('settings-pw-confirm').value;
+  const btn = document.getElementById('settings-pw-btn');
+  if (!pw)           { showToast('Enter a new password', 'warn');              return; }
+  if (pw.length < 8) { showToast('Password must be at least 8 characters', 'warn'); return; }
+  if (pw !== pw2)    { showToast('Passwords do not match', 'error');           return; }
+
+  btn.disabled = true; btn.textContent = 'Saving…';
+  const { error } = await _supa.auth.updateUser({ password: pw });
+  btn.disabled = false; btn.textContent = 'Set Password';
+
+  if (error) { showToast(error.message, 'error'); return; }
+  document.getElementById('settings-pw').value = '';
+  document.getElementById('settings-pw-confirm').value = '';
+  showToast('Password set — you can now sign in with email + this password', 'success');
 }
 
 async function supaResetPassword() {
