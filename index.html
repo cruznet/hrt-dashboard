@@ -5225,7 +5225,6 @@ async function renderCoachReport() {
   const el = document.getElementById('report-content');
   if (!el) return;
 
-  // Ensure HealthKit data is loaded before rendering
   if (!_hkSupaData) {
     el.innerHTML = `<div style="text-align:center;padding:40px 0;color:var(--text-muted);font-size:13px;">
       <i class="ti ti-loader-2" style="font-size:28px;animation:spin 1s linear infinite;display:block;margin-bottom:10px;"></i>
@@ -5233,18 +5232,169 @@ async function renderCoachReport() {
     await hkLoadFromSupabase();
   }
 
-  const protocol = (() => { try { return JSON.parse(localStorage.getItem('hrt_active_protocol_data')); } catch { return null; } })();
-  const panels   = bwLoad().sort((a, b) => b.date.localeCompare(a.date));
-  const bwLatest = panels[0] || null;
-  const measList = measLoad().sort((a, b) => b.date.localeCompare(a.date));
-  const phLatest = measList[0] || null;
-  const phPrev   = measList[1] || null;
-  const vitals   = lsGet('hrt_vitals_log', []).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
+  const protocol  = (() => { try { return JSON.parse(localStorage.getItem('hrt_active_protocol_data')); } catch { return null; } })();
+  const panels    = bwLoad().sort((a, b) => b.date.localeCompare(a.date));
+  const bwLatest  = panels[0] || null;
+  const bwPrev    = panels[1] || null;
+  const measList  = measLoad().sort((a, b) => b.date.localeCompare(a.date));
+  const phLatest  = measList[0] || null;
+  const phPrev    = measList[1] || null;
+  const vitals    = lsGet('hrt_vitals_log', []).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
+  const checkins  = lsGet('hrt_weekly_checkins', []).sort((a,b) => b.check_in_date.localeCompare(a.check_in_date)).slice(0, 4);
+  const show      = getShow();
+  const profile   = lsGet('hrt_user_profile', null);
+  const today     = localDate();
+  const sections  = [];
 
-  const today    = localDate();
-  const sections = [];
+  // ── 1. Athlete + Show Header ──
+  {
+    const athleteName = profile?.name || _supaUser?.user_metadata?.full_name || '';
+    let showBlock = '';
+    if (show?.date) {
+      const showD  = new Date(show.date + 'T00:00:00');
+      const todayD = new Date(); todayD.setHours(0,0,0,0);
+      const days   = Math.round((showD - todayD) / 86400000);
+      const wks    = Math.ceil(days / 7);
+      const meta   = [show.federation, show.division].filter(Boolean).join(' · ');
+      showBlock = `
+        <div style="margin-top:8px;padding-top:8px;border-top:0.5px solid rgba(245,197,24,0.2);">
+          ${meta ? `<div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--primary);margin-bottom:3px;">${escHtml(meta)}</div>` : ''}
+          ${show.name ? `<div style="font-size:13px;font-weight:600;color:var(--text-primary);">${escHtml(show.name)}</div>` : ''}
+          <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">${days > 0 ? `<strong style="color:var(--primary-bright);">${wks} weeks out</strong> · ` : ''}Show date: ${show.date}</div>
+        </div>`;
+    }
+    sections.push(`
+      <div class="report-card card" style="background:linear-gradient(135deg,rgba(245,197,24,0.07) 0%,rgba(245,197,24,0.01) 100%);border-color:rgba(245,197,24,0.28);margin-bottom:14px;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+          <div style="flex:1;">
+            <div style="font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--primary);margin-bottom:4px;">Prep Report</div>
+            ${athleteName ? `<div style="font-size:18px;font-weight:700;color:var(--text-primary);">${escHtml(athleteName)}</div>` : ''}
+            ${showBlock}
+          </div>
+          <div style="text-align:right;flex-shrink:0;">
+            <div style="font-size:10px;color:var(--text-muted);">Generated</div>
+            <div style="font-size:12px;font-weight:600;color:var(--text-secondary);">${today}</div>
+          </div>
+        </div>
+      </div>`);
+  }
 
-  // ── Active Protocol ──
+  // ── 2. Weekly Check-Ins ──
+  if (checkins.length) {
+    const scoreClr = v => v == null ? 'var(--text-muted)' : v >= 8 ? '#4ADE80' : v >= 5 ? '#F5C518' : '#F87171';
+    const sc = v => v != null
+      ? `<span style="font-weight:700;color:${scoreClr(v)};">${v}</span>`
+      : `<span style="color:var(--text-muted);">—</span>`;
+
+    const rows = checkins.map(c => `
+      <tr style="border-bottom:0.5px solid var(--border);">
+        <td style="padding:7px 4px 7px 0;font-size:12px;color:var(--text-muted);white-space:nowrap;">${c.check_in_date}${c.weeks_out != null ? `<br><span style="font-size:10px;color:var(--primary);font-weight:700;">W${c.weeks_out}</span>` : ''}</td>
+        <td style="text-align:center;font-size:13px;">${sc(c.fullness)}</td>
+        <td style="text-align:center;font-size:13px;">${sc(c.dryness)}</td>
+        <td style="text-align:center;font-size:13px;">${sc(c.vascularity)}</td>
+        <td style="text-align:center;font-size:12px;color:var(--text-secondary);">${c.diet_adherence != null ? c.diet_adherence+'%' : '—'}</td>
+        <td style="text-align:center;font-size:12px;color:var(--text-secondary);">${c.cardio_sessions != null ? c.cardio_sessions : '—'}</td>
+        <td style="text-align:center;font-size:13px;">${sc(c.energy_score)}</td>
+        <td style="text-align:center;font-size:13px;">${sc(c.mood_score)}</td>
+      </tr>
+      ${c.notes ? `<tr><td colspan="8" style="padding:0 4px 8px 0;font-size:11px;color:var(--text-muted);font-style:italic;">${escHtml(c.notes)}</td></tr>` : ''}`
+    ).join('');
+
+    sections.push(`
+      <div class="report-card card" style="margin-bottom:14px;">
+        <div class="report-card-title card-title">Weekly Check-Ins</div>
+        <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;min-width:460px;">
+            <thead><tr style="border-bottom:1px solid var(--border);">
+              <th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;padding-bottom:6px;">Date</th>
+              <th style="text-align:center;font-size:11px;color:#38BDF8;font-weight:700;padding-bottom:6px;">Full</th>
+              <th style="text-align:center;font-size:11px;color:#F5C518;font-weight:700;padding-bottom:6px;">Dry</th>
+              <th style="text-align:center;font-size:11px;color:#F87171;font-weight:700;padding-bottom:6px;">Vasc</th>
+              <th style="text-align:center;font-size:11px;color:var(--text-muted);font-weight:500;padding-bottom:6px;">Diet</th>
+              <th style="text-align:center;font-size:11px;color:var(--text-muted);font-weight:500;padding-bottom:6px;">Cardio</th>
+              <th style="text-align:center;font-size:11px;color:#4ADE80;font-weight:700;padding-bottom:6px;">Energy</th>
+              <th style="text-align:center;font-size:11px;color:#FB923C;font-weight:700;padding-bottom:6px;">Mood</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      </div>`)
+  }
+
+  // ── 3. Physique ──
+  if (phLatest) {
+    const daysAgo = Math.floor((Date.now() - Date.parse(phLatest.date)) / 86400000);
+    const rows = MEAS_KEYS.filter(m => phLatest.measurements?.[m.key] != null).map(m => {
+      const val  = phLatest.measurements[m.key];
+      const pval = phPrev?.measurements?.[m.key];
+      const diff = pval != null ? +(val - pval).toFixed(2) : null;
+      const isGood = diff == null ? null : (m.dir === 'up' ? diff > 0 : m.dir === 'down' ? diff < 0 : null);
+      const diffStr = diff != null ? `<span style="font-size:11px;margin-left:4px;color:${isGood===null?'var(--text-muted)':isGood?'#4ADE80':'#F87171'};">${diff>0?'+':''}${diff}</span>` : '';
+      return `<tr style="border-bottom:0.5px solid var(--border);"><td style="padding:5px 0;color:var(--text-muted);font-size:12px;">${m.label}</td><td style="font-family:var(--font-data);font-weight:600;color:${m.color};">${val}${diffStr}</td><td style="color:var(--text-muted);font-size:12px;">${m.unit}</td></tr>`;
+    }).join('');
+    sections.push(`
+      <div class="report-card card" style="margin-bottom:14px;">
+        <div class="report-card-title card-title">Physique — ${phLatest.date}${daysAgo > 0 ? ` <span style="font-size:12px;color:var(--text-muted);font-weight:400;">(${daysAgo}d ago)</span>` : ''}</div>
+        ${phLatest.notes ? `<div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">${escHtml(phLatest.notes)}</div>` : ''}
+        <table style="width:100%;border-collapse:collapse;">
+          <thead><tr><th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;padding-bottom:4px;">Metric</th><th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;">Value</th><th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;">Unit</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`);
+  }
+
+  // ── 4. Bloodwork ──
+  if (bwLatest) {
+    const daysAgo  = Math.floor((Date.now() - Date.parse(bwLatest.date)) / 86400000);
+    const flagKeys = Object.keys(bwLatest.markers).filter(k => { const s = bwRangeStatus(k, bwLatest.markers[k]); return s === 'high' || s === 'low'; });
+    const allKeys  = Object.keys(bwLatest.markers).filter(k => bwLatest.markers[k] != null && BW_MARKERS[k]);
+    const okCount  = allKeys.filter(k => bwRangeStatus(k, bwLatest.markers[k]) === 'ok').length;
+    const pct      = allKeys.length ? Math.round((okCount / allKeys.length) * 100) : 100;
+    const grade    = pct === 100 ? 'A' : pct >= 90 ? 'B' : pct >= 75 ? 'C' : 'D';
+    const gradeClr = { A:'#4ADE80', B:'#A3E635', C:'#F5C518', D:'#F87171' }[grade];
+
+    const flagHtml = flagKeys.length
+      ? flagKeys.map(k => { const m = BW_MARKERS[k]; const s = bwRangeStatus(k, bwLatest.markers[k]); return `<span style="font-size:12px;padding:2px 8px;border-radius:99px;background:${s==='high'?'rgba(248,113,113,0.12)':'rgba(96,165,250,0.12)'};color:${s==='high'?'#F87171':'#60A5FA'};">${m.label} <strong>${bwLatest.markers[k]} ${m.unit}</strong> ${s.toUpperCase()}</span>`; }).join(' ')
+      : `<span style="color:#4ADE80;font-size:13px;">All tracked markers in range</span>`;
+
+    const markerRows = Object.keys(BW_MARKERS)
+      .filter(k => bwLatest.markers[k] != null)
+      .map(k => {
+        const m = BW_MARKERS[k];
+        const s = bwRangeStatus(k, bwLatest.markers[k]);
+        const col = s === 'high' ? '#F87171' : s === 'low' ? '#60A5FA' : 'var(--text-secondary)';
+        const ref = (m.lo && m.hi < 9000) ? `${m.lo}–${m.hi}` : m.hi < 9000 ? `< ${m.hi}` : m.lo ? `> ${m.lo}` : '—';
+        const prev = bwPrev?.markers[k];
+        const delta = prev != null ? (() => { const d = +(bwLatest.markers[k]-prev).toFixed(2); const dc = bwTrendColor(k, bwLatest.markers[k], prev); return `<span style="font-size:11px;color:${dc};">${d>0?'↑':'↓'}${Math.abs(d)}</span>`; })() : '';
+        return `<tr style="border-bottom:0.5px solid var(--border);"><td style="padding:5px 0;color:var(--text-muted);font-size:12px;">${m.label}</td><td style="font-family:var(--font-data);font-weight:600;color:${col};">${bwLatest.markers[k]}</td><td style="color:var(--text-muted);font-size:12px;">${m.unit}</td><td style="color:var(--text-muted);font-size:11px;">${ref}</td><td style="font-size:11px;">${delta}</td></tr>`;
+      }).join('');
+
+    sections.push(`
+      <div class="report-card card" style="margin-bottom:14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div class="report-card-title card-title" style="margin-bottom:0;">Bloodwork — ${bwLatest.date}${daysAgo > 0 ? ` <span style="font-size:12px;color:var(--text-muted);font-weight:400;">(${daysAgo}d ago)</span>` : ''}</div>
+          <div style="text-align:center;flex-shrink:0;">
+            <div style="font-size:24px;font-weight:800;font-family:var(--font-data);color:${gradeClr};line-height:1;">${grade}</div>
+            <div style="font-size:9px;font-weight:700;letter-spacing:0.1em;color:${gradeClr};text-transform:uppercase;">${okCount}/${allKeys.length} OK</div>
+          </div>
+        </div>
+        ${bwLatest.lab ? `<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">${escHtml(bwLatest.lab)}</div>` : ''}
+        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px;">${flagHtml}</div>
+        ${bwLatest.notes ? `<div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;padding:8px 10px;background:var(--surface-2);border-radius:var(--radius);">${escHtml(bwLatest.notes)}</div>` : ''}
+        <table style="width:100%;border-collapse:collapse;">
+          <thead><tr>
+            <th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;padding-bottom:4px;">Marker</th>
+            <th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;">Value</th>
+            <th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;">Unit</th>
+            <th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;">Ref Range</th>
+            <th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;">Trend</th>
+          </tr></thead>
+          <tbody>${markerRows}</tbody>
+        </table>
+      </div>`);
+  }
+
+  // ── 5. Active Protocol ──
   if (protocol) {
     const compounds = (protocol.compounds || []).map(c => {
       const dose = c.phases?.[0]?.dose ?? c.dose ?? '?';
@@ -5268,60 +5418,7 @@ async function renderCoachReport() {
     if (retroHtml) sections.push(retroHtml);
   }
 
-  // ── Bloodwork ──
-  if (bwLatest) {
-    const daysAgo  = Math.floor((Date.now() - Date.parse(bwLatest.date)) / 86400000);
-    const flagKeys = Object.keys(bwLatest.markers).filter(k => { const s = bwRangeStatus(k, bwLatest.markers[k]); return s === 'high' || s === 'low'; });
-    const flagHtml = flagKeys.length
-      ? flagKeys.map(k => { const m = BW_MARKERS[k]; const s = bwRangeStatus(k, bwLatest.markers[k]); return `<span class="report-flag-${s}" style="font-size:12px;padding:2px 7px;border-radius:4px;background:${s==='high'?'rgba(248,113,113,0.12)':'rgba(96,165,250,0.12)'};">${m.label} <strong>${bwLatest.markers[k]} ${m.unit}</strong> <span style="font-size:10px;opacity:0.8;">${s.toUpperCase()}</span></span>`; }).join(' ')
-      : `<span style="color:var(--green);font-size:13px;">All tracked markers in range</span>`;
-
-    const markerRows = Object.keys(BW_MARKERS)
-      .filter(k => bwLatest.markers[k] != null)
-      .map(k => {
-        const m = BW_MARKERS[k];
-        const s = bwRangeStatus(k, bwLatest.markers[k]);
-        const col = s === 'high' ? 'var(--red)' : s === 'low' ? '#60A5FA' : 'var(--text-secondary)';
-        const ref = (m.lo && m.hi) ? `${m.lo}–${m.hi}` : m.hi ? `< ${m.hi}` : m.lo ? `> ${m.lo}` : '—';
-        return `<tr style="border-bottom:0.5px solid var(--border);"><td style="padding:5px 0;color:var(--text-muted);font-size:12px;">${m.label}</td><td style="font-family:var(--font-data);font-weight:600;color:${col};">${bwLatest.markers[k]}</td><td style="color:var(--text-muted);font-size:12px;">${m.unit}</td><td style="color:var(--text-muted);font-size:11px;">${ref}</td></tr>`;
-      }).join('');
-
-    sections.push(`
-      <div class="report-card card" style="margin-bottom:14px;">
-        <div class="report-card-title card-title">Bloodwork — ${bwLatest.date}${daysAgo > 0 ? ' <span style="font-size:12px;color:var(--text-muted);font-weight:400;">('+daysAgo+'d ago)</span>' : ''}</div>
-        ${bwLatest.lab ? `<div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">${escHtml(bwLatest.lab)}</div>` : ''}
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">${flagHtml}</div>
-        ${bwLatest.notes ? `<div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;padding:8px 10px;background:var(--surface-2);border-radius:var(--radius);">${escHtml(bwLatest.notes)}</div>` : ''}
-        <table style="width:100%;border-collapse:collapse;">
-          <thead><tr><th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;padding-bottom:4px;">Marker</th><th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;">Value</th><th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;">Unit</th><th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;">Reference</th></tr></thead>
-          <tbody>${markerRows}</tbody>
-        </table>
-      </div>`);
-  }
-
-  // ── Physique ──
-  if (phLatest) {
-    const daysAgo = Math.floor((Date.now() - Date.parse(phLatest.date)) / 86400000);
-    const rows = MEAS_KEYS.filter(m => phLatest.measurements?.[m.key] != null).map(m => {
-      const val  = phLatest.measurements[m.key];
-      const pval = phPrev?.measurements?.[m.key];
-      const diff = pval != null ? +(val - pval).toFixed(2) : null;
-      const isGood = diff == null ? null : (m.dir === 'up' ? diff > 0 : m.dir === 'down' ? diff < 0 : null);
-      const diffStr = diff != null ? `<span style="font-size:11px;margin-left:4px;color:${isGood===null?'var(--text-muted)':isGood?'var(--green)':'var(--red)'};">${diff>0?'+':''}${diff}</span>` : '';
-      return `<tr style="border-bottom:0.5px solid var(--border);"><td style="padding:5px 0;color:var(--text-muted);font-size:12px;">${m.label}</td><td style="font-family:var(--font-data);font-weight:600;color:${m.color};">${val}${diffStr}</td><td style="color:var(--text-muted);font-size:12px;">${m.unit}</td></tr>`;
-    }).join('');
-    sections.push(`
-      <div class="report-card card" style="margin-bottom:14px;">
-        <div class="report-card-title card-title">Physique — ${phLatest.date}${daysAgo > 0 ? ' <span style="font-size:12px;color:var(--text-muted);font-weight:400;">('+daysAgo+'d ago)</span>' : ''}</div>
-        ${phLatest.notes ? `<div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">${escHtml(phLatest.notes)}</div>` : ''}
-        <table style="width:100%;border-collapse:collapse;">
-          <thead><tr><th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;padding-bottom:4px;">Metric</th><th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;">Value</th><th style="text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;">Unit</th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </div>`);
-  }
-
-  // ── Recent Vitals ──
+  // ── 6. Recent Vitals ──
   if (vitals.length) {
     const rows = vitals.map(v => `<tr style="border-bottom:0.5px solid var(--border);">
       <td style="padding:5px 0;font-family:var(--font-data);font-size:12px;color:var(--text-muted);">${v.date}</td>
@@ -5397,21 +5494,47 @@ async function renderCoachReport() {
   }
 
   el.innerHTML = `
-    <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">Generated ${today}</div>
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;"></div>
     ${sections.join('')}`;
 }
 
 function reportCopy() {
-  const protocol = (() => { try { return JSON.parse(localStorage.getItem('hrt_active_protocol_data')); } catch { return null; } })();
-  const panels   = bwLoad().sort((a, b) => b.date.localeCompare(a.date));
-  const bwLatest = panels[0] || null;
-  const measList = measLoad().sort((a, b) => b.date.localeCompare(a.date));
-  const phLatest = measList[0] || null;
-  const phPrev   = measList[1] || null;
-  const vitals   = lsGet('hrt_vitals_log', []).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
-  const today    = localDate();
+  const protocol  = (() => { try { return JSON.parse(localStorage.getItem('hrt_active_protocol_data')); } catch { return null; } })();
+  const panels    = bwLoad().sort((a, b) => b.date.localeCompare(a.date));
+  const bwLatest  = panels[0] || null;
+  const measList  = measLoad().sort((a, b) => b.date.localeCompare(a.date));
+  const phLatest  = measList[0] || null;
+  const phPrev    = measList[1] || null;
+  const vitals    = lsGet('hrt_vitals_log', []).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
+  const checkins  = lsGet('hrt_weekly_checkins', []).sort((a,b) => b.check_in_date.localeCompare(a.check_in_date)).slice(0, 4);
+  const show      = getShow();
+  const profile   = lsGet('hrt_user_profile', null);
+  const today     = localDate();
 
-  const lines = [`HRT / Physique Report — ${today}`, '═'.repeat(44), ''];
+  const athleteName = profile?.name || _supaUser?.user_metadata?.full_name || '';
+  const lines = [`PREP REPORT — ${today}`, '═'.repeat(44)];
+  if (athleteName)  lines.push(`Athlete: ${athleteName}`);
+  if (show?.date) {
+    const days = Math.round((new Date(show.date+'T00:00:00') - new Date(today+'T00:00:00')) / 86400000);
+    const meta = [show.federation, show.division, show.name].filter(Boolean).join(' · ');
+    if (meta) lines.push(meta);
+    lines.push(days > 0 ? `${Math.ceil(days/7)} Weeks Out · Show: ${show.date}` : `Show: ${show.date}`);
+  }
+  lines.push('');
+
+  // Weekly check-ins
+  if (checkins.length) {
+    lines.push('WEEKLY CHECK-INS');
+    checkins.forEach(c => {
+      const wk  = c.weeks_out != null ? ` [W${c.weeks_out}]` : '';
+      const cond = [c.fullness!=null?`Full:${c.fullness}`:'', c.dryness!=null?`Dry:${c.dryness}`:'', c.vascularity!=null?`Vasc:${c.vascularity}`:''].filter(Boolean).join(' ');
+      const comp = [c.diet_adherence!=null?`Diet:${c.diet_adherence}%`:'', c.cardio_sessions!=null?`Cardio:${c.cardio_sessions}`:''].filter(Boolean).join(' ');
+      const well = [c.energy_score!=null?`Energy:${c.energy_score}`:'', c.mood_score!=null?`Mood:${c.mood_score}`:''].filter(Boolean).join(' ');
+      lines.push(`  ${c.check_in_date}${wk}  ${[cond,comp,well].filter(Boolean).join('  ')}`);
+      if (c.notes) lines.push(`    Note: ${c.notes}`);
+    });
+    lines.push('');
+  }
 
   if (protocol) {
     lines.push(`PROTOCOL: ${protocol.name} (${protocol.phase} · ${protocol.weeks}wk)`);
