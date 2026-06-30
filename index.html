@@ -3450,6 +3450,7 @@ function isDueToday(freq, startDate) {
 }
 
 function isDueOnDate(freq, startDate, targetDate) {
+  if (typeof targetDate === 'string') targetDate = new Date(targetDate + 'T00:00:00');
   const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const targetDay = days[targetDate.getDay()];
   if (Array.isArray(freq)) return freq.includes(targetDay);
