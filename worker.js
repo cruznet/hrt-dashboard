@@ -61,7 +61,7 @@ async function handleIngest(request, env) {
 
   const upsertRows = rows.map(r => ({ ...r, user_id: userId }));
 
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/healthkit_daily`, {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/healthkit_daily?on_conflict=user_id%2Cdate`, {
     method: 'POST',
     headers: {
       'Content-Type':  'application/json',
