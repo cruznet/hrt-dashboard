@@ -278,6 +278,9 @@ CREATE TABLE healthkit_daily (
   steps               INTEGER,
   active_energy_kcal  DECIMAL(7,1),
   exercise_min        INTEGER,
+  bp_systolic         INTEGER,
+  bp_diastolic        INTEGER,
+  spo2_pct            DECIMAL(4,1),
   created_at          TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE (user_id, date)
 );

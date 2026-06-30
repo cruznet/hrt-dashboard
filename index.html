@@ -733,17 +733,53 @@ body {
 }
 
 @media print {
-  #sidebar, #topbar, #auth-overlay { display: none !important; }
-  body { background: #fff !important; color: #000 !important; overflow: auto !important; }
+  @page { margin: 18mm 16mm; }
+  #sidebar, #topbar, #auth-overlay, #bottom-nav, #toast-container,
+  button, .btn-primary, .btn-secondary { display: none !important; }
+  body { background: #fff !important; color: #111 !important; overflow: auto !important; font-family: 'DM Sans', system-ui, sans-serif; font-size: 12px; }
   #content { overflow: visible !important; padding: 0 !important; }
   .page { display: block !important; }
   .page:not(#page-report) { display: none !important; }
-  #report-content { color: #000; }
-  #report-content .report-card { border: 1px solid #ddd; background: #fff; break-inside: avoid; }
-  #report-content .report-card-title { color: #000; border-bottom: 1px solid #ddd; }
-  #report-content .report-val { color: #000; }
-  #report-content .report-flag-high { color: #c00; }
-  #report-content .report-flag-low  { color: #00c; }
+
+  /* Print header — injected via ::before on #page-report */
+  #page-report::before {
+    content: 'HRT Tracker — Patient Report';
+    display: block;
+    font-size: 18px;
+    font-weight: 700;
+    color: #111;
+    border-bottom: 2px solid #111;
+    padding-bottom: 8px;
+    margin-bottom: 16px;
+  }
+
+  #report-content { color: #111; }
+  #report-content .report-card {
+    border: 1px solid #d1d5db;
+    background: #fff;
+    break-inside: avoid;
+    border-radius: 6px;
+    padding: 14px;
+    margin-bottom: 12px;
+    box-shadow: none;
+  }
+  #report-content .report-card-title {
+    color: #111;
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 6px;
+    margin-bottom: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  #report-content .report-val     { color: #111; font-weight: 600; }
+  #report-content .report-flag-high { color: #b91c1c; background: #fef2f2; padding: 1px 5px; border-radius: 3px; }
+  #report-content .report-flag-low  { color: #1d4ed8; background: #eff6ff; padding: 1px 5px; border-radius: 3px; }
+  #report-content table td, #report-content table th { color: #111; border-bottom: 1px solid #e5e7eb; }
+  #report-content [style*="color:var"] { color: #111 !important; }
+  #report-content [style*="background"] { background: transparent !important; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
 
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -1032,6 +1068,48 @@ body {
           <span class="metric-badge badge-muted" id="m-mood-badge">No data</span>
           <div class="metric-delta" id="m-mood-delta"></div>
         </div>
+        <div class="metric-card mc-amber">
+          <div class="metric-label">Energy</div>
+          <div class="metric-value" id="m-energy">—</div>
+          <div class="metric-unit">/10</div>
+          <span class="metric-badge badge-muted" id="m-energy-badge">No data</span>
+          <div class="metric-delta" id="m-energy-delta"></div>
+        </div>
+        <div class="metric-card mc-red">
+          <div class="metric-label">Body Fat</div>
+          <div class="metric-value" id="m-bf">—</div>
+          <div class="metric-unit">%</div>
+          <span class="metric-badge badge-muted" id="m-bf-badge">No data</span>
+          <div class="metric-delta" id="m-bf-delta"></div>
+        </div>
+        <div class="metric-card mc-teal">
+          <div class="metric-label">HRV</div>
+          <div class="metric-value" id="m-hrv">—</div>
+          <div class="metric-unit">ms</div>
+          <span class="metric-badge badge-muted" id="m-hrv-badge">No data</span>
+          <div class="metric-delta" id="m-hrv-delta"></div>
+        </div>
+        <div class="metric-card mc-red">
+          <div class="metric-label">Resting HR</div>
+          <div class="metric-value" id="m-resting-hr">—</div>
+          <div class="metric-unit">bpm</div>
+          <span class="metric-badge badge-muted" id="m-resting-hr-badge">No data</span>
+          <div class="metric-delta" id="m-resting-hr-delta"></div>
+        </div>
+        <div class="metric-card mc-purple">
+          <div class="metric-label">Sleep</div>
+          <div class="metric-value" id="m-sleep">—</div>
+          <div class="metric-unit">hrs</div>
+          <span class="metric-badge badge-muted" id="m-sleep-badge">No data</span>
+          <div class="metric-delta" id="m-sleep-delta"></div>
+        </div>
+        <div class="metric-card mc-teal">
+          <div class="metric-label">SpO₂</div>
+          <div class="metric-value" id="m-spo2">—</div>
+          <div class="metric-unit">%</div>
+          <span class="metric-badge badge-muted" id="m-spo2-badge">No data</span>
+          <div class="metric-delta" id="m-spo2-delta"></div>
+        </div>
       </div>
 
       <!-- Latest Labs strip -->
@@ -1149,179 +1227,21 @@ body {
               <label class="form-label">Date</label>
               <input type="date" class="form-input" id="log-date">
             </div>
-            <div class="form-group">
-              <label class="form-label">Time</label>
-              <input type="time" class="form-input" id="log-time" value="08:00">
-            </div>
           </div>
 
-          <div class="card-title" style="margin-top:8px;">Compounds</div>
-          <div id="log-compounds">
-            <div class="log-compound-row">
-              <div>
-                <label class="form-label">Compound</label>
-                <select class="form-select log-compound-name">
-                  <option value="">Select compound...</option>
-                  <option>Testosterone Cypionate</option>
-                  <option>Testosterone Enanthate</option>
-                  <option>Testosterone Propionate</option>
-                  <option>Primobolan (Methenolone E)</option>
-                  <optgroup label="── Testosterone ──">
-                    <option>Testosterone Suspension</option>
-                    <option>Testosterone Propionate</option>
-                    <option>Testosterone Phenylpropionate</option>
-                    <option>Testosterone Enanthate</option>
-                    <option>Testosterone Cypionate</option>
-                    <option>Sustanon (Mixed Esters)</option>
-                    <option>Testosterone Undecanoate</option>
-                  </optgroup>
-                  <optgroup label="── 19-nor ──">
-                    <option>Nandrolone Phenylpropionate (NPP)</option>
-                    <option>Nandrolone Decanoate (Deca)</option>
-                    <option>Trenbolone Acetate</option>
-                    <option>Trenbolone Enanthate</option>
-                    <option>Trenbolone Hexahydrobenzylcarbonate (Parabolan)</option>
-                  </optgroup>
-                  <optgroup label="── Anabolics / Injectables ──">
-                    <option>Boldenone Undecylenate (EQ)</option>
-                    <option>Boldenone Cypionate</option>
-                    <option>DHB (Dihydroboldenone Cypionate)</option>
-                    <option>Masteron Propionate</option>
-                    <option>Masteron Enanthate</option>
-                    <option>Primobolan (Methenolone E)</option>
-                    <option>Stanozolol Depot (Winstrol Inj)</option>
-                  </optgroup>
-                  <optgroup label="── Orals ──">
-                    <option>Methandrostenolone (Dianabol)</option>
-                    <option>Oxandrolone (Anavar)</option>
-                    <option>Stanozolol (Winstrol Oral)</option>
-                    <option>Oxymetholone (Anadrol)</option>
-                    <option>Turinabol</option>
-                    <option>Fluoxymesterone (Halotestin)</option>
-                    <option>Mesterolone (Proviron)</option>
-                    <option>Primobolan Oral (Methenolone Acetate)</option>
-                  </optgroup>
-                  <optgroup label="── SARMs ──">
-                    <option>Ostarine (MK-2866)</option>
-                    <option>Ligandrol (LGD-4033)</option>
-                    <option>RAD-140 (Testolone)</option>
-                    <option>YK-11</option>
-                    <option>Andarine (S4)</option>
-                    <option>S23</option>
-                    <option>Cardarine (GW-501516)</option>
-                    <option>SR9009 (Stenabolic)</option>
-                  </optgroup>
-                  <optgroup label="── AI / SERM ──">
-                    <option>Anastrozole</option>
-                    <option>Exemestane</option>
-                    <option>Letrozole</option>
-                    <option>HCG</option>
-                    <option>Enclomiphene</option>
-                  </optgroup>
-                  <optgroup label="── GH / Peptides ──">
-                    <option>Growth Hormone (rHGH)</option>
-                    <option>MK-677 (Ibutamoren)</option>
-                    <option>Ipamorelin</option>
-                    <option>GHRP-2</option>
-                    <option>GHRP-6</option>
-                    <option>CJC-1295 DAC</option>
-                    <option>CJC-1295 No DAC (Mod GRF 1-29)</option>
-                    <option>Tesamorelin</option>
-                    <option>Sermorelin</option>
-                    <option>BPC-157</option>
-                    <option>TB-500</option>
-                    <option>IGF-1 LR3</option>
-                    <option>IGF-1 DES</option>
-                    <option>PEG-MGF</option>
-                  </optgroup>
-                  <optgroup label="── GLP-1 / Weight Loss ──">
-                    <option>Semaglutide</option>
-                    <option>Tirzepatide</option>
-                    <option>Retatrutide</option>
-                  </optgroup>
-                  <optgroup label="── Fat Loss ──">
-                    <option>Clenbuterol</option>
-                    <option>Albuterol (Salbutamol)</option>
-                    <option>Ephedrine</option>
-                    <option>Yohimbine</option>
-                    <option>T3 (Liothyronine)</option>
-                    <option>T4 (Levothyroxine)</option>
-                  </optgroup>
-                  <optgroup label="── Insulin ──">
-                    <option>Insulin (Humalog / Lispro)</option>
-                    <option>Insulin (Novolog / Aspart)</option>
-                    <option>Insulin (Apidra / Glulisine)</option>
-                    <option>Novolin R / Humulin R</option>
-                    <option>NPH Insulin</option>
-                    <option>Lantus (Glargine)</option>
-                    <option>Levemir (Detemir)</option>
-                    <option>Tresiba (Degludec)</option>
-                    <option>Metformin</option>
-                  </optgroup>
-                  <optgroup label="── Support: Blood Pressure ──">
-                    <option>Losartan</option>
-                    <option>Telmisartan</option>
-                    <option>Nebivolol</option>
-                  </optgroup>
-                  <optgroup label="── Support: Cardiovascular ──">
-                    <option>Cialis (Tadalafil)</option>
-                    <option>Viagra (Sildenafil)</option>
-                  </optgroup>
-                  <optgroup label="── Support: Lipids ──">
-                    <option>Rosuvastatin</option>
-                    <option>Ezetimibe</option>
-                    <option>Bempedoic Acid</option>
-                  </optgroup>
-                  <optgroup label="── Other ──">
-                    <option>EPO (Erythropoietin)</option>
-                    <option>Meldonium</option>
-                  </optgroup>
-                </select>
-              </div>
-              <div>
-                <label class="form-label">Dose</label>
-                <input type="number" class="form-input log-compound-dose" placeholder="200">
-              </div>
-              <div>
-                <label class="form-label">Unit</label>
-                <select class="form-select log-compound-unit">
-                  <option>mg</option>
-                  <option>IU</option>
-                  <option>mcg</option>
-                  <option>mL</option>
-                </select>
-              </div>
-              <div>
-                <button onclick="removeCompoundRow(this)" style="background:var(--red-dim);border:0.5px solid rgba(239,68,68,0.3);color:var(--red);border-radius:var(--radius);padding:8px 10px;cursor:pointer;font-size:13px;height:36px;margin-top:19px;">
-                  <i class="ti ti-trash"></i>
-                </button>
-              </div>
-            </div>
+          <div class="card-title" style="margin-top:8px;">Vitals</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;display:flex;align-items:center;gap:6px;">
+            <i class="ti ti-brand-apple" style="font-size:13px;"></i>
+            Weight, HR, HRV, sleep, and SpO₂ are imported automatically from Apple Health.
           </div>
-          <button class="btn-secondary" style="font-size:11px;padding:6px 12px;margin-bottom:14px;" onclick="addCompoundRow()">
-            <i class="ti ti-plus"></i> Add compound
-          </button>
-
-          <div class="divider"></div>
-          <div class="card-title">Vitals</div>
           <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">Weight (lbs)</label>
-              <input type="number" class="form-input" id="log-weight" placeholder="212.4" step="0.1">
-            </div>
             <div class="form-group">
               <label class="form-label">Blood Pressure</label>
               <input type="text" class="form-input" id="log-bp" placeholder="134/82">
             </div>
-          </div>
-          <div class="form-row">
             <div class="form-group">
               <label class="form-label">Glucose (mg/dL)</label>
               <input type="number" class="form-input" id="log-glucose" placeholder="94">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Resting HR (bpm)</label>
-              <input type="number" class="form-input" id="log-hr" placeholder="62">
             </div>
           </div>
 
@@ -1445,7 +1365,7 @@ body {
           <div class="card">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
               <div class="card-title" style="margin-bottom:0;">Panel Results</div>
-              <select class="form-select" id="bw-panel-select" onchange="bwRenderPanel()" style="font-size:12px;padding:5px 8px;width:auto;"></select>
+              <select class="form-select" id="bw-panel-select" onchange="bwRenderPanel();bwRenderCompareView(bwLoad())" style="font-size:12px;padding:5px 8px;width:auto;"></select>
             </div>
             <div id="bw-panel-detail"></div>
           </div>
@@ -1454,6 +1374,8 @@ body {
             <div id="bw-history-list"></div>
           </div>
         </div>
+
+        <div id="bw-compare-view" style="display:none;"></div>
 
       </div>
     </section>
@@ -2571,7 +2493,6 @@ async function loadUserData() {
         localStorage.setItem('hrt_user_profile', JSON.stringify(settings.user_profile));
     }
 
-    if (metricsRes.data?.length) renderMetrics(metricsRes.data);
     if (logsRes.data?.length) renderLastEntry(logsRes.data[0]);
 
     // Sync today's checked doses from Supabase → hrt_doses_taken localStorage.
@@ -2621,6 +2542,7 @@ async function loadUserData() {
                      r.mood   !== null || r.energy !== null);
       localStorage.setItem('hrt_vitals_log', JSON.stringify(vitals));
     }
+    await hkLoadFromSupabase();
     renderVitalsToCards();
 
     setTimeout(renderRealCharts, 100);
@@ -2706,35 +2628,83 @@ function getCycleChartData(logs, fieldKey, protocol) {
 }
 
 // ── Render vitals log → dashboard cards, deltas, sparklines, weight chart ──
+// Returns the most recent non-null value for a HealthKit metric key from the cached data
+function hkLatest(key) {
+  const rows = _hkSupaData || _hkData || [];
+  for (let i = rows.length - 1; i >= 0; i--) {
+    const v = parseFloat(rows[i][key]);
+    if (v > 0) return { value: v, date: (rows[i]['Date/Time'] || '').slice(0, 10) };
+  }
+  return null;
+}
+
+// Merges weight from vitals log, physique check-ins, and HealthKit — most-recent-date wins.
+// Within the same date, priority: user-typed vitals (1) > physique check-in (2) > HealthKit (3).
+function getBestWeight() {
+  const candidates = [];
+
+  for (const l of lsGet('hrt_vitals_log', [])) {
+    const v = parseFloat(l.weight);
+    if (l.date && v > 0) candidates.push({ date: l.date, value: v, priority: 1 });
+  }
+  for (const m of measLoad()) {
+    const v = parseFloat(m.measurements?.weight);
+    if (m.date && v > 0) candidates.push({ date: m.date, value: v, priority: 2 });
+  }
+  for (const r of (_hkSupaData || _hkData || [])) {
+    const v = parseFloat(r['Weight (lbs)']);
+    const date = (r['Date/Time'] || '').slice(0, 10);
+    if (date && v > 0) candidates.push({ date, value: v, priority: 3 });
+  }
+
+  if (!candidates.length) return { latest: null, prev: null };
+
+  const byDate = new Map();
+  for (const c of candidates) {
+    const ex = byDate.get(c.date);
+    if (!ex || c.priority < ex.priority) byDate.set(c.date, c);
+  }
+
+  const sorted = [...byDate.values()].sort((a, b) => b.date.localeCompare(a.date));
+  return { latest: sorted[0] || null, prev: sorted[1] || null };
+}
+
 function renderVitalsToCards() {
   const logs = lsGet('hrt_vitals_log', []);
   const protocol = lsGet('hrt_active_protocol_data', null);
   // logs are sorted newest-first
   if (!logs.length) {
-    ['m-weight','m-bp','m-glucose','m-mood'].forEach(id =>
+    ['m-weight','m-bp','m-glucose','m-mood','m-energy'].forEach(id =>
       updateMetricCard(id, '—', 'No data', 'badge-muted'));
-    return;
+    // fall through — HealthKit and physique cards may still have data
   }
 
-  // ── Weight ──
-  const weightLogs = logs.filter(l => l.weight && parseFloat(l.weight) > 0);
-  if (weightLogs.length) {
-    const latest = parseFloat(weightLogs[0].weight);
-    const prev   = weightLogs.length > 1 ? parseFloat(weightLogs[1].weight) : null;
-    updateMetricCard('m-weight', latest.toFixed(1), 'lbs', 'badge-muted');
-    setDelta('m-weight-delta', latest, prev, 'lbs', false); // lower = bad for weight loss context, no inversion
+  // ── Weight (multi-source: vitals log > physique check-in > HealthKit) ──
+  const { latest: wLatest, prev: wPrev } = getBestWeight();
+  if (wLatest) {
+    updateMetricCard('m-weight', wLatest.value.toFixed(1), 'lbs', 'badge-muted');
+    if (wPrev) setDelta('m-weight-delta', wLatest.value, wPrev.value, 'lbs', false);
   }
 
-  // ── Blood Pressure ──
+  // ── Blood Pressure (manual log preferred, HealthKit fallback) ──
   const bpLogs = logs.filter(l => l.bp && l.bp.includes('/'));
   if (bpLogs.length) {
-    const latestBP  = bpLogs[0].bp;
+    const latestBP = bpLogs[0].bp;
     const sys = parseInt(latestBP.split('/')[0]);
     const bpBadge = sys > 140 ? ['High','badge-red'] : sys > 130 ? ['Elevated','badge-amber'] : ['Normal','badge-green'];
     updateMetricCard('m-bp', latestBP, bpBadge[0], bpBadge[1]);
     if (bpLogs.length > 1) {
       const prevSys = parseInt(bpLogs[1].bp.split('/')[0]);
-      setDelta('m-bp-delta', sys, prevSys, 'mmHg', true); // lower BP = good
+      setDelta('m-bp-delta', sys, prevSys, 'mmHg', true);
+    }
+  } else {
+    const hkSys = hkLatest('Blood Pressure [Systolic] (mmHg)');
+    const hkDia = hkLatest('Blood Pressure [Diastolic] (mmHg)');
+    if (hkSys && hkDia) {
+      const sys = Math.round(hkSys.value);
+      const dia = Math.round(hkDia.value);
+      const bpBadge = sys > 140 ? ['High','badge-red'] : sys > 130 ? ['Elevated','badge-amber'] : ['Normal','badge-green'];
+      updateMetricCard('m-bp', `${sys}/${dia}`, bpBadge[0], bpBadge[1]);
     }
   }
 
@@ -2746,7 +2716,7 @@ function renderVitalsToCards() {
     updateMetricCard('m-glucose', g, gBadge[0], gBadge[1]);
     if (glucoseLogs.length > 1) {
       const prevG = parseFloat(glucoseLogs[1].glucose);
-      setDelta('m-glucose-delta', g, prevG, 'mg/dL', true); // lower = good
+      setDelta('m-glucose-delta', g, prevG, 'mg/dL', true);
     }
   }
 
@@ -2758,6 +2728,66 @@ function renderVitalsToCards() {
     const moodBadge  = latestMood >= 8 ? ['Good','badge-green'] : latestMood >= 5 ? ['Fair','badge-amber'] : ['Low','badge-red'];
     updateMetricCard('m-mood', `${latestMood}/10`, moodBadge[0], moodBadge[1]);
     if (prevMood !== null) setDelta('m-mood-delta', latestMood, prevMood, '/10', false);
+  }
+
+  // ── Energy (vitals log) ──
+  const energyLogs = logs.filter(l => l.energy && parseInt(l.energy) > 0);
+  if (energyLogs.length) {
+    const e = parseInt(energyLogs[0].energy);
+    const prevE = energyLogs.length > 1 ? parseInt(energyLogs[1].energy) : null;
+    const eBadge = e >= 8 ? ['High','badge-green'] : e >= 5 ? ['Normal','badge-amber'] : ['Low','badge-red'];
+    updateMetricCard('m-energy', `${e}/10`, eBadge[0], eBadge[1]);
+    if (prevE !== null) setDelta('m-energy-delta', e, prevE, '/10', false);
+  }
+
+  // ── Body Fat % (physique check-in preferred, HealthKit fallback) ──
+  const bfMeas = measLoad().filter(m => parseFloat(m.measurements?.bf) > 0)
+                           .sort((a, b) => b.date.localeCompare(a.date));
+  if (bfMeas.length) {
+    const bf = parseFloat(bfMeas[0].measurements.bf);
+    const prevBf = bfMeas.length > 1 ? parseFloat(bfMeas[1].measurements.bf) : null;
+    const bfBadge = bf < 18 ? ['Lean','badge-green'] : bf < 25 ? ['Normal','badge-amber'] : ['High','badge-red'];
+    updateMetricCard('m-bf', bf.toFixed(1), bfBadge[0], bfBadge[1]);
+    if (prevBf !== null) setDelta('m-bf-delta', bf, prevBf, '%', true);
+  } else {
+    const hkBf = hkLatest('Body Fat Percentage (%)');
+    if (hkBf) {
+      const bf = hkBf.value;
+      const bfBadge = bf < 18 ? ['Lean','badge-green'] : bf < 25 ? ['Normal','badge-amber'] : ['High','badge-red'];
+      updateMetricCard('m-bf', bf.toFixed(1), bfBadge[0], bfBadge[1]);
+    }
+  }
+
+  // ── HRV (HealthKit) ──
+  const hkHrv = hkLatest('Heart Rate Variability (ms)');
+  if (hkHrv) {
+    const hrv = Math.round(hkHrv.value);
+    const hrvBadge = hrv >= 50 ? ['Good','badge-green'] : hrv >= 30 ? ['Fair','badge-amber'] : ['Low','badge-red'];
+    updateMetricCard('m-hrv', hrv, hrvBadge[0], hrvBadge[1]);
+  }
+
+  // ── Resting HR (HealthKit) ──
+  const hkRhr = hkLatest('Resting Heart Rate (bpm)');
+  if (hkRhr) {
+    const rhr = Math.round(hkRhr.value);
+    const rhrBadge = rhr <= 60 ? ['Athletic','badge-green'] : rhr <= 80 ? ['Normal','badge-amber'] : ['Elevated','badge-red'];
+    updateMetricCard('m-resting-hr', rhr, rhrBadge[0], rhrBadge[1]);
+  }
+
+  // ── Sleep (HealthKit) ──
+  const hkSleep = hkLatest('Sleep Analysis [Total] (hr)');
+  if (hkSleep) {
+    const sleep = hkSleep.value;
+    const sleepBadge = sleep >= 7.5 ? ['Good','badge-green'] : sleep >= 6 ? ['Fair','badge-amber'] : ['Low','badge-red'];
+    updateMetricCard('m-sleep', sleep.toFixed(1), sleepBadge[0], sleepBadge[1]);
+  }
+
+  // ── SpO₂ (HealthKit) ──
+  const hkSpo2 = hkLatest('Oxygen Saturation (%)');
+  if (hkSpo2) {
+    const spo2 = hkSpo2.value;
+    const spo2Badge = spo2 >= 97 ? ['Normal','badge-green'] : spo2 >= 94 ? ['Low-Normal','badge-amber'] : ['Low','badge-red'];
+    updateMetricCard('m-spo2', spo2.toFixed(1), spo2Badge[0], spo2Badge[1]);
   }
 
   // ── Weight chart from local data ──
@@ -3462,14 +3492,12 @@ function removeCompoundRow(btn) {
 async function submitLog() {
   const status = document.getElementById('log-status');
   const entry = {
-    date: document.getElementById('log-date').value,
-    weight: document.getElementById('log-weight').value,
-    bp: document.getElementById('log-bp').value,
+    date:    document.getElementById('log-date').value,
+    bp:      document.getElementById('log-bp').value,
     glucose: document.getElementById('log-glucose').value,
-    hr: document.getElementById('log-hr').value,
-    mood: document.getElementById('log-mood').value,
-    energy: document.getElementById('log-energy').value,
-    notes: document.getElementById('log-notes').value
+    mood:    document.getElementById('log-mood').value,
+    energy:  document.getElementById('log-energy').value,
+    notes:   document.getElementById('log-notes').value
   };
   if (!entry.date) { status.textContent = 'Please select a date.'; status.style.color = 'var(--red)'; status.style.display='block'; return; }
 
@@ -3483,10 +3511,8 @@ async function submitLog() {
     const existing = logs[idx];
     logs[idx] = {
       ...existing,
-      ...(entry.weight  ? { weight:  entry.weight  } : {}),
       ...(entry.bp      ? { bp:      entry.bp      } : {}),
       ...(entry.glucose ? { glucose: entry.glucose } : {}),
-      ...(entry.hr      ? { hr:      entry.hr      } : {}),
       ...(entry.mood    ? { mood:    entry.mood    } : {}),
       ...(entry.energy  ? { energy:  entry.energy  } : {}),
       ...(entry.notes   ? { notes:   entry.notes   } : {}),
@@ -3501,10 +3527,9 @@ async function submitLog() {
   if (_supa && _supaUser) {
     const metricsRow = {
       user_id: _supaUser.id, date: entry.date,
-      weight_lbs: entry.weight || null,
-      mood: entry.mood ? parseInt(entry.mood) : null,
+      mood:   entry.mood   ? parseInt(entry.mood)   : null,
       energy: entry.energy ? parseInt(entry.energy) : null,
-      notes: entry.notes || null
+      notes:  entry.notes  || null
     };
     const bpParts = entry.bp ? entry.bp.split('/') : [];
     metricsRow.bp_systolic    = bpParts.length >= 1 && bpParts[0] ? parseInt(bpParts[0]) : null;
@@ -3515,7 +3540,7 @@ async function submitLog() {
   }
 
   // Clear value fields, keep date set to today for next entry
-  ['log-weight','log-bp','log-glucose','log-hr','log-mood','log-energy','log-notes'].forEach(id => {
+  ['log-bp','log-glucose','log-mood','log-energy','log-notes'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
@@ -3848,6 +3873,63 @@ function bwRenderPanel() {
   renderBwTrendCharts();
 }
 
+let _bwCompareIdx = null;
+
+function bwToggleCompare(i) {
+  const panels = bwLoad();
+  if (_bwCompareIdx === i) {
+    _bwCompareIdx = null;
+  } else {
+    _bwCompareIdx = i;
+  }
+  bwRenderHistory(panels);
+  bwRenderCompareView(panels);
+}
+
+function bwRenderCompareView(panels) {
+  const el = document.getElementById('bw-compare-view');
+  if (!el) return;
+  const baseIdx = parseInt(document.getElementById('bw-panel-select')?.value ?? '0', 10) || 0;
+  if (_bwCompareIdx === null || _bwCompareIdx === baseIdx || !panels[baseIdx] || !panels[_bwCompareIdx]) {
+    el.style.display = 'none';
+    return;
+  }
+  const base = panels[baseIdx];
+  const cmp  = panels[_bwCompareIdx];
+  const allKeys = Array.from(new Set([...Object.keys(base.markers), ...Object.keys(cmp.markers)])).filter(k => base.markers[k] != null || cmp.markers[k] != null);
+
+  const rows = allKeys.map(k => {
+    const bv = base.markers[k];
+    const cv = cmp.markers[k];
+    const delta = (bv != null && cv != null) ? (bv - cv) : null;
+    const dStr = delta === null ? '—' : (delta > 0 ? `+${delta.toFixed(1)}` : delta.toFixed(1));
+    const dColor = delta === null ? 'var(--text-muted)' : delta > 0 ? 'var(--green)' : delta < 0 ? 'var(--red)' : 'var(--text-muted)';
+    const status = bwRangeStatus(k, bv);
+    const flag = status === 'high' ? '<span style="color:var(--red);font-size:10px;margin-left:4px;">H</span>' : status === 'low' ? '<span style="color:var(--teal);font-size:10px;margin-left:4px;">L</span>' : '';
+    return `<tr style="border-bottom:0.5px solid var(--border);">
+      <td style="padding:7px 4px;font-size:12px;color:var(--text-label);">${k.toUpperCase()}</td>
+      <td style="padding:7px 4px;font-size:12px;color:var(--text-primary);font-family:var(--font-data);text-align:right;">${bv != null ? bv : '—'}${flag}</td>
+      <td style="padding:7px 4px;font-size:12px;color:var(--text-secondary);font-family:var(--font-data);text-align:right;">${cv != null ? cv : '—'}</td>
+      <td style="padding:7px 4px;font-size:12px;color:${dColor};font-family:var(--font-data);text-align:right;font-weight:600;">${dStr}</td>
+    </tr>`;
+  }).join('');
+
+  el.style.display = 'block';
+  el.innerHTML = `<div class="card" style="margin-bottom:14px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <div class="card-title" style="margin-bottom:0;">Panel Comparison</div>
+      <button onclick="_bwCompareIdx=null;document.getElementById('bw-compare-view').style.display='none';bwRenderHistory(bwLoad());" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:18px;line-height:1;">×</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0;margin-bottom:8px;border-bottom:1px solid var(--border-mid);padding-bottom:6px;">
+      <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Marker</div>
+      <div style="font-size:11px;color:var(--primary-bright);font-weight:600;text-align:right;">${base.date}</div>
+      <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-align:right;">${cmp.date}</div>
+      <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-align:right;text-transform:uppercase;">Δ</div>
+    </div>
+    <table style="width:100%;border-collapse:collapse;"><tbody>${rows}</tbody></table>
+  </div>`;
+}
+
 function bwRenderHistory(panels) {
   const el = document.getElementById('bw-history-list');
   if (!el) return;
@@ -3857,16 +3939,22 @@ function bwRenderHistory(panels) {
     const daysAgo    = Math.floor((Date.now() - Date.parse(p.date)) / 86400000);
     const count      = Object.keys(p.markers).filter(k => p.markers[k] != null).length;
     const outOfRange = Object.keys(p.markers).filter(k => { const s = bwRangeStatus(k, p.markers[k]); return s === 'high' || s === 'low'; }).length;
-    return `<div style="padding:10px 0;border-bottom:0.5px solid var(--border);cursor:pointer;" onclick="document.getElementById('bw-panel-select').value=${i};bwRenderPanel();">
-      <div style="display:flex;justify-content:space-between;">
-        <span style="font-size:13px;color:var(--text-primary);font-weight:500;">${p.date}</span>
-        <span style="font-size:11px;color:var(--text-muted);">${daysAgo === 0 ? 'Today' : daysAgo + 'd ago'}</span>
-      </div>
-      <div style="margin-top:3px;display:flex;gap:8px;align-items:center;">
-        <span style="font-size:12px;color:var(--text-muted);">${p.lab || '—'}</span>
-        <span style="font-size:11px;color:var(--border-mid);">·</span>
-        <span style="font-size:12px;color:var(--text-muted);">${count} markers</span>
-        ${outOfRange ? `<span style="font-size:11px;color:var(--red);font-weight:600;">· ${outOfRange} flagged</span>` : ''}
+    const isComparing = _bwCompareIdx === i;
+    return `<div style="padding:10px 0;border-bottom:0.5px solid var(--border);">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+        <div style="cursor:pointer;flex:1;" onclick="document.getElementById('bw-panel-select').value=${i};bwRenderPanel();bwRenderCompareView(bwLoad());">
+          <div style="display:flex;justify-content:space-between;">
+            <span style="font-size:13px;color:var(--text-primary);font-weight:500;">${p.date}</span>
+            <span style="font-size:11px;color:var(--text-muted);">${daysAgo === 0 ? 'Today' : daysAgo + 'd ago'}</span>
+          </div>
+          <div style="margin-top:3px;display:flex;gap:8px;align-items:center;">
+            <span style="font-size:12px;color:var(--text-muted);">${p.lab || '—'}</span>
+            <span style="font-size:11px;color:var(--border-mid);">·</span>
+            <span style="font-size:12px;color:var(--text-muted);">${count} markers</span>
+            ${outOfRange ? `<span style="font-size:11px;color:var(--red);font-weight:600;">· ${outOfRange} flagged</span>` : ''}
+          </div>
+        </div>
+        <button onclick="bwToggleCompare(${i})" title="Compare panel" style="flex-shrink:0;padding:3px 8px;border-radius:5px;border:0.5px solid ${isComparing ? 'rgba(245,197,24,0.4)' : 'var(--border)'};background:${isComparing ? 'rgba(245,197,24,0.1)' : 'transparent'};color:${isComparing ? 'var(--primary-bright)' : 'var(--text-muted)'};font-size:11px;cursor:pointer;margin-top:2px;">⇄</button>
       </div>
     </div>`;
   }).join('');
@@ -4967,7 +5055,7 @@ async function hkLoadFromSupabase() {
   if (!_supa || !_supaUser) return null;
   const { data, error } = await _supa
     .from('healthkit_daily')
-    .select('date,weight_lbs,body_fat_pct,lean_mass_lbs,hrv_ms,resting_hr,hr_min,hr_avg,hr_max,sleep_total_hr,sleep_deep_hr,sleep_rem_hr,steps,active_energy_kcal,exercise_min')
+    .select('date,weight_lbs,body_fat_pct,lean_mass_lbs,hrv_ms,resting_hr,hr_min,hr_avg,hr_max,sleep_total_hr,sleep_deep_hr,sleep_rem_hr,steps,active_energy_kcal,exercise_min,bp_systolic,bp_diastolic,spo2_pct')
     .eq('user_id', _supaUser.id)
     .order('date', { ascending: true });
   if (error) { console.warn('[hk] Supabase error:', error.message); return null; }
@@ -4987,8 +5075,11 @@ async function hkLoadFromSupabase() {
     'Sleep Analysis [Deep] (hr)':   r.sleep_deep_hr       ?? '',
     'Sleep Analysis [REM] (hr)':    r.sleep_rem_hr        ?? '',
     'Step Count (steps)':           r.steps               ?? '',
-    'Active Energy (kcal)':         r.active_energy_kcal  ?? '',
-    'Apple Exercise Time (min)':    r.exercise_min        ?? '',
+    'Active Energy (kcal)':              r.active_energy_kcal  ?? '',
+    'Apple Exercise Time (min)':         r.exercise_min        ?? '',
+    'Blood Pressure [Systolic] (mmHg)':  r.bp_systolic         ?? '',
+    'Blood Pressure [Diastolic] (mmHg)': r.bp_diastolic        ?? '',
+    'Oxygen Saturation (%)':             r.spo2_pct            ?? '',
   }));
   return _hkSupaData;
 }
@@ -6048,10 +6139,8 @@ function renderVitalsCharts(logs) {
   }
 }
 function resetLogForm() {
-  document.getElementById('log-weight').value = '';
   document.getElementById('log-bp').value = '';
   document.getElementById('log-glucose').value = '';
-  document.getElementById('log-hr').value = '';
   document.getElementById('log-notes').value = '';
 }
 
@@ -6495,7 +6584,37 @@ function renderProtocolsPage() {
         </div>
       </div>
       ${p.notes ? `<div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;font-style:italic;">${escHtml(p.notes)}</div>` : ''}
-      <div style="display:flex;flex-wrap:wrap;gap:6px;">${compounds || '<span style="color:var(--text-muted);font-size:12px;">No compounds added</span>'}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:${(p.compounds||[]).length ? '10px' : '0'};">${compounds || '<span style="color:var(--text-muted);font-size:12px;">No compounds added</span>'}</div>
+      ${(function(){
+        const cs = p.compounds || [];
+        if (!cs.length) return '';
+        const totalWeeks = p.cycleLengthWeeks || parseInt(p.weeks) || 12;
+        const { weeks, rows } = buildWeekGrid(cs, totalWeeks);
+        const STRIP_COLORS = ['#F5C518','#22D3EE','#C084FC','#4ADE80','#FB923C','#F87171'];
+        const rowsHtml = rows.map((r, ri) => {
+          const color = STRIP_COLORS[ri % STRIP_COLORS.length];
+          const blocks = r.cells.map(v => v !== null
+            ? `<span title="${escHtml(r.name)} ${escHtml(v)}${escHtml(r.unit)}" style="display:inline-block;width:100%;height:8px;border-radius:2px;background:${color};opacity:0.85;"></span>`
+            : `<span style="display:inline-block;width:100%;height:8px;border-radius:2px;background:rgba(255,255,255,0.05);"></span>`
+          ).join('');
+          return `<div style="display:contents;">
+            <div style="font-size:10px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80px;align-self:center;">${escHtml(r.name.split(' ')[0])}</div>
+            <div style="display:grid;grid-template-columns:repeat(${weeks.length},1fr);gap:2px;align-items:center;">${blocks}</div>
+          </div>`;
+        }).join('');
+        const weekLabels = weeks.filter((_, wi) => wi === 0 || wi === weeks.length-1 || (wi+1) % Math.max(1,Math.floor(weeks.length/4)) === 0)
+          .map(w => w).join('');
+        return `<div style="border-top:0.5px solid var(--border);padding-top:10px;">
+          <div style="font-size:10px;color:var(--text-muted);margin-bottom:6px;letter-spacing:0.05em;text-transform:uppercase;">Week Timeline</div>
+          <div style="display:grid;grid-template-columns:80px 1fr;gap:4px 8px;">${rowsHtml}</div>
+          <div style="display:grid;grid-template-columns:80px 1fr;gap:0 8px;margin-top:3px;">
+            <div></div>
+            <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--text-muted);">
+              <span>Wk1</span><span>Wk${totalWeeks}</span>
+            </div>
+          </div>
+        </div>`;
+      })()}
     </div>`;
   }).join('');
 }

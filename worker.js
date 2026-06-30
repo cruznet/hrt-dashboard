@@ -84,20 +84,23 @@ async function handleIngest(request, env) {
 // Maps Health Auto Export CSV column headers → healthkit_daily column names + type
 
 const CSV_COL = {
-  'Weight (lbs)':                    ['weight_lbs',         'float'],
-  'Body Fat Percentage (%)':         ['body_fat_pct',       'float'],
-  'Lean Body Mass (lbs)':            ['lean_mass_lbs',      'float'],
-  'Heart Rate Variability (ms)':     ['hrv_ms',             'float'],
-  'Resting Heart Rate (bpm)':        ['resting_hr',         'int'],
-  'Heart Rate [Min] (bpm)':          ['hr_min',             'int'],
-  'Heart Rate [Avg] (bpm)':          ['hr_avg',             'int'],
-  'Heart Rate [Max] (bpm)':          ['hr_max',             'int'],
-  'Sleep Analysis [Total] (hr)':     ['sleep_total_hr',     'float'],
-  'Sleep Analysis [Deep] (hr)':      ['sleep_deep_hr',      'float'],
-  'Sleep Analysis [REM] (hr)':       ['sleep_rem_hr',       'float'],
-  'Step Count (steps)':              ['steps',              'int'],
-  'Active Energy (kcal)':            ['active_energy_kcal', 'float'],
-  'Apple Exercise Time (min)':       ['exercise_min',       'int'],
+  'Weight (lbs)':                          ['weight_lbs',         'float'],
+  'Body Fat Percentage (%)':               ['body_fat_pct',       'float'],
+  'Lean Body Mass (lbs)':                  ['lean_mass_lbs',      'float'],
+  'Heart Rate Variability (ms)':           ['hrv_ms',             'float'],
+  'Resting Heart Rate (bpm)':              ['resting_hr',         'int'],
+  'Heart Rate [Min] (bpm)':               ['hr_min',             'int'],
+  'Heart Rate [Avg] (bpm)':               ['hr_avg',             'int'],
+  'Heart Rate [Max] (bpm)':               ['hr_max',             'int'],
+  'Sleep Analysis [Total] (hr)':           ['sleep_total_hr',     'float'],
+  'Sleep Analysis [Deep] (hr)':            ['sleep_deep_hr',      'float'],
+  'Sleep Analysis [REM] (hr)':             ['sleep_rem_hr',       'float'],
+  'Step Count (steps)':                    ['steps',              'int'],
+  'Active Energy (kcal)':                  ['active_energy_kcal', 'float'],
+  'Apple Exercise Time (min)':             ['exercise_min',       'int'],
+  'Blood Pressure [Systolic] (mmHg)':      ['bp_systolic',        'int'],
+  'Blood Pressure [Diastolic] (mmHg)':     ['bp_diastolic',       'int'],
+  'Oxygen Saturation (%)':                 ['spo2_pct',           'float'],
 };
 
 function parseCsv(text) {
@@ -124,6 +127,7 @@ function parseCsv(text) {
       hrv_ms: null, resting_hr: null, hr_min: null, hr_avg: null, hr_max: null,
       sleep_total_hr: null, sleep_deep_hr: null, sleep_rem_hr: null,
       steps: null, active_energy_kcal: null, exercise_min: null,
+      bp_systolic: null, bp_diastolic: null, spo2_pct: null,
     };
 
     for (const [csvCol, [dbCol, type]] of Object.entries(CSV_COL)) {
@@ -158,6 +162,11 @@ const JSON_METRIC = {
   'active_energy':                d => ({ active_energy_kcal: num(d.qty ?? d.sum) }),
   'active_energy_burned':         d => ({ active_energy_kcal: num(d.qty ?? d.sum) }),
   'apple_exercise_time':          d => ({ exercise_min:       int(d.qty ?? d.sum) }),
+  'blood_pressure': d => ({
+    ...(d.systolic  != null ? { bp_systolic:  int(d.systolic)  } : {}),
+    ...(d.diastolic != null ? { bp_diastolic: int(d.diastolic) } : {}),
+  }),
+  'oxygen_saturation':            d => ({ spo2_pct:           num(d.qty) }),
   'sleep_analysis': d => ({
     ...(d.qty          != null || d.totalSleepTime != null ? { sleep_total_hr: num(d.qty          ?? d.totalSleepTime) } : {}),
     ...(d.deep         != null || d.deepSleepTime  != null ? { sleep_deep_hr:  num(d.deep         ?? d.deepSleepTime)  } : {}),
@@ -182,6 +191,7 @@ function parseHAEJson(body) {
         hrv_ms: null, resting_hr: null, hr_min: null, hr_avg: null, hr_max: null,
         sleep_total_hr: null, sleep_deep_hr: null, sleep_rem_hr: null,
         steps: null, active_energy_kcal: null, exercise_min: null,
+        bp_systolic: null, bp_diastolic: null, spo2_pct: null,
       };
       const mapped = mapper(d);
       for (const [k, v] of Object.entries(mapped)) {
