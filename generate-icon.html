@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>HRT Tracker — Icon Generator</title>
+<style>
+  body { margin: 0; background: #08080E; display: flex; flex-direction: column; align-items: center;
+         justify-content: center; min-height: 100vh; font-family: system-ui, sans-serif; color: #E8E8ED; gap: 24px; }
+  h1   { font-size: 15px; color: #64748B; letter-spacing: 0.08em; text-transform: uppercase; margin: 0; }
+  .canvases { display: flex; gap: 32px; align-items: flex-end; flex-wrap: wrap; justify-content: center; }
+  .item { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  canvas { border-radius: 22.5%; box-shadow: 0 0 40px rgba(245,197,24,0.18); }
+  .label { font-size: 11px; color: #64748B; }
+  button { padding: 10px 24px; border-radius: 8px; border: 0.5px solid rgba(245,197,24,0.4);
+           background: rgba(245,197,24,0.1); color: #F5C518; font-size: 13px; cursor: pointer;
+           transition: all 0.15s; }
+  button:hover { background: rgba(245,197,24,0.2); }
+  .instructions { font-size: 12px; color: #64748B; text-align: center; max-width: 400px; line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<h1>HRT Tracker Icon Generator</h1>
+
+<div class="canvases">
+  <div class="item">
+    <canvas id="c180" width="180" height="180"></canvas>
+    <span class="label">180×180 — iPhone (apple-touch-icon)</span>
+    <button onclick="dl('c180','apple-touch-icon.png')">Download PNG</button>
+  </div>
+  <div class="item">
+    <canvas id="c512" width="512" height="512"></canvas>
+    <span class="label">512×512 — PWA / Splash</span>
+    <button onclick="dl('c512','icon-512.png')">Download PNG</button>
+  </div>
+</div>
+
+<p class="instructions">
+  Save <strong>apple-touch-icon.png</strong> to the project root folder, then deploy.<br>
+  On iPhone: Safari → Share → Add to Home Screen.
+</p>
+
+<script>
+function drawIcon(canvas) {
+  const ctx = canvas.getContext('2d');
+  const S = canvas.width; // scale factor (180 or 512)
+  const s = S / 180;     // unit scale
+
+  // ── Background ──
+  const bg = ctx.createRadialGradient(S * 0.5, S * 0.36, 0, S * 0.5, S * 0.36, S * 0.75);
+  bg.addColorStop(0, '#1C1C2E');
+  bg.addColorStop(1, '#07070D');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, S, S);
+
+  // Subtle top-center glow
+  const topGlow = ctx.createRadialGradient(S * 0.5, 0, 0, S * 0.5, 0, S * 0.55);
+  topGlow.addColorStop(0, 'rgba(245,197,24,0.07)');
+  topGlow.addColorStop(1, 'rgba(245,197,24,0)');
+  ctx.fillStyle = topGlow;
+  ctx.fillRect(0, 0, S, S);
+
+  // ── Helper: rounded rect path ──
+  function rr(x, y, w, h, r) {
+    x *= s; y *= s; w *= s; h *= s; r *= s;
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+  }
+
+  // ── H left vertical bar ──
+  ctx.shadowColor = '#F5C518';
+  ctx.shadowBlur = 14 * s;
+  ctx.fillStyle = '#F5C518';
+  rr(27, 35, 25, 110, 6);
+  ctx.fill();
+
+  // ── H right vertical bar ──
+  rr(128, 35, 25, 110, 6);
+  ctx.fill();
+
+  // ── EKG heartbeat crossbar ──
+  // Baseline at y=90, spike centered around x=90 (center of the 52–128 gap)
+  ctx.shadowBlur = 12 * s;
+  ctx.strokeStyle = '#F5C518';
+  ctx.lineWidth = 7.5 * s;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(52  * s, 90 * s);   // start at left bar edge
+  ctx.lineTo(68  * s, 90 * s);   // flat baseline
+  ctx.lineTo(76  * s, 60 * s);   // up — Q/R rise
+  ctx.lineTo(87  * s, 125 * s);  // down — S wave
+  ctx.lineTo(98  * s, 62 * s);   // up — T bounce
+  ctx.lineTo(108 * s, 90 * s);   // back to baseline
+  ctx.lineTo(128 * s, 90 * s);   // flat to right bar
+  ctx.stroke();
+
+  ctx.shadowBlur = 0;
+
+  // ── Small "HRT" text at bottom ──
+  const fontSize = 13 * s;
+  ctx.font = `600 ${fontSize}px 'SF Pro Display', system-ui, -apple-system, sans-serif`;
+  ctx.fillStyle = 'rgba(245,197,24,0.45)';
+  ctx.textAlign = 'center';
+  ctx.letterSpacing = `${3 * s}px`;
+  ctx.fillText('HRT', S * 0.5, S - 14 * s);
+}
+
+['c180','c512'].forEach(id => drawIcon(document.getElementById(id)));
+
+function dl(canvasId, filename) {
+  const a = document.createElement('a');
+  a.download = filename;
+  a.href = document.getElementById(canvasId).toDataURL('image/png');
+  a.click();
+}
+</script>
+</body>
+</html>
