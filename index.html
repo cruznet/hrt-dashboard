@@ -557,10 +557,36 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
   content: ''; flex: 1; height: 0.5px; background: var(--border);
 }
 .auth-privacy {
-  margin-top: 28px; font-size: 11px; color: var(--text-muted);
+  margin-top: 20px; font-size: 11px; color: var(--text-muted);
   line-height: 1.6; padding: 14px; border-radius: var(--radius);
   background: var(--bg-card); border: 0.5px solid var(--border);
 }
+.auth-tabs {
+  display: flex; gap: 4px; margin: 20px 0 18px;
+  padding: 3px; background: var(--bg-deep);
+  border-radius: 9px; border: 0.5px solid var(--border);
+}
+.auth-tab {
+  flex: 1; padding: 8px 10px; border-radius: 7px; border: none;
+  background: none; color: var(--text-muted); font-size: 13px;
+  font-family: var(--font-ui); font-weight: 500; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  transition: all 0.15s;
+}
+.auth-tab.active {
+  background: var(--bg-card); color: var(--text-primary);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.35);
+}
+.auth-tab:hover:not(.active) { color: var(--text-secondary); }
+.auth-email-form .form-group { margin-bottom: 12px; text-align: left; }
+.auth-email-form .form-label { font-size: 12px; }
+.auth-email-form .form-input { background: var(--bg-deep); }
+.auth-email-links {
+  display: flex; justify-content: center; gap: 4px; flex-wrap: wrap;
+  margin-top: 12px; font-size: 12px; color: var(--text-muted);
+}
+.auth-email-links a { color: var(--primary-bright); text-decoration: none; }
+.auth-email-links a:hover { text-decoration: underline; }
 @media (max-width: 768px) {
   .auth-panel-left { display: none; }
   .auth-panel-right { width: 100%; }
@@ -896,12 +922,57 @@ body {
     <div class="auth-panel-right">
       <div class="auth-card">
         <div class="auth-card-icon"><i class="ti ti-lock"></i></div>
-        <div class="auth-card-title">Welcome back</div>
+        <div class="auth-card-title" id="auth-card-title">Welcome back</div>
         <div class="auth-card-sub">Sign in to access your protocols and health data.</div>
-        <button class="auth-btn" onclick="supaSignIn()">
-          <svg width="16" height="16" viewBox="0 0 18 18" fill="none"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/><path d="M3.964 10.707A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.96l3.007 2.332C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>
-          Continue with Google
-        </button>
+
+        <!-- Tab switcher -->
+        <div class="auth-tabs">
+          <button class="auth-tab active" id="auth-tab-google" onclick="authSwitchTab('google')">
+            <svg width="14" height="14" viewBox="0 0 18 18" fill="none"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/><path d="M3.964 10.707A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.96l3.007 2.332C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>
+            Google
+          </button>
+          <button class="auth-tab" id="auth-tab-email" onclick="authSwitchTab('email')">
+            <i class="ti ti-mail" style="font-size:14px;"></i>
+            Email
+          </button>
+        </div>
+
+        <!-- Google panel -->
+        <div id="auth-panel-google">
+          <button class="auth-btn" onclick="supaSignIn()">
+            <svg width="16" height="16" viewBox="0 0 18 18" fill="none"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/><path d="M3.964 10.707A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.96l3.007 2.332C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>
+            Continue with Google
+          </button>
+        </div>
+
+        <!-- Email panel -->
+        <div id="auth-panel-email" style="display:none;" class="auth-email-form">
+          <div class="form-group">
+            <label class="form-label">Email</label>
+            <input type="email" class="form-input" id="auth-email" placeholder="you@example.com"
+              autocomplete="email" onkeydown="if(event.key==='Enter')supaEmailAuth()">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <input type="password" class="form-input" id="auth-password" placeholder="••••••••"
+              autocomplete="current-password" onkeydown="if(event.key==='Enter')supaEmailAuth()">
+          </div>
+          <div class="form-group" id="auth-confirm-group" style="display:none;">
+            <label class="form-label">Confirm Password</label>
+            <input type="password" class="form-input" id="auth-confirm" placeholder="••••••••"
+              autocomplete="new-password" onkeydown="if(event.key==='Enter')supaEmailAuth()">
+          </div>
+          <button class="auth-btn" id="auth-email-btn" onclick="supaEmailAuth()" style="margin-top:4px;">
+            Sign In
+          </button>
+          <div class="auth-email-links">
+            <span id="auth-toggle-text">No account?</span>
+            <a href="#" onclick="authToggleSignUp();return false;" id="auth-toggle-link">Sign Up</a>
+            <span id="auth-forgot-sep" style="color:var(--border);">·</span>
+            <a href="#" onclick="supaResetPassword();return false;" id="auth-forgot-link">Forgot password?</a>
+          </div>
+        </div>
+
         <div class="auth-privacy">
           <i class="ti ti-shield-check" style="color:var(--green);"></i>
           Your data is private and encrypted. Only you can access it.
@@ -2360,6 +2431,85 @@ async function supaSignIn() {
   const redirectTo = window.location.href.split('#')[0];
   const { error } = await _supa.auth.signInWithOAuth({ provider: 'google', options: { redirectTo } });
   if (error) { console.error('[auth] signIn failed:', error); showToast('Sign-in failed: ' + error.message, 'error'); }
+}
+
+let _authEmailMode = 'signin';
+
+function authSwitchTab(tab) {
+  const gPanel = document.getElementById('auth-panel-google');
+  const ePanel = document.getElementById('auth-panel-email');
+  const gTab   = document.getElementById('auth-tab-google');
+  const eTab   = document.getElementById('auth-tab-email');
+  const title  = document.getElementById('auth-card-title');
+  if (tab === 'google') {
+    gPanel.style.display = ''; ePanel.style.display = 'none';
+    gTab.classList.add('active'); eTab.classList.remove('active');
+    if (title) title.textContent = 'Welcome back';
+  } else {
+    gPanel.style.display = 'none'; ePanel.style.display = '';
+    eTab.classList.add('active'); gTab.classList.remove('active');
+    if (title) title.textContent = _authEmailMode === 'signup' ? 'Create account' : 'Welcome back';
+    setTimeout(() => document.getElementById('auth-email')?.focus(), 50);
+  }
+}
+
+function authToggleSignUp() {
+  _authEmailMode = _authEmailMode === 'signin' ? 'signup' : 'signin';
+  const isUp = _authEmailMode === 'signup';
+  const title = document.getElementById('auth-card-title');
+  if (title) title.textContent = isUp ? 'Create account' : 'Welcome back';
+  document.getElementById('auth-email-btn').textContent  = isUp ? 'Create Account' : 'Sign In';
+  document.getElementById('auth-confirm-group').style.display = isUp ? '' : 'none';
+  document.getElementById('auth-toggle-text').textContent = isUp ? 'Have an account?' : 'No account?';
+  document.getElementById('auth-toggle-link').textContent = isUp ? 'Sign In' : 'Sign Up';
+  document.getElementById('auth-forgot-sep').style.display  = isUp ? 'none' : '';
+  document.getElementById('auth-forgot-link').style.display = isUp ? 'none' : '';
+  document.getElementById('auth-password').setAttribute('autocomplete', isUp ? 'new-password' : 'current-password');
+}
+
+async function supaEmailAuth() {
+  const email    = (document.getElementById('auth-email').value || '').trim();
+  const password = document.getElementById('auth-password').value || '';
+  const btn      = document.getElementById('auth-email-btn');
+  if (!email || !password) { showToast('Enter your email and password', 'warn'); return; }
+
+  if (_authEmailMode === 'signup') {
+    const confirm = document.getElementById('auth-confirm').value || '';
+    if (password !== confirm) { showToast('Passwords do not match', 'error'); return; }
+    if (password.length < 8)  { showToast('Password must be at least 8 characters', 'warn'); return; }
+  }
+
+  const origText   = btn.textContent;
+  btn.disabled     = true;
+  btn.textContent  = _authEmailMode === 'signup' ? 'Creating…' : 'Signing in…';
+
+  try {
+    if (_authEmailMode === 'signup') {
+      const { error } = await _supa.auth.signUp({ email, password });
+      if (error) throw error;
+      showToast('Account created — check your email to confirm, then sign in.', 'success');
+      authToggleSignUp(); // switch back to sign-in
+    } else {
+      const { error } = await _supa.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      // onAuthStateChange fires and calls showApp()
+    }
+  } catch (e) {
+    console.error('[auth] email auth failed:', e);
+    showToast(e.message || 'Sign-in failed', 'error');
+  } finally {
+    btn.disabled    = false;
+    btn.textContent = origText;
+  }
+}
+
+async function supaResetPassword() {
+  const email = (document.getElementById('auth-email').value || '').trim();
+  if (!email) { showToast('Enter your email address first', 'warn'); return; }
+  const redirectTo = window.location.href.split('#')[0];
+  const { error } = await _supa.auth.resetPasswordForEmail(email, { redirectTo });
+  if (error) showToast(error.message, 'error');
+  else showToast('Password reset email sent — check your inbox', 'success');
 }
 
 function _checkPwaAuthNote() {
