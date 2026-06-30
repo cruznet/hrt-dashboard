@@ -221,20 +221,49 @@ body {
 
 /* ── Metric cards ── */
 .metrics-grid {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
   gap: 10px;
   margin-bottom: 14px;
 }
+.dash-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.dash-section-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--text-muted);
+  margin: 20px 0 10px; padding-bottom: 8px;
+  border-bottom: 0.5px solid rgba(255,255,255,0.06);
+  display: flex; align-items: center; gap: 8px;
+}
+.dash-section-label::after {
+  content: ''; flex: 1; height: 0.5px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.06), transparent);
+}
+.metric-icon {
+  width: 26px; height: 26px; border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 10px; flex-shrink: 0;
+}
+.metric-icon svg { width: 13px; height: 13px; }
+.mc-red    .metric-icon { background: rgba(248,113,113,0.12); }
+.mc-purple .metric-icon { background: rgba(192,132,252,0.12); }
+.mc-teal   .metric-icon { background: rgba(34,211,238,0.12); }
+.mc-amber  .metric-icon { background: rgba(251,146,60,0.12); }
 .metric-card {
   background: var(--bg-card);
   border: 0.5px solid var(--border);
   border-radius: var(--radius);
   border-top-width: 2px;
-  padding: 13px 14px;
+  padding: 14px 14px 12px;
   cursor: default;
   transition: background var(--transition), box-shadow var(--transition);
-  flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 .metric-card:hover { background: var(--bg-card-hover); box-shadow: 0 0 0 0.5px var(--border-mid); }
 .mc-gold:hover   { box-shadow: 0 0 0 0.5px var(--border-mid), 0 4px 16px rgba(197,146,10,0.08); }
@@ -302,9 +331,9 @@ label.dose-row.dose-done .dose-name { text-decoration: line-through; }
 .shimmer-line  { height:11px; margin-bottom:8px; }
 .shimmer-value { height:28px; width:55%; margin-bottom:7px; }
 .shimmer-sub   { height:10px; width:38%; }
-.metric-label { font-size: 12px; color: var(--text-label); letter-spacing: 0; text-transform: none; margin-bottom: 5px; font-weight: 500; }
-.metric-value { font-size: 28px; font-family: var(--font-data); font-weight: 500; color: var(--text-primary); line-height: 1.1; letter-spacing: -0.5px; }
-.metric-unit  { font-size: 12px; margin-top: 4px; font-family: var(--font-data); font-weight: 500; }
+.metric-label { font-size: 11px; color: var(--text-label); letter-spacing: 0.02em; text-transform: uppercase; margin-bottom: 4px; font-weight: 600; }
+.metric-value { font-size: 24px; font-family: var(--font-data); font-weight: 500; color: var(--text-primary); line-height: 1.1; letter-spacing: -0.5px; margin-top: auto; }
+.metric-unit  { font-size: 11px; margin-top: 3px; font-family: var(--font-data); font-weight: 500; }
 .metric-badge {
   display: inline-block; font-size: 11px; padding: 2px 8px;
   border-radius: 20px; margin-top: 5px; font-family: var(--font-ui); letter-spacing: 0;
@@ -660,6 +689,7 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
   #sync-btn .btn-text { display: inline; font-size: 12px; }
   .topbar-badge { display: none; }
   .grid-2, .grid-3, .grid-2-1, .grid-1-2, .grid-dash-main { grid-template-columns: 1fr; }
+  .dash-row-2 { grid-template-columns: 1fr; }
   #content { padding: 12px; }
   .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; }
   #bw-kpi-row   { grid-template-columns: 1fr 1fr 1fr; }
@@ -1261,11 +1291,14 @@ body {
     <!-- ── DASHBOARD PAGE ── -->
     <section class="page active" id="page-dashboard">
 
-      <!-- Daily Readiness Card -->
-      <div id="daily-readiness-card" style="margin-bottom:14px;"></div>
+      <!-- TODAY section -->
+      <div class="dash-section-label">Today</div>
 
-      <!-- Compliance Streak -->
-      <div id="streak-dash-card" style="margin-bottom:14px;"></div>
+      <!-- Readiness + Streak side-by-side -->
+      <div class="dash-row-2">
+        <div id="daily-readiness-card"></div>
+        <div id="streak-dash-card"></div>
+      </div>
 
       <!-- Show countdown banner (Prep mode) -->
       <div id="show-countdown" style="margin-bottom:14px;"></div>
@@ -1276,9 +1309,15 @@ body {
       <!-- Weekly check-in nudge -->
       <div id="checkin-dash-card" style="margin-bottom:14px;"></div>
 
+      <!-- HEALTH METRICS section -->
+      <div class="dash-section-label">Health Metrics</div>
+
       <!-- Metric cards -->
       <div class="metrics-grid" id="metrics-grid">
         <div class="metric-card mc-red">
+          <div class="metric-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#F87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V22H4V12"/><path d="M22 7H2v5h20V7z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+          </div>
           <div class="metric-label">Blood Pressure</div>
           <div class="metric-value" id="m-bp" style="font-size:18px;">—</div>
           <div class="metric-unit">mmHg</div>
@@ -1286,6 +1325,9 @@ body {
           <div class="metric-delta" id="m-bp-delta"></div>
         </div>
         <div class="metric-card mc-purple">
+          <div class="metric-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#C084FC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>
+          </div>
           <div class="metric-label">Glucose</div>
           <div class="metric-value" id="m-glucose">—</div>
           <div class="metric-unit">mg/dL</div>
@@ -1293,6 +1335,9 @@ body {
           <div class="metric-delta" id="m-glucose-delta"></div>
         </div>
         <div class="metric-card mc-teal">
+          <div class="metric-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#22D3EE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+          </div>
           <div class="metric-label">Mood</div>
           <div class="metric-value" id="m-mood">—</div>
           <div class="metric-unit">/10</div>
@@ -1300,6 +1345,9 @@ body {
           <div class="metric-delta" id="m-mood-delta"></div>
         </div>
         <div class="metric-card mc-amber">
+          <div class="metric-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#FB923C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          </div>
           <div class="metric-label">Energy</div>
           <div class="metric-value" id="m-energy">—</div>
           <div class="metric-unit">/10</div>
@@ -1307,6 +1355,9 @@ body {
           <div class="metric-delta" id="m-energy-delta"></div>
         </div>
         <div class="metric-card mc-teal">
+          <div class="metric-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#22D3EE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          </div>
           <div class="metric-label">HRV</div>
           <div class="metric-value" id="m-hrv">—</div>
           <div class="metric-unit">ms</div>
@@ -1314,6 +1365,9 @@ body {
           <div class="metric-delta" id="m-hrv-delta"></div>
         </div>
         <div class="metric-card mc-red">
+          <div class="metric-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#F87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          </div>
           <div class="metric-label">Resting HR</div>
           <div class="metric-value" id="m-resting-hr">—</div>
           <div class="metric-unit">bpm</div>
@@ -1321,6 +1375,9 @@ body {
           <div class="metric-delta" id="m-resting-hr-delta"></div>
         </div>
         <div class="metric-card mc-purple">
+          <div class="metric-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#C084FC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
           <div class="metric-label">Sleep</div>
           <div class="metric-value" id="m-sleep">—</div>
           <div class="metric-unit">hrs</div>
@@ -1328,6 +1385,9 @@ body {
           <div class="metric-delta" id="m-sleep-delta"></div>
         </div>
         <div class="metric-card mc-teal">
+          <div class="metric-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#22D3EE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></svg>
+          </div>
           <div class="metric-label">SpO₂</div>
           <div class="metric-value" id="m-spo2">—</div>
           <div class="metric-unit">%</div>
@@ -1340,6 +1400,9 @@ body {
       <div id="bw-dash-strip" style="display:none;margin-bottom:8px;cursor:pointer;" onclick="nav('bloodwork')"></div>
       <!-- Latest Physique strip -->
       <div id="ph-dash-strip" style="display:none;margin-bottom:12px;cursor:pointer;" onclick="nav('physique')"></div>
+
+      <!-- PROTOCOL section -->
+      <div class="dash-section-label">Protocol</div>
 
       <!-- ROW 2: Daily doses (left, primary action) + Protocol context (right) -->
       <div class="grid-dash-main" style="margin-bottom:14px;">
@@ -1395,6 +1458,9 @@ body {
 
         </div>
       </div>
+
+      <!-- TRENDS section -->
+      <div class="dash-section-label">Trends</div>
 
       <!-- ROW 3: Trend charts -->
       <div class="grid-2" style="margin-bottom:14px;">
