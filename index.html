@@ -4151,22 +4151,35 @@ function daysUntilNextDose(freq, startDate) {
 }
 
 function buildWeekStrip(currentWeek, totalWeeks) {
-  const squares = [];
+  const CELL = 18; // px per cell
+  const cells = [];
+  const labelAt = new Set([1, Math.round(totalWeeks / 2), totalWeeks]);
+
   for (let w = 1; w <= totalWeeks; w++) {
-    if (w < currentWeek) {
-      squares.push(`<div style="width:14px;height:14px;border-radius:2px;background:var(--primary);opacity:0.3;flex-shrink:0;" title="Week ${w}"></div>`);
-    } else if (w === currentWeek) {
-      squares.push(
-        `<div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;">` +
-        `<div style="width:14px;height:14px;border-radius:2px;background:var(--primary);" title="Week ${w}"></div>` +
-        `<div style="font-size:8px;color:var(--primary-bright);margin-top:2px;font-family:var(--font-data);white-space:nowrap;">Wk ${w}</div>` +
-        `</div>`
-      );
-    } else {
-      squares.push(`<div style="width:14px;height:14px;border-radius:2px;border:1px solid var(--primary);opacity:0.4;flex-shrink:0;" title="Week ${w}"></div>`);
-    }
+    const past    = w < currentWeek;
+    const current = w === currentWeek;
+    const pct     = past ? 1 : current ? 0.85 : 0;
+    const bg = past    ? `rgba(245,197,24,${pct})`
+             : current ? 'var(--primary-bright)'
+             : 'rgba(255,255,255,0.07)';
+    const border = current ? 'none' : past ? 'none' : '0.5px solid rgba(255,255,255,0.15)';
+    const glow   = current ? 'box-shadow:0 0 8px rgba(245,197,24,0.5);' : '';
+    const label  = (labelAt.has(w) || current)
+      ? `<div style="font-size:8px;color:${current ? 'var(--primary-bright)' : 'var(--text-muted)'};text-align:center;margin-top:3px;font-family:var(--font-data);">${w}</div>`
+      : '';
+    cells.push(`<div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;${current ? 'transform:translateY(-2px);' : ''}">
+      <div title="Week ${w}" style="width:${CELL}px;height:${w === currentWeek ? 20 : 14}px;border-radius:3px;background:${bg};border:${border};${glow}cursor:default;transition:opacity 0.15s;" onmouseenter="this.style.opacity='0.7'" onmouseleave="this.style.opacity='1'"></div>
+      ${label}
+    </div>`);
   }
-  return `<div style="display:flex;gap:3px;align-items:flex-end;padding:2px 0;">${squares.join('')}</div>`;
+
+  const pctDone = totalWeeks > 0 ? Math.round(((currentWeek - 1) / totalWeeks) * 100) : 0;
+  return `
+    <div style="position:relative;padding:4px 0 0;">
+      <div style="display:flex;gap:2px;align-items:flex-end;overflow-x:auto;padding-bottom:4px;">
+        ${cells.join('')}
+      </div>
+    </div>`;
 }
 
 function renderCycleProgress(rawProtocol) {
@@ -8091,33 +8104,62 @@ function renderProtocolTimeline() {
   const el = document.getElementById('pb-timeline-grid');
   if (!el) return;
   if (!pbState.compounds.length) {
-    el.innerHTML = '<div style="color:var(--text-muted);font-size:12px;">Build a protocol in the Builder tab to see the timeline.</div>';
+    el.innerHTML = '<div style="font-size:13px;color:var(--text-muted);padding:20px 0;">Build a protocol in the Builder tab to see the timeline.</div>';
     return;
   }
-  const { weeks, rows } = buildWeekGrid(pbState.compounds, pbState.cycleLengthWeeks || 12);
-  const thStyle = 'padding:5px 10px;font-size:11px;font-weight:600;color:var(--text-muted);text-align:center;white-space:nowrap;';
-  const nameStyle = 'padding:6px 10px;font-size:12px;color:var(--text-secondary);font-weight:500;white-space:nowrap;';
-  const activeStyle = 'padding:5px 8px;font-size:11px;font-family:var(--font-data);background:var(--primary-dim);color:var(--primary-bright);border-radius:3px;text-align:center;';
-  const emptyStyle  = 'padding:5px 8px;font-size:11px;color:var(--text-muted);text-align:center;';
+  const totalWeeks = pbState.cycleLengthWeeks || 12;
+  const { weeks, rows } = buildWeekGrid(pbState.compounds, totalWeeks);
+  const currentWeek = pbState.startDate ? pbCurrentCycleWeek(pbState.startDate) : null;
 
-  const headerCells = weeks.map(w => `<th style="${thStyle}">Wk${w}</th>`).join('');
-  const bodyRows = rows.map(r => {
-    const freqLabel = Array.isArray(r.freq) ? r.freq.join(',') : r.freq;
-    const cells = r.cells.map(v =>
-      v !== null
-        ? `<td style="${activeStyle}">${escHtml(String(v))}${escHtml(r.unit)}</td>`
-        : `<td style="${emptyStyle}">—</td>`
-    ).join('');
-    return `<tr>
-      <td style="${nameStyle}">${escHtml(r.name)}<br><span style="font-size:10px;color:var(--text-muted);">${escHtml(freqLabel)}</span></td>
-      ${cells}
-    </tr>`;
+  const COLORS = ['#F5C518','#22D3EE','#C084FC','#4ADE80','#FB923C','#F472B6','#60A5FA','#A78BFA'];
+
+  // Gantt bars: one row per compound
+  const ganttRows = rows.map((r, i) => {
+    const color = COLORS[i % COLORS.length];
+    const freqLabel = Array.isArray(r.freq) ? r.freq.join(', ') : r.freq;
+
+    // Build continuous block spans from phases
+    let spans = '';
+    let inBlock = false, blockStart = 0, blockDose = '';
+    for (let wi = 0; wi < r.cells.length; wi++) {
+      const v = r.cells[wi];
+      if (v !== null && !inBlock) { inBlock = true; blockStart = wi; blockDose = v; }
+      if ((v === null || wi === r.cells.length - 1) && inBlock) {
+        const endIdx = v !== null ? wi : wi - 1;
+        const leftPct  = (blockStart / totalWeeks) * 100;
+        const widthPct = ((endIdx - blockStart + 1) / totalWeeks) * 100;
+        spans += `<div style="position:absolute;left:${leftPct.toFixed(2)}%;width:${widthPct.toFixed(2)}%;height:100%;background:${color};border-radius:4px;opacity:0.85;display:flex;align-items:center;justify-content:center;overflow:hidden;">
+          <span style="font-size:10px;font-family:var(--font-data);color:#000;font-weight:700;white-space:nowrap;padding:0 4px;">${escHtml(blockDose)}${escHtml(r.unit)}</span>
+        </div>`;
+        inBlock = false;
+      }
+    }
+
+    return `<div style="display:grid;grid-template-columns:140px 1fr;align-items:center;gap:10px;margin-bottom:8px;">
+      <div style="text-align:right;padding-right:4px;min-width:0;">
+        <div style="font-size:12px;font-weight:600;color:var(--text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(r.name)}</div>
+        <div style="font-size:10px;color:var(--text-muted);">${escHtml(freqLabel)}</div>
+      </div>
+      <div style="position:relative;height:28px;background:rgba(255,255,255,0.04);border-radius:4px;overflow:visible;">
+        ${spans}
+        ${currentWeek && currentWeek <= totalWeeks ? `<div style="position:absolute;left:${((currentWeek - 1) / totalWeeks * 100).toFixed(2)}%;top:-4px;width:2px;height:calc(100% + 8px);background:var(--primary-bright);border-radius:1px;z-index:1;"></div>` : ''}
+      </div>
+    </div>`;
   }).join('');
 
-  el.innerHTML = `<table style="border-collapse:collapse;min-width:100%;">
-    <thead><tr><th style="${thStyle};text-align:left;">Compound</th>${headerCells}</tr></thead>
-    <tbody>${bodyRows}</tbody>
-  </table>`;
+  // Week axis
+  const axisTicks = weeks.filter((_,i) => i === 0 || (i+1) % 4 === 0 || i+1 === totalWeeks).map(w => {
+    const left = ((w - 1) / totalWeeks * 100).toFixed(2);
+    return `<div style="position:absolute;left:${left}%;font-size:10px;color:var(--text-muted);transform:translateX(-50%);white-space:nowrap;">Wk ${w}</div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div style="margin-bottom:16px;">${ganttRows}</div>
+    <div style="display:grid;grid-template-columns:140px 1fr;gap:10px;">
+      <div></div>
+      <div style="position:relative;height:16px;">${axisTicks}</div>
+    </div>
+    ${currentWeek && currentWeek <= totalWeeks ? `<div style="margin-top:10px;font-size:11px;color:var(--primary-bright);display:flex;align-items:center;gap:6px;"><div style="width:8px;height:8px;border-radius:50%;background:var(--primary-bright);"></div> Current: Week ${currentWeek}</div>` : ''}`;
 }
 
 const _pbLogIcons = {
