@@ -8785,30 +8785,63 @@ function renderReadinessCard() {
   const gc      = overall >= 80 ? 'var(--green)' : overall >= 60 ? '#F5C518' : 'var(--red)';
   const label   = overall >= 80 ? 'Ready' : overall >= 60 ? 'Moderate' : 'Recovery Needed';
 
-  const bar = (score, label, color) => score == null ? '' :
-    `<div style="margin-bottom:6px;">
-      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-bottom:3px;">
-        <span>${label}</span><span style="color:${color};font-weight:600;">${score}%</span>
+  const metricColor = (s, hi, mid) => s >= hi ? 'var(--green)' : s >= mid ? '#F5C518' : 'var(--red)';
+  const hc = metricColor(hrvScore   ?? 0, 70, 45);
+  const sc = metricColor(sleepScore ?? 0, 80, 65);
+  const wc = metricColor(wellScore  ?? 0, 70, 50);
+  const cc = metricColor(compScore  ?? 0, 90, 70);
+
+  const metricRow = (icon, lbl, score, color) => score == null ? '' : `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+      <div style="width:28px;height:28px;border-radius:7px;background:${color}18;border:0.5px solid ${color}40;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${icon}</svg>
       </div>
-      <div style="height:4px;background:rgba(255,255,255,0.06);border-radius:2px;">
-        <div style="height:4px;border-radius:2px;background:${color};width:${score}%;transition:width 0.6s ease;"></div>
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+          <span style="font-size:11.5px;color:var(--text-secondary);">${lbl}</span>
+          <span style="font-size:12px;font-weight:600;color:${color};font-family:var(--font-data);">${score}</span>
+        </div>
+        <div style="height:5px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+          <div style="height:5px;border-radius:3px;background:${color};width:${score}%;transition:width 0.7s cubic-bezier(.4,0,.2,1);opacity:0.85;"></div>
+        </div>
       </div>
     </div>`;
 
-  el.innerHTML = `<div class="card" style="border-color:${gc};border-opacity:0.3;background:rgba(0,0,0,0.2);" onclick="nav('wellness')" style="cursor:pointer;">
-    <div style="display:flex;align-items:center;gap:20px;">
-      <div style="text-align:center;flex-shrink:0;">
-        <div style="font-size:42px;font-weight:800;color:${gc};font-family:var(--font-data);line-height:1;">${overall}</div>
-        <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:${gc};margin-top:2px;">${label}</div>
+  el.innerHTML = `
+  <div class="card" style="cursor:pointer;padding:0;overflow:hidden;border-color:${gc}40;" onclick="nav('wellness')">
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;border-bottom:0.5px solid rgba(255,255,255,0.06);">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="width:28px;height:28px;border-radius:8px;background:${gc}18;border:0.5px solid ${gc}40;display:flex;align-items:center;justify-content:center;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="${gc}" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        </div>
+        <span style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.08em;">Daily Readiness</span>
       </div>
-      <div style="flex:1;min-width:0;">
-        ${bar(hrvScore,    'HRV',         hrvScore   >= 70 ? 'var(--green)' : hrvScore   >= 45 ? '#F5C518' : 'var(--red)')}
-        ${bar(sleepScore,  'Sleep',       sleepScore >= 80 ? 'var(--green)' : sleepScore >= 65 ? '#F5C518' : 'var(--red)')}
-        ${bar(wellScore,   'Wellbeing',   wellScore  >= 70 ? 'var(--green)' : wellScore  >= 50 ? '#F5C518' : 'var(--red)')}
-        ${bar(compScore,   'Compliance',  compScore  >= 90 ? 'var(--green)' : compScore  >= 70 ? '#F5C518' : 'var(--red)')}
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;background:${gc}20;color:${gc};border:0.5px solid ${gc}40;letter-spacing:0.06em;">Grade ${grade}</span>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
       </div>
     </div>
-    <div style="font-size:10px;color:var(--text-muted);margin-top:8px;text-align:right;">Daily Readiness · tap for Wellness →</div>
+    <!-- Score + Bars -->
+    <div style="display:flex;align-items:flex-start;gap:16px;padding:14px 16px 6px;">
+      <!-- Big score -->
+      <div style="flex-shrink:0;text-align:center;min-width:72px;">
+        <div style="font-size:52px;font-weight:800;color:${gc};font-family:var(--font-data);line-height:1;letter-spacing:-2px;">${overall}</div>
+        <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:${gc};margin-top:4px;opacity:0.85;">${label}</div>
+      </div>
+      <!-- Metric bars -->
+      <div style="flex:1;min-width:0;padding-top:4px;">
+        ${metricRow('<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>', 'HRV',        hrvScore,   hc)}
+        ${metricRow('<path d="M17 7h-1.5a1.5 1.5 0 0 0 0 3H17a1.5 1.5 0 0 1 0 3h-1.5m1.5-6V5m0 9v1.5M7 21A5 5 0 0 1 7 11"/><path d="M3 15a4 4 0 1 0 8 0c0-1.5-.5-2.5-1.5-3.5L7 9l-2.5 2.5C3.5 12.5 3 13.5 3 15Z"/>', 'Sleep',     sleepScore, sc)}
+        ${metricRow('<path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m9 12 2 2 4-4"/>', 'Wellbeing', wellScore,  wc)}
+        ${metricRow('<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/>', 'Compliance', compScore, cc)}
+      </div>
+    </div>
+    <!-- Footer -->
+    <div style="padding:8px 16px 12px;display:flex;align-items:center;justify-content:space-between;">
+      <span style="font-size:10px;color:var(--text-muted);">7-day avg · Last check-in included</span>
+      <span style="font-size:10px;color:var(--text-muted);">Tap for Wellness →</span>
+    </div>
   </div>`;
 }
 
