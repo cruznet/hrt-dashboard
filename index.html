@@ -275,6 +275,26 @@ label.dose-row.dose-done .dose-name { text-decoration: line-through; }
   100% { transform: scale(1); }
 }
 .dose-pulse { animation: dosePulse 0.28s ease; }
+
+/* ── Toast notifications ── */
+#toast-container { position:fixed; bottom:24px; right:24px; z-index:9999; display:flex; flex-direction:column; gap:8px; pointer-events:none; width:300px; }
+.toast { display:flex; align-items:flex-start; gap:10px; padding:12px 14px; border-radius:10px; background:#1C1C28; border:0.5px solid rgba(255,255,255,0.12); color:var(--text-secondary); font-size:13px; line-height:1.4; box-shadow:0 4px 24px rgba(0,0,0,0.45); pointer-events:auto; cursor:pointer; animation:toastIn 0.2s ease; }
+.toast.toast-exit { animation:toastOut 0.18s ease forwards; }
+.toast-icon { font-size:15px; flex-shrink:0; margin-top:1px; }
+.toast.toast-success .toast-icon { color:var(--green); }
+.toast.toast-error   .toast-icon { color:var(--red); }
+.toast.toast-warn    .toast-icon { color:var(--amber); }
+.toast.toast-info    .toast-icon { color:var(--teal); }
+@keyframes toastIn  { from { opacity:0; transform:translateY(10px) scale(0.97); } to { opacity:1; transform:none; } }
+@keyframes toastOut { from { opacity:1; transform:none; } to { opacity:0; transform:translateX(12px); } }
+
+/* ── Shimmer skeleton ── */
+@keyframes shimmer { 0% { background-position:-200% 0; } 100% { background-position:200% 0; } }
+.shimmer { background:linear-gradient(90deg,rgba(255,255,255,0.04) 25%,rgba(255,255,255,0.09) 50%,rgba(255,255,255,0.04) 75%); background-size:200% 100%; animation:shimmer 1.4s ease infinite; border-radius:6px; }
+.shimmer-card { background:var(--bg-card); border:0.5px solid var(--border); border-radius:var(--radius-lg); padding:14px; }
+.shimmer-line  { height:11px; margin-bottom:8px; }
+.shimmer-value { height:28px; width:55%; margin-bottom:7px; }
+.shimmer-sub   { height:10px; width:38%; }
 .metric-label { font-size: 12px; color: var(--text-label); letter-spacing: 0; text-transform: none; margin-bottom: 5px; font-weight: 500; }
 .metric-value { font-size: 28px; font-family: var(--font-data); font-weight: 500; color: var(--text-primary); line-height: 1.1; letter-spacing: -0.5px; }
 .metric-unit  { font-size: 12px; margin-top: 4px; font-family: var(--font-data); font-weight: 500; }
@@ -791,6 +811,7 @@ body {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js" defer></script>
 </head>
 <body>
+<div id="toast-container"></div>
 
 <!-- ── Auth Overlay ── -->
 <div id="auth-overlay" class="visible">
@@ -1073,10 +1094,12 @@ body {
           <div class="card-title">Weight &amp; Body Comp</div>
           <div class="chart-wrap" style="height:180px;position:relative;">
             <canvas id="chart-weight" style="display:none;"></canvas>
-            <div id="chart-weight-empty" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:6px;text-align:center;">
-              <i class="ti ti-weight" style="font-size:26px;color:var(--text-muted);opacity:0.4;"></i>
-              <div style="font-size:13px;color:var(--text-muted);">No weight data yet</div>
-              <div style="font-size:12px;color:var(--text-muted);opacity:0.8;">Log weight via <a href="#" onclick="nav('log');return false;" style="color:var(--primary-bright);">Log Entry</a></div>
+            <div id="chart-weight-empty" style="display:flex;align-items:center;justify-content:center;height:100%;">
+              <div style="border:1.5px dashed rgba(255,255,255,0.1);border-radius:10px;padding:18px 22px;display:flex;flex-direction:column;align-items:center;gap:7px;text-align:center;">
+                <i class="ti ti-weight" style="font-size:22px;color:var(--text-muted);opacity:0.4;"></i>
+                <div style="font-size:13px;color:var(--text-muted);">No weight data yet</div>
+                <button onclick="nav('log')" style="padding:4px 14px;border-radius:6px;background:rgba(245,197,24,0.1);border:0.5px solid rgba(245,197,24,0.25);color:var(--primary-bright);font-size:12px;cursor:pointer;">+ Log Entry</button>
+              </div>
             </div>
           </div>
         </div>
@@ -1084,10 +1107,12 @@ body {
           <div class="card-title">Mood Trend</div>
           <div class="chart-wrap" style="height:180px;position:relative;">
             <canvas id="chart-mood" style="display:none;"></canvas>
-            <div id="chart-mood-empty" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:6px;text-align:center;">
-              <i class="ti ti-mood-smile" style="font-size:26px;color:var(--text-muted);opacity:0.4;"></i>
-              <div style="font-size:13px;color:var(--text-muted);">No mood data yet</div>
-              <div style="font-size:12px;color:var(--text-muted);opacity:0.8;">Log mood via <a href="#" onclick="nav('log');return false;" style="color:var(--primary-bright);">Log Entry</a></div>
+            <div id="chart-mood-empty" style="display:flex;align-items:center;justify-content:center;height:100%;">
+              <div style="border:1.5px dashed rgba(255,255,255,0.1);border-radius:10px;padding:18px 22px;display:flex;flex-direction:column;align-items:center;gap:7px;text-align:center;">
+                <i class="ti ti-mood-smile" style="font-size:22px;color:var(--text-muted);opacity:0.4;"></i>
+                <div style="font-size:13px;color:var(--text-muted);">No mood data yet</div>
+                <button onclick="nav('log')" style="padding:4px 14px;border-radius:6px;background:rgba(245,197,24,0.1);border:0.5px solid rgba(245,197,24,0.25);color:var(--primary-bright);font-size:12px;cursor:pointer;">+ Log Entry</button>
+              </div>
             </div>
           </div>
         </div>
@@ -1095,10 +1120,12 @@ body {
           <div class="card-title">Energy Trend</div>
           <div class="chart-wrap" style="height:180px;position:relative;">
             <canvas id="chart-energy" style="display:none;"></canvas>
-            <div id="chart-energy-empty" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:6px;text-align:center;">
-              <i class="ti ti-bolt" style="font-size:26px;color:var(--text-muted);opacity:0.4;"></i>
-              <div style="font-size:13px;color:var(--text-muted);">No energy data yet</div>
-              <div style="font-size:12px;color:var(--text-muted);opacity:0.8;">Log energy via <a href="#" onclick="nav('log');return false;" style="color:var(--primary-bright);">Log Entry</a></div>
+            <div id="chart-energy-empty" style="display:flex;align-items:center;justify-content:center;height:100%;">
+              <div style="border:1.5px dashed rgba(255,255,255,0.1);border-radius:10px;padding:18px 22px;display:flex;flex-direction:column;align-items:center;gap:7px;text-align:center;">
+                <i class="ti ti-bolt" style="font-size:22px;color:var(--text-muted);opacity:0.4;"></i>
+                <div style="font-size:13px;color:var(--text-muted);">No energy data yet</div>
+                <button onclick="nav('log')" style="padding:4px 14px;border-radius:6px;background:rgba(245,197,24,0.1);border:0.5px solid rgba(245,197,24,0.25);color:var(--primary-bright);font-size:12px;cursor:pointer;">+ Log Entry</button>
+              </div>
             </div>
           </div>
         </div>
@@ -2406,7 +2433,7 @@ async function _initSupaAuth() {
 
 async function supaSignIn() {
   const { error } = await _supa.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } });
-  if (error) { console.error('[auth] signIn failed:', error); alert('Sign-in failed: ' + error.message); }
+  if (error) { console.error('[auth] signIn failed:', error); showToast('Sign-in failed: ' + error.message, 'error'); }
 }
 async function supaSignOut() {
   localStorage.removeItem(_LAST_ACTIVE_KEY);
@@ -2816,6 +2843,19 @@ function countUp(el, target, decimals = 0, duration = 650, useLocale = false) {
     if (t < 1) requestAnimationFrame(tick);
   }
   requestAnimationFrame(tick);
+}
+
+function showToast(msg, type = 'success', duration = 3500) {
+  const c = document.getElementById('toast-container');
+  if (!c) return;
+  const icons = { success: 'ti-circle-check', error: 'ti-alert-circle', warn: 'ti-alert-triangle', info: 'ti-info-circle' };
+  const t = document.createElement('div');
+  t.className = `toast toast-${type}`;
+  t.innerHTML = `<i class="ti ${icons[type] || 'ti-info-circle'} toast-icon"></i><span>${String(msg).replace(/</g,'&lt;').replace(/>/g,'&gt;')}</span>`;
+  c.appendChild(t);
+  const rm = () => { t.classList.add('toast-exit'); setTimeout(() => t.remove(), 200); };
+  const tid = setTimeout(rm, duration);
+  t.addEventListener('click', () => { clearTimeout(tid); rm(); });
 }
 
 function updateMetricCard(id, value, badge, badgeClass) {
@@ -3580,7 +3620,7 @@ function bwBuildFormGroups(prefill = {}) {
 
 function bwSavePanel() {
   const date = document.getElementById('bw-date').value;
-  if (!date) { alert('Please enter a panel date.'); return; }
+  if (!date) { showToast('Please enter a panel date.', 'warn'); return; }
 
   const markers = {};
   Object.keys(BW_MARKERS).forEach(key => {
@@ -3591,7 +3631,7 @@ function bwSavePanel() {
     }
   });
 
-  if (!Object.keys(markers).length) { alert('Please enter at least one marker value.'); return; }
+  if (!Object.keys(markers).length) { showToast('Please enter at least one marker value.', 'warn'); return; }
 
   const panels = bwLoad();
   const formEl = document.getElementById('bw-form');
@@ -4048,14 +4088,14 @@ function measHideForm() {
 
 function measSaveCheckin() {
   const date  = document.getElementById('ph-date').value.trim();
-  if (!date) return alert('Date is required.');
+  if (!date) { showToast('Date is required.', 'warn'); return; }
   const notes = document.getElementById('ph-notes').value.trim();
   const meas  = {};
   MEAS_KEYS.forEach(m => {
     const v = parseFloat(document.getElementById('ph-' + m.key).value);
     if (!isNaN(v)) meas[m.key] = v;
   });
-  if (!Object.keys(meas).length) return alert('Enter at least one measurement.');
+  if (!Object.keys(meas).length) { showToast('Enter at least one measurement.', 'warn'); return; }
 
   const list    = measLoad();
   const form    = document.getElementById('ph-form');
@@ -4905,8 +4945,9 @@ async function renderWellnessPage() {
   const syncEl    = document.getElementById('hk-last-sync');
   if (!container) return;
 
-  container.innerHTML = '<div style="color:var(--text-muted);font-size:13px;">Loading…</div>';
-  kpiRow.innerHTML = '';
+  const shimCard = () => `<div class="shimmer-card"><div class="shimmer shimmer-line" style="width:45%;"></div><div class="shimmer shimmer-value"></div><div class="shimmer shimmer-sub"></div></div>`;
+  kpiRow.innerHTML = Array(6).fill(0).map(shimCard).join('');
+  container.innerHTML = '';
 
   let rows  = null;
   let source = 'csv';
@@ -5161,7 +5202,7 @@ async function hevySync() {
     localStorage.setItem('hrt_hevy_synced', new Date().toISOString());
     renderWorkoutsPage();
   } catch(e) {
-    alert(`Hevy sync failed: ${e.message}`);
+    showToast(`Hevy sync failed: ${e.message}`, 'error');
   } finally {
     if (btn) { btn.innerHTML = '<i class="ti ti-refresh"></i> Sync'; btn.disabled = false; }
   }
@@ -5197,7 +5238,7 @@ async function hevyMeasSync() {
       page++;
     } while (page <= pageCount);
 
-    if (!allEntries.length) { alert('No body measurements found in Hevy.'); return; }
+    if (!allEntries.length) { showToast('No body measurements found in Hevy.', 'info'); return; }
 
     // Dedup by date — keep entry with most non-null fields (handles multiple weigh-ins per day)
     const dedupMap = {};
@@ -5242,9 +5283,9 @@ async function hevyMeasSync() {
     renderPhysiquePage();
 
     const parts = [added && `${added} added`, updated && `${updated} updated`].filter(Boolean);
-    if (parts.length) alert(`Hevy body sync complete: ${parts.join(', ')}.`);
+    if (parts.length) showToast(`Hevy body sync complete: ${parts.join(', ')}.`, 'success');
   } catch(e) {
-    alert(`Hevy body sync failed: ${e.message}`);
+    showToast(`Hevy body sync failed: ${e.message}`, 'error');
   } finally {
     if (btn) { btn.innerHTML = '<i class="ti ti-refresh"></i> Sync from Hevy'; btn.disabled = false; }
   }
@@ -5802,8 +5843,8 @@ function updateInsulinTypeUI() {
 function submitInsulinLog() {
   const date  = document.getElementById('ins-date').value;
   const units = parseFloat(document.getElementById('ins-units').value);
-  if (!date)          { alert('Please enter a date.');       return; }
-  if (!units || units <= 0) { alert('Please enter units > 0.'); return; }
+  if (!date)          { showToast('Please enter a date.', 'warn');       return; }
+  if (!units || units <= 0) { showToast('Please enter units > 0.', 'warn'); return; }
 
   const type    = document.getElementById('ins-type').value;
   const nameEl  = document.getElementById('ins-name');
@@ -6111,7 +6152,7 @@ function pbOnWeeksChange() {
     }
   } else if (weeks < old && pbState.compounds.some(c => c.phases.some(ph => ph.endWeek > weeks))) {
     pbState.cycleLengthWeeks = weeks;
-    alert(`⚠ Some compound phases extend past week ${weeks}. Review them in the Builder.`);
+    showToast(`Some compound phases extend past week ${weeks}. Review in Builder.`, 'warn');
   } else {
     pbState.cycleLengthWeeks = weeks;
   }
@@ -6493,7 +6534,7 @@ function printProtocol(index) {
 </html>`;
 
   const w = window.open('', '_blank');
-  if (!w) { alert('Pop-up blocked — please allow pop-ups for this page and try again.'); return; }
+  if (!w) { showToast('Pop-up blocked — allow pop-ups and try again.', 'warn'); return; }
   w.document.write(html);
   w.document.close();
 }
@@ -7273,6 +7314,7 @@ async function checkDose(compound_name, dose, unit, date) {
   const entry = { label: compound_name, date, ts: new Date().toISOString(), id: null };
   taken.push(entry);
   localStorage.setItem('hrt_doses_taken', JSON.stringify(taken));
+  showToast(`${compound_name} ${dose}${unit} logged`, 'success', 2500);
   renderDoseSchedule();
   if (_supa && _supaUser) {
     const { data, error } = await _supa
