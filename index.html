@@ -2958,9 +2958,10 @@ document.addEventListener('visibilitychange', () => {
 function showApp() {
   document.getElementById('auth-overlay').classList.remove('visible');
   _resetInactivityTimer();
-  if (!localStorage.getItem('hrt_onboarded')) {
-    setTimeout(showOnboarding, 300);
-  }
+  // Delay onboarding check so loadUserData can restore hrt_onboarded from Supabase first
+  setTimeout(() => {
+    if (!localStorage.getItem('hrt_onboarded')) showOnboarding();
+  }, 2000);
 }
 
 // ── Onboarding ────────────────────────────────────────────────────────────────
@@ -3104,6 +3105,9 @@ async function loadUserData() {
         const el = document.getElementById('share-token-display');
         if (el) el.value = settings.share_token;
       }
+      if (settings.onboarded) {
+        localStorage.setItem('hrt_onboarded', '1');
+      }
     }
 
     // Load coach_athletes roster
@@ -3189,6 +3193,7 @@ async function syncProtocolsToSupabase() {
     show_federation:       localStorage.getItem('hrt_show_federation') || null,
     show_division:         localStorage.getItem('hrt_show_division') || null,
     share_token:           localStorage.getItem('hrt_share_token') || null,
+    onboarded:             localStorage.getItem('hrt_onboarded') ? true : null,
     updated_at:            new Date().toISOString()
   }, { onConflict: 'user_id' });
   if (error) console.warn('[syncProtocols]', error.message);
