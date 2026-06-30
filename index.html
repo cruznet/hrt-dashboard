@@ -880,6 +880,96 @@ body {
 <div id="toast-container"></div>
 
 <!-- ── Auth Overlay ── -->
+<!-- ── ONBOARDING OVERLAY ── -->
+<div id="onboard-overlay" style="display:none;position:fixed;inset:0;z-index:9000;background:var(--bg-primary);overflow-y:auto;padding:0;">
+  <div style="max-width:480px;margin:0 auto;padding:48px 24px 80px;">
+    <!-- Logo -->
+    <div style="text-align:center;margin-bottom:40px;">
+      <div style="font-size:28px;color:var(--primary);margin-bottom:6px;"><i class="ti ti-dna-2"></i></div>
+      <div style="font-size:11px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:var(--text-muted);">HRT Tracker</div>
+    </div>
+
+    <!-- Step 1 — Mode -->
+    <div id="onboard-step-1">
+      <div style="font-size:22px;font-weight:700;color:var(--text-primary);margin-bottom:8px;">Where are you right now?</div>
+      <div style="font-size:14px;color:var(--text-muted);margin-bottom:32px;">This sets your dashboard focus. You can change it anytime in Settings.</div>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <button onclick="onboardSelectMode('trt')" class="onboard-mode-btn" id="ob-btn-trt" style="text-align:left;padding:18px 20px;border-radius:14px;border:0.5px solid var(--border);background:rgba(255,255,255,0.03);cursor:pointer;transition:all 0.15s;">
+          <div style="font-size:15px;font-weight:600;color:var(--text-primary);margin-bottom:4px;"><i class="ti ti-shield-heart" style="color:var(--primary);margin-right:8px;"></i>TRT / Cruise</div>
+          <div style="font-size:12px;color:var(--text-muted);">Prescribed TRT or cruising between blasts — focused on health maintenance</div>
+        </button>
+        <button onclick="onboardSelectMode('offseason')" class="onboard-mode-btn" id="ob-btn-offseason" style="text-align:left;padding:18px 20px;border-radius:14px;border:0.5px solid var(--border);background:rgba(255,255,255,0.03);cursor:pointer;transition:all 0.15s;">
+          <div style="font-size:15px;font-weight:600;color:var(--text-primary);margin-bottom:4px;"><i class="ti ti-barbell" style="color:#4ADE80;margin-right:8px;"></i>Offseason</div>
+          <div style="font-size:12px;color:var(--text-muted);">Building phase, running a blast — no show on the calendar yet</div>
+        </button>
+        <button onclick="onboardSelectMode('performance')" class="onboard-mode-btn" id="ob-btn-prep" style="text-align:left;padding:18px 20px;border-radius:14px;border:0.5px solid var(--border);background:rgba(255,255,255,0.03);cursor:pointer;transition:all 0.15s;">
+          <div style="font-size:15px;font-weight:600;color:var(--text-primary);margin-bottom:4px;"><i class="ti ti-trophy" style="color:var(--primary);margin-right:8px;"></i>Prepping for a Show</div>
+          <div style="font-size:12px;color:var(--text-muted);">Competition prep — I have a show date coming up</div>
+        </button>
+      </div>
+    </div>
+
+    <!-- Step 2 — Show date (Prep only) -->
+    <div id="onboard-step-2" style="display:none;">
+      <div style="font-size:22px;font-weight:700;color:var(--text-primary);margin-bottom:8px;">When's the show?</div>
+      <div style="font-size:14px;color:var(--text-muted);margin-bottom:32px;">We'll build your countdown and track your peak week.</div>
+      <div class="form-group" style="margin-bottom:16px;">
+        <label class="form-label">Show Name</label>
+        <input type="text" class="form-input" id="ob-show-name" placeholder="NPC Greater Gulf States 2026">
+      </div>
+      <div class="form-row" style="margin-bottom:16px;">
+        <div class="form-group">
+          <label class="form-label">Show Date</label>
+          <input type="date" class="form-input" id="ob-show-date">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Federation</label>
+          <select class="form-input" id="ob-show-federation">
+            <option value="">— Select —</option>
+            <option value="NPC">NPC</option>
+            <option value="IFBB">IFBB Pro</option>
+            <option value="OCB">OCB</option>
+            <option value="WNBF">WNBF</option>
+            <option value="NPA">NPA</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:32px;">
+        <label class="form-label">Division</label>
+        <select class="form-input" id="ob-show-division">
+          <option value="">— Select —</option>
+          <option value="Classic Physique">Classic Physique</option>
+          <option value="Men's Physique">Men's Physique</option>
+          <option value="Bodybuilding">Bodybuilding</option>
+          <option value="Bikini">Bikini</option>
+          <option value="Figure">Figure</option>
+          <option value="Wellness">Wellness</option>
+          <option value="Women's Physique">Women's Physique</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:12px;">
+        <button class="btn-secondary" onclick="onboardStep(3)" style="flex:1;padding:14px;">Skip for now</button>
+        <button class="btn-primary" onclick="onboardSaveShow()" style="flex:2;padding:14px;">Save & Continue</button>
+      </div>
+    </div>
+
+    <!-- Step 3 — Name -->
+    <div id="onboard-step-3" style="display:none;">
+      <div style="font-size:22px;font-weight:700;color:var(--text-primary);margin-bottom:8px;">What should we call you?</div>
+      <div style="font-size:14px;color:var(--text-muted);margin-bottom:32px;">Shows on your Coach Report and Athletes roster. You can update this anytime.</div>
+      <div class="form-group" style="margin-bottom:32px;">
+        <label class="form-label">Your Name</label>
+        <input type="text" class="form-input" id="ob-name" placeholder="First name or full name" autocomplete="name">
+      </div>
+      <div style="display:flex;gap:12px;">
+        <button class="btn-secondary" onclick="onboardFinish()" style="flex:1;padding:14px;">Skip</button>
+        <button class="btn-primary" onclick="onboardSaveName()" style="flex:2;padding:14px;">Finish Setup</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="auth-overlay" class="visible">
   <div class="auth-layout">
 
@@ -1116,8 +1206,11 @@ body {
     <!-- ── DASHBOARD PAGE ── -->
     <section class="page active" id="page-dashboard">
 
-      <!-- Show countdown banner -->
+      <!-- Show countdown banner (Prep mode) -->
       <div id="show-countdown" style="margin-bottom:14px;"></div>
+
+      <!-- Mode context card (TRT/Cruise or Offseason when no show date) -->
+      <div id="mode-context-card" style="margin-bottom:14px;"></div>
 
       <!-- Weekly check-in nudge -->
       <div id="checkin-dash-card" style="margin-bottom:14px;"></div>
@@ -2243,11 +2336,12 @@ body {
           </div>
         </div>
         <div class="card-title">Mode</div>
-        <div style="display:flex;gap:8px;">
-          <button class="btn-primary" id="mode-trt" onclick="setMode('trt')">TRT / HRT Mode</button>
-          <button class="btn-secondary" id="mode-perf" onclick="setMode('performance')">Performance Mode</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn-secondary" id="mode-trt"      onclick="setMode('trt')">TRT / Cruise</button>
+          <button class="btn-secondary" id="mode-offseason" onclick="setMode('offseason')">Offseason</button>
+          <button class="btn-secondary" id="mode-perf"     onclick="setMode('performance')">Performance</button>
         </div>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:8px;">Performance mode unlocks AAS compounds, cycle tracking, and advanced calculators.</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:8px;">Prep mode activates automatically when you set a show date. Performance / Offseason unlocks AAS compounds, cycle tracking, and advanced calculators.</div>
         <hr class="divider">
         <div class="card-title">Password</div>
         <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">Set or change your password to enable email sign-in alongside Google.</div>
@@ -2831,6 +2925,72 @@ document.addEventListener('visibilitychange', () => {
 function showApp() {
   document.getElementById('auth-overlay').classList.remove('visible');
   _resetInactivityTimer();
+  if (!localStorage.getItem('hrt_onboarded')) {
+    setTimeout(showOnboarding, 300);
+  }
+}
+
+// ── Onboarding ────────────────────────────────────────────────────────────────
+
+let _obMode = 'trt';
+
+function showOnboarding() {
+  const el = document.getElementById('onboard-overlay');
+  if (el) el.style.display = 'block';
+  onboardStep(1);
+}
+
+function onboardStep(n) {
+  [1,2,3].forEach(i => {
+    const el = document.getElementById(`onboard-step-${i}`);
+    if (el) el.style.display = i === n ? 'block' : 'none';
+  });
+}
+
+function onboardSelectMode(mode) {
+  _obMode = mode;
+  setMode(mode, false);
+  if (mode === 'performance') {
+    onboardStep(2); // prep → ask for show date
+  } else {
+    onboardStep(3); // trt/offseason → skip to name
+  }
+}
+
+function onboardSaveShow() {
+  const date = document.getElementById('ob-show-date')?.value || '';
+  if (date) {
+    const name = (document.getElementById('ob-show-name')?.value || '').trim();
+    const fed  = document.getElementById('ob-show-federation')?.value || '';
+    const div  = document.getElementById('ob-show-division')?.value || '';
+    localStorage.setItem('hrt_show_date',       date);
+    localStorage.setItem('hrt_show_name',        name);
+    localStorage.setItem('hrt_show_federation',  fed);
+    localStorage.setItem('hrt_show_division',    div);
+  }
+  onboardStep(3);
+}
+
+function onboardSaveName() {
+  const name = (document.getElementById('ob-name')?.value || '').trim();
+  if (name) {
+    const profile = lsGet('hrt_user_profile', {});
+    profile.name = name;
+    localStorage.setItem('hrt_user_profile', JSON.stringify(profile));
+  }
+  onboardFinish();
+}
+
+function onboardFinish() {
+  localStorage.setItem('hrt_onboarded', '1');
+  const el = document.getElementById('onboard-overlay');
+  if (el) el.style.display = 'none';
+  syncProtocolsToSupabase();
+  updateTopbarBadge();
+  renderShowCountdown();
+  renderModeContextCard();
+  renderDashboardCheckinCard();
+  showToast('Welcome to HRT Tracker', 'success');
 }
 function showAuthOverlay() { document.getElementById('auth-overlay').classList.add('visible'); _checkPwaAuthNote(); }
 
@@ -3444,7 +3604,7 @@ function nav(page) {
   if (page === 'wellness') renderWellnessPage();
   if (page === 'calculator') setTimeout(() => { calcBuildCompoundSelect(); pepUpdate(); }, 100);
   if (page === 'settings') setTimeout(populateShowForm, 50);
-  if (page === 'dashboard') { renderShowCountdown(); renderDashboardCheckinCard(); renderVitalsToCards(); renderBwDashStrip(); renderPhysiqueDashStrip(); setTimeout(() => { if (_supa && _supaUser) renderRealCharts(); else renderDemoCharts(); }, 100); setTimeout(checkLabReminder, 1200); }
+  if (page === 'dashboard') { renderShowCountdown(); renderModeContextCard(); renderDashboardCheckinCard(); renderVitalsToCards(); renderBwDashStrip(); renderPhysiqueDashStrip(); setTimeout(() => { if (_supa && _supaUser) renderRealCharts(); else renderDemoCharts(); }, 100); setTimeout(checkLabReminder, 1200); }
   // Load active protocol on dashboard
   if (page === 'dashboard') {
     const activeData = localStorage.getItem('hrt_active_protocol_data');
@@ -8161,9 +8321,13 @@ function showChart(chartId) {
 // ── Mode ──
 function setMode(mode, save = true) {
   localStorage.setItem('hrt_mode', mode);
-  document.getElementById('mode-trt').className  = mode === 'trt'         ? 'btn-primary' : 'btn-secondary';
-  document.getElementById('mode-perf').className = mode === 'performance' ? 'btn-primary' : 'btn-secondary';
+  const btns = { trt: 'mode-trt', offseason: 'mode-offseason', performance: 'mode-perf' };
+  Object.entries(btns).forEach(([m, id]) => {
+    const el = document.getElementById(id);
+    if (el) el.className = m === mode ? 'btn-primary' : 'btn-secondary';
+  });
   updateTopbarBadge();
+  if (currentPage === 'dashboard') renderModeContextCard();
   if (save) syncProtocolsToSupabase();
 }
 
@@ -8176,15 +8340,15 @@ function updateTopbarBadge() {
     const show = new Date(showDate + 'T00:00:00');
     const today = new Date(); today.setHours(0,0,0,0);
     const daysOut = Math.round((show - today) / 86400000);
-    if (daysOut > 7)      { badge.textContent = `${Math.ceil(daysOut / 7)} Wks Out`; return; }
-    if (daysOut > 1)      { badge.textContent = `${daysOut} Days Out`; return; }
-    if (daysOut === 1)    { badge.textContent = 'Tomorrow'; return; }
-    if (daysOut === 0)    { badge.textContent = 'SHOW DAY'; return; }
-    if (daysOut >= -6)    { badge.textContent = 'Post-Show'; return; }
+    if (daysOut > 7)   { badge.textContent = `${Math.ceil(daysOut / 7)} Wks Out`; return; }
+    if (daysOut > 1)   { badge.textContent = `${daysOut} Days Out`; return; }
+    if (daysOut === 1) { badge.textContent = 'Tomorrow'; return; }
+    if (daysOut === 0) { badge.textContent = 'SHOW DAY'; return; }
+    if (daysOut >= -6) { badge.textContent = 'Post-Show'; return; }
   }
 
   const mode = localStorage.getItem('hrt_mode') || 'trt';
-  const modeLabel = mode === 'performance' ? 'Performance' : 'TRT Mode';
+  const modeLabel = mode === 'performance' ? 'Performance' : mode === 'offseason' ? 'Offseason' : 'TRT / Cruise';
   const active = localStorage.getItem('hrt_active_protocol_data');
   let weekLabel = '';
   if (active) {
@@ -8195,6 +8359,64 @@ function updateTopbarBadge() {
     } catch(e) { console.error('[updateTopbarBadge]', e); }
   }
   badge.textContent = `${weekLabel}${modeLabel}`;
+}
+
+function renderModeContextCard() {
+  const el = document.getElementById('mode-context-card');
+  if (!el) return;
+  // Only show when there's no show date (prep mode handles its own card)
+  if (localStorage.getItem('hrt_show_date')) { el.innerHTML = ''; return; }
+
+  const mode = localStorage.getItem('hrt_mode') || 'trt';
+  const panels  = bwLoad().sort((a, b) => dateCmp(a.date, b.date));
+  const bwLatest = panels[0] || null;
+  const checkins = lsGet('hrt_weekly_checkins', []);
+  const lastCi   = checkins.length ? checkins.sort((a,b) => dateCmp(a.check_in_date, b.check_in_date))[0] : null;
+
+  // Bloodwork grade
+  let gradeHtml = '';
+  if (bwLatest?.markers) {
+    const keys = Object.keys(bwLatest.markers).filter(k => BW_MARKERS[k] && bwLatest.markers[k] != null);
+    const inRange = keys.filter(k => bwRangeStatus(k, bwLatest.markers[k]) === 'ok').length;
+    const pct = keys.length ? Math.round((inRange / keys.length) * 100) : null;
+    if (pct != null) {
+      const grade = pct === 100 ? 'A' : pct >= 90 ? 'B' : pct >= 75 ? 'C' : 'D';
+      const gc = grade === 'A' ? 'var(--green)' : grade === 'B' ? '#4ADE80' : grade === 'C' ? '#F5C518' : 'var(--red)';
+      gradeHtml = `<div style="text-align:center;"><div style="font-size:28px;font-weight:800;color:${gc};font-family:var(--font-data);line-height:1;">${grade}</div><div style="font-size:10px;color:var(--text-muted);margin-top:2px;">Labs</div></div>`;
+    }
+  }
+
+  // Wellness from last check-in
+  let wellHtml = '';
+  if (lastCi) {
+    const scores = [lastCi.energy_score, lastCi.sleep_score, lastCi.mood_score].filter(v => v != null);
+    if (scores.length) {
+      const avg = (scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(1);
+      const c = avg >= 7 ? 'var(--green)' : avg >= 5 ? '#F5C518' : 'var(--red)';
+      wellHtml = `<div style="text-align:center;"><div style="font-size:28px;font-weight:800;color:${c};font-family:var(--font-data);line-height:1;">${avg}</div><div style="font-size:10px;color:var(--text-muted);margin-top:2px;">Wellness</div></div>`;
+    }
+  }
+
+  const isTrt = mode === 'trt';
+  const label = isTrt ? 'TRT / Cruise' : 'Offseason';
+  const icon  = isTrt ? 'ti-shield-heart' : 'ti-barbell';
+  const color = isTrt ? 'rgba(99,102,241,0.15)' : 'rgba(74,222,128,0.08)';
+  const border = isTrt ? 'rgba(99,102,241,0.25)' : 'rgba(74,222,128,0.2)';
+  const labelColor = isTrt ? '#818CF8' : '#4ADE80';
+
+  el.innerHTML = `<div class="card" style="background:${color};border-color:${border};cursor:pointer;" onclick="nav('report')">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <div style="font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${labelColor};margin-bottom:4px;"><i class="ti ${icon}" style="margin-right:4px;"></i>${escHtml(label)}</div>
+        <div style="font-size:13px;color:var(--text-muted);">${bwLatest ? `Last labs: ${bwLatest.date}` : 'No bloodwork logged yet'}</div>
+        ${lastCi ? `<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Last check-in: ${lastCi.check_in_date}</div>` : ''}
+      </div>
+      <div style="display:flex;gap:16px;align-items:center;">
+        ${gradeHtml}
+        ${wellHtml}
+      </div>
+    </div>
+  </div>`;
 }
 
 // ── Competition / Show countdown ──
@@ -8215,6 +8437,10 @@ function saveShowFromSettings() {
   const fed   = document.getElementById('show-federation')?.value  || '';
   const div   = document.getElementById('show-division')?.value    || '';
   if (!date) { showToast('Please set a show date', 'info'); return; }
+  // Escalate to performance mode if currently on TRT/cruise
+  if ((localStorage.getItem('hrt_mode') || 'trt') === 'trt') {
+    setMode('performance', false);
+  }
   localStorage.setItem('hrt_show_date',        date);
   localStorage.setItem('hrt_show_name',        name);
   localStorage.setItem('hrt_show_federation',  fed);
@@ -8222,6 +8448,7 @@ function saveShowFromSettings() {
   syncProtocolsToSupabase();
   updateTopbarBadge();
   renderShowCountdown();
+  renderModeContextCard();
   showToast('Competition saved', 'success');
 }
 
@@ -8230,6 +8457,7 @@ function clearShow() {
   syncProtocolsToSupabase();
   updateTopbarBadge();
   renderShowCountdown();
+  renderModeContextCard();
   showToast('Competition cleared', 'info');
 }
 
@@ -9370,7 +9598,8 @@ function pepUpdate() {
 window.addEventListener('DOMContentLoaded', () => {
   initSupa();
   const savedMode = localStorage.getItem('hrt_mode') || 'trt';
-  setMode(savedMode, false);
+  const validModes = ['trt', 'offseason', 'performance'];
+  setMode(validModes.includes(savedMode) ? savedMode : 'trt', false);
   nav(localStorage.getItem('hrt_active_page') || 'dashboard');
   renderCompoundsTable();
   // Charts start in empty state — populated only when real data is available
