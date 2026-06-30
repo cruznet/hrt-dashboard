@@ -627,6 +627,7 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
   #sidebar.mob-open { transform: translateX(0); }
   #mob-backdrop.mob-open { display: block; }
   .topbar-btn-ghost .btn-text { display: none; }
+  #sync-btn .btn-text { display: inline; font-size: 12px; }
   .topbar-badge { display: none; }
   .grid-2, .grid-3, .grid-2-1, .grid-1-2, .grid-dash-main { grid-template-columns: 1fr; }
   #content { padding: 12px; }
@@ -8263,6 +8264,83 @@ function pepUpdate() {
   document.getElementById('pep-ruler-mid').textContent  = Math.round(syringeUnits / 2);
   document.getElementById('pep-ruler-max').textContent  = syringeUnits + ' units';
 }
+
+// ── Pull-to-refresh ──────────────────────────────────────────────────────────
+(function initPTR() {
+  const isTouchDevice = () => window.matchMedia('(hover:none) and (pointer:coarse)').matches;
+
+  const pill = document.createElement('div');
+  pill.style.cssText = [
+    'position:fixed;top:62px;left:50%;',
+    'transform:translateX(-50%) translateY(-10px) scale(0.88);',
+    'background:var(--card);border:0.5px solid var(--border);',
+    'border-radius:99px;padding:7px 16px 7px 12px;',
+    'display:flex;align-items:center;gap:8px;',
+    'font-size:13px;font-family:var(--font-ui);color:var(--text-secondary);',
+    'z-index:300;pointer-events:none;',
+    'box-shadow:0 4px 24px rgba(0,0,0,0.45);',
+    'opacity:0;transition:opacity 0.15s ease,transform 0.15s ease;',
+    'white-space:nowrap;',
+  ].join('');
+  pill.innerHTML = '<i class="ti ti-refresh" style="font-size:15px;transition:transform 0.2s ease;"></i><span>Pull to refresh</span>';
+  document.body.appendChild(pill);
+  const pIcon  = pill.querySelector('i');
+  const pLabel = pill.querySelector('span');
+
+  let startY = 0, pulling = false, syncing = false;
+  const THRESHOLD = 60;
+
+  function showPill(progress) {
+    const clamped = Math.min(progress, 1);
+    pill.style.opacity = String(Math.min(clamped * 1.6, 1));
+    pill.style.transform = `translateX(-50%) translateY(${(1-clamped)*-10}px) scale(${0.88+clamped*0.12})`;
+    pIcon.style.transform = `rotate(${clamped*180}deg)`;
+    pLabel.textContent = clamped >= 1 ? 'Release to sync' : 'Pull to refresh';
+  }
+  function hidePill() {
+    pill.style.opacity = '0';
+    pill.style.transform = 'translateX(-50%) translateY(-10px) scale(0.88)';
+  }
+
+  const content = document.getElementById('content');
+  if (!content) return;
+
+  content.addEventListener('touchstart', e => {
+    if (syncing || content.scrollTop > 2) return;
+    startY = e.touches[0].clientY;
+    pulling = true;
+  }, { passive: true });
+
+  content.addEventListener('touchmove', e => {
+    if (!pulling) return;
+    const dy = e.touches[0].clientY - startY;
+    if (dy <= 0) { pulling = false; hidePill(); return; }
+    showPill(dy / THRESHOLD);
+  }, { passive: true });
+
+  content.addEventListener('touchend', e => {
+    if (!pulling) return;
+    pulling = false;
+    const dy = (e.changedTouches[0]?.clientY ?? startY) - startY;
+    if (dy >= THRESHOLD && !syncing) {
+      syncing = true;
+      pIcon.style.transition = 'none';
+      pIcon.style.animation = 'spin 0.8s linear infinite';
+      pLabel.textContent = 'Syncing…';
+      pill.style.opacity = '1';
+      pill.style.transform = 'translateX(-50%) translateY(0) scale(1)';
+      syncAll().finally(() => {
+        syncing = false;
+        pIcon.style.animation = '';
+        pIcon.style.transition = 'transform 0.2s ease';
+        setTimeout(hidePill, 700);
+      });
+    } else {
+      hidePill();
+    }
+    startY = 0;
+  }, { passive: true });
+})();
 
 // ── Init ──
 window.addEventListener('DOMContentLoaded', () => {
