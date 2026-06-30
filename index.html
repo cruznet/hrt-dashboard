@@ -288,6 +288,11 @@ label.dose-row.dose-done .dose-name { text-decoration: line-through; }
 @keyframes toastIn  { from { opacity:0; transform:translateY(10px) scale(0.97); } to { opacity:1; transform:none; } }
 @keyframes toastOut { from { opacity:1; transform:none; } to { opacity:0; transform:translateX(12px); } }
 
+/* ── Range pills (Wellness, Compliance) ── */
+.range-pill { padding:4px 11px;border-radius:6px;font-size:12px;border:0.5px solid var(--border);background:transparent;color:var(--text-muted);cursor:pointer;transition:all 0.15s;font-family:var(--font-ui); }
+.range-pill:hover { color:var(--text-secondary);border-color:var(--border-mid); }
+.range-pill-active { background:rgba(245,197,24,0.1);border-color:rgba(245,197,24,0.3)!important;color:var(--primary-bright)!important; }
+
 /* ── Shimmer skeleton ── */
 @keyframes shimmer { 0% { background-position:-200% 0; } 100% { background-position:200% 0; } }
 .shimmer { background:linear-gradient(90deg,rgba(255,255,255,0.04) 25%,rgba(255,255,255,0.09) 50%,rgba(255,255,255,0.04) 75%); background-size:200% 100%; animation:shimmer 1.4s ease infinite; border-radius:6px; }
@@ -387,8 +392,9 @@ label.dose-row.dose-done .dose-name { text-decoration: line-through; }
 .bw-low     { background:rgba(248,113,113,0.13); color:var(--red); }
 .bw-caution { background:rgba(251,146,60,0.13);  color:var(--amber); }
 .bw-none    { background:var(--bg-deep);         color:var(--text-muted); }
-.bw-marker-row { display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:0.5px solid var(--border); }
+.bw-marker-row { display:flex;justify-content:space-between;align-items:center;padding:8px 6px;border-bottom:0.5px solid var(--border);border-radius:5px;margin:0 -6px;transition:background 0.12s; }
 .bw-marker-row:last-child { border-bottom:none; }
+.bw-marker-row:hover { background:rgba(255,255,255,0.03); }
 .bw-group-label { font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.07em;font-weight:700;margin:14px 0 8px; }
 .bw-form-grid { display:grid;grid-template-columns:repeat(auto-fill, minmax(175px, 1fr));gap:10px;margin-top:8px; }
 
@@ -673,36 +679,33 @@ body {
   align-items: stretch;
 }
 .bnav-item {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 3px;
-  padding: 10px 4px 6px;
-  min-height: 54px;
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  font-size: 10px;
-  font-family: var(--font-ui);
-  font-weight: 500;
-  letter-spacing: 0.1px;
-  cursor: pointer;
-  user-select: none;
+  flex: 1; position: relative;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: flex-start;
+  gap: 3px; padding: 10px 4px 6px; min-height: 54px;
+  background: none; border: none;
+  color: var(--text-muted); font-size: 10px;
+  font-family: var(--font-ui); font-weight: 500;
+  letter-spacing: 0.1px; cursor: pointer; user-select: none;
 }
+.bnav-item::before {
+  content: ''; position: absolute; top: 0; left: 50%;
+  transform: translateX(-50%) scaleX(0);
+  width: 28px; height: 2.5px;
+  border-radius: 0 0 3px 3px;
+  background: var(--primary-bright);
+  transition: transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.bnav-item.active::before { transform: translateX(-50%) scaleX(1); }
 .bnav-item i {
-  font-size: 23px;
-  line-height: 1;
-  transition: transform 120ms cubic-bezier(0.34, 1.56, 0.64, 1), color 120ms ease;
+  font-size: 23px; line-height: 1;
+  transition: transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1), color 150ms ease;
 }
-.bnav-item span {
-  transition: color 120ms ease;
-}
+.bnav-item span { transition: color 150ms ease; }
 .bnav-item.active { color: var(--primary-bright); }
-.bnav-item.active i { transform: scale(1.08); }
-.bnav-item:active i { transform: scale(0.84); transition-duration: 80ms; }
-.bnav-item:active { opacity: 0.6; }
+.bnav-item.active i { transform: scale(1.14); }
+.bnav-item:active i { transform: scale(0.82); transition-duration: 70ms; }
+.bnav-item:active { opacity: 0.55; }
 
 /* Mobile-specific layout overrides */
 @media (max-width: 768px) {
@@ -1041,7 +1044,10 @@ body {
 
         <!-- Left: Today's dose checklist — the #1 daily interaction -->
         <div class="card">
-          <div class="card-title">Dose Schedule</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <div class="card-title" style="margin-bottom:0;">Dose Schedule</div>
+            <div id="dose-streak-badge"></div>
+          </div>
           <div id="dose-schedule-content" style="line-height:1.9;"></div>
         </div>
 
@@ -1573,7 +1579,14 @@ body {
     <section class="page" id="page-wellness">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding-bottom:12px;border-bottom:0.5px solid var(--border);flex-wrap:wrap;gap:8px;">
         <div style="font-size:15px;font-weight:600;color:var(--text-primary);">Wellness</div>
-        <div id="hk-last-sync" style="font-size:12px;color:var(--text-muted);"></div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <div style="display:flex;gap:4px;">
+            <button onclick="hkSetRange(7)"  id="hk-r7"  class="range-pill">7d</button>
+            <button onclick="hkSetRange(30)" id="hk-r30" class="range-pill range-pill-active">30d</button>
+            <button onclick="hkSetRange(90)" id="hk-r90" class="range-pill">90d</button>
+          </div>
+          <div id="hk-last-sync" style="font-size:12px;color:var(--text-muted);"></div>
+        </div>
       </div>
       <div id="hk-kpi-row" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px;"></div>
       <div id="hk-charts"></div>
@@ -2812,6 +2825,22 @@ function renderSparkline(containerId, values, max, color) {
   });
 }
 
+// Consecutive days with at least one dose logged
+function calcDoseStreak() {
+  const taken = lsGet('hrt_doses_taken', []);
+  if (!taken.length) return 0;
+  const takenDates = new Set(taken.map(t => t.date));
+  const today = localDate(new Date());
+  const startBack = takenDates.has(today) ? 0 : 1;
+  let streak = 0;
+  for (let back = startBack; back < 365; back++) {
+    const d = new Date(Date.now() - back * 86400000);
+    if (!takenDates.has(localDate(d))) break;
+    streak++;
+  }
+  return streak;
+}
+
 // Calculate consecutive day log streak (days ending today or yesterday)
 function calcLogStreak(logs) {
   if (!logs.length) return 0;
@@ -2998,7 +3027,7 @@ function nav(page) {
   if (page === 'compliance') renderCompliancePage();
   if (page === 'wellness') renderWellnessPage();
   if (page === 'calculator') setTimeout(() => { calcBuildCompoundSelect(); pepUpdate(); }, 100);
-  if (page === 'dashboard') { renderVitalsToCards(); renderBwDashStrip(); renderPhysiqueDashStrip(); setTimeout(() => { if (_supa && _supaUser) renderRealCharts(); else renderDemoCharts(); }, 100); }
+  if (page === 'dashboard') { renderVitalsToCards(); renderBwDashStrip(); renderPhysiqueDashStrip(); setTimeout(() => { if (_supa && _supaUser) renderRealCharts(); else renderDemoCharts(); }, 100); setTimeout(checkLabReminder, 1200); }
   // Load active protocol on dashboard
   if (page === 'dashboard') {
     const activeData = localStorage.getItem('hrt_active_protocol_data');
@@ -3325,6 +3354,11 @@ function currentPhaseDose(phases, startDate) {
 function renderDoseSchedule() {
   const el = document.getElementById('dose-schedule-content');
   if (!el) return;
+  const streak = calcDoseStreak();
+  const streakEl = document.getElementById('dose-streak-badge');
+  if (streakEl) streakEl.innerHTML = streak > 0
+    ? `<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-family:var(--font-data);font-weight:600;color:var(--primary-bright);background:rgba(245,197,24,0.1);border:0.5px solid rgba(245,197,24,0.25);padding:3px 9px;border-radius:20px;"><i class="ti ti-flame" style="font-size:12px;"></i> ${streak}d streak</span>`
+    : '';
   const protocol = lsGet('hrt_active_protocol_data', null);
   if (!protocol || !(protocol.compounds || []).length) {
     el.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:160px;gap:6px;text-align:center;"><i class="ti ti-calendar-off" style="font-size:28px;color:var(--text-muted);opacity:0.4;"></i><div style="color:var(--text-muted);">No active protocol</div><div style="font-size:11px;color:var(--text-muted);opacity:0.7;"><a href="#" onclick="nav('protocols');return false;" style="color:var(--primary-bright);">My Protocols →</a></div></div>`;
@@ -3553,6 +3587,23 @@ const BW_KPI_KEYS    = ['tt', 'hematocrit', 'e2', 'ldl', 'hdl'];
 const BW_KPI_COLORS  = { tt: 'mc-gold', hematocrit: 'mc-red', e2: 'mc-purple', ldl: 'mc-amber', hdl: 'mc-green' };
 
 function bwLoad()           { return lsGet('hrt_bloodwork', []); }
+
+function checkLabReminder() {
+  const panels = bwLoad().sort((a, b) => b.date.localeCompare(a.date));
+  if (!panels.length) return;
+  const intervalDays = (parseInt(localStorage.getItem('hrt_labs_interval_weeks')) || 12) * 7;
+  const nextDue   = Date.parse(panels[0].date) + intervalDays * 86400000;
+  const daysUntil = Math.ceil((nextDue - Date.now()) / 86400000);
+  const today     = localDate(new Date());
+  if (localStorage.getItem('hrt_lab_reminder_shown') === today) return;
+  if (daysUntil <= 7 && daysUntil >= 0) {
+    localStorage.setItem('hrt_lab_reminder_shown', today);
+    showToast(`Labs due in ${daysUntil} day${daysUntil !== 1 ? 's' : ''}`, 'warn', 6000);
+  } else if (daysUntil < 0) {
+    localStorage.setItem('hrt_lab_reminder_shown', today);
+    showToast(`Labs overdue by ${Math.abs(daysUntil)} days`, 'error', 6000);
+  }
+}
 function bwSaveAll(panels)  { localStorage.setItem('hrt_bloodwork', JSON.stringify(panels)); syncProtocolsToSupabase(); }
 
 function bwRangeStatus(key, value) {
@@ -3928,12 +3979,6 @@ function renderBwTrendCharts() {
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: '#192134',
-        borderColor: 'rgba(255,255,255,0.08)',
-        borderWidth: 0.5,
-        titleColor: '#F8FAFC',
-        bodyColor: '#94A3B8',
-        padding: 10,
         filter: item => item.datasetIndex === 0,
         callbacks: { label: ctx => `${m.label}: ${ctx.parsed.y} ${m.unit}` }
       }
@@ -4892,6 +4937,15 @@ function isScheduledDay(compound, dateStr, protocolStart) {
 
 let _hkData     = null; // cache for CSV data
 let _hkSupaData = null; // cache for Supabase cloud data
+let _hkRange    = 30;   // wellness chart window in days
+
+function hkSetRange(days) {
+  _hkRange = days;
+  document.querySelectorAll('.range-pill').forEach(b => b.classList.remove('range-pill-active'));
+  const btn = document.getElementById(`hk-r${days}`);
+  if (btn) btn.classList.add('range-pill-active');
+  renderWellnessPage();
+}
 
 async function hkLoadCSV() {
   if (_hkData) return _hkData;
@@ -4969,7 +5023,7 @@ async function renderWellnessPage() {
   }
 
   const sorted = [...rows].sort((a, b) => a['Date/Time'].localeCompare(b['Date/Time']));
-  const last30 = sorted.slice(-30);
+  const lastN  = sorted.slice(-_hkRange);
   const latest = sorted[sorted.length - 1];
   if (!latest) { container.innerHTML = '<div style="color:var(--text-muted);font-size:13px;">No data</div>'; return; }
 
@@ -4980,7 +5034,7 @@ async function renderWellnessPage() {
   }
 
   hkRenderKpis(kpiRow, latest, sorted);
-  hkRenderCharts(container, last30);
+  hkRenderCharts(container, lastN);
 }
 
 function hkVal(row, col) {
@@ -6925,10 +6979,24 @@ function filterCompounds() {
 const chartDefaults = {
   responsive: true,
   maintainAspectRatio: false,
-  plugins: { legend: { display: false }, tooltip: { backgroundColor: '#192134', borderColor: 'rgba(255,255,255,0.08)', borderWidth: 0.5, titleColor: '#F8FAFC', bodyColor: '#94A3B8', padding: 10 } },
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      backgroundColor: '#1C1C28',
+      borderColor: 'rgba(255,255,255,0.10)',
+      borderWidth: 1,
+      titleColor: '#F8FAFC',
+      bodyColor: '#94A3B8',
+      padding: 12,
+      cornerRadius: 8,
+      displayColors: false,
+      titleFont: { family: "'DM Sans', system-ui, sans-serif", weight: '600', size: 12 },
+      bodyFont: { family: "'JetBrains Mono', monospace", size: 12 },
+    }
+  },
   scales: {
-    x: { grid: { color: 'rgba(255,255,255,0.04)', drawBorder: false }, ticks: { color: '#64748B', font: { family: "'Fira Code'" } } },
-    y: { grid: { color: 'rgba(255,255,255,0.04)', drawBorder: false }, ticks: { color: '#64748B', font: { family: "'Fira Code'" } } }
+    x: { grid: { color: 'rgba(255,255,255,0.04)', drawBorder: false }, ticks: { color: '#64748B', font: { family: "'JetBrains Mono', monospace", size: 11 } } },
+    y: { grid: { color: 'rgba(255,255,255,0.04)', drawBorder: false }, ticks: { color: '#64748B', font: { family: "'JetBrains Mono', monospace", size: 11 } } }
   }
 };
 
@@ -7532,11 +7600,6 @@ function _calcUpdateNow() {
           labels: { color: '#F59E0B', font: { family: "'Fira Code'", size: 11 }, boxWidth: 20, padding: 10 }
         },
         tooltip: {
-          backgroundColor: '#192134',
-          borderColor: 'rgba(255,255,255,0.08)',
-          borderWidth: 1,
-          titleColor: '#F8FAFC',
-          bodyColor: '#94A3B8',
           callbacks: {
             title: (items) => 'Day ' + items[0].dataIndex,
             label: (item) => item.datasetIndex === 0
