@@ -3499,24 +3499,65 @@ function updateUserUI(user) {
 function loadDemoData() {
   // Active protocol from localStorage
   const activeData = localStorage.getItem('hrt_active_protocol_data');
-  const pd = document.getElementById('protocol-display');
   let p = null;
   if (activeData) {
-    try {
-      p = JSON.parse(activeData);
-      const pills = (p.compounds || []).map(raw => {
-        const c = normalizeCompound(raw);
-        return `<span class="pill pill-primary">${escHtml(String(c.name))} ${escHtml(String(c.dose))}${escHtml(String(c.unit))} ${escHtml(String(c.freq))}</span>`;
-      }).join(' ');
-      if (pd && pills) pd.innerHTML = `<div style="margin-bottom:8px;">${pills}</div>`;
-    } catch(e) { console.error('[loadDemoData] protocol pills render failed:', e); }
-  } else if (pd) {
-    pd.innerHTML = '<div style="color:var(--text-muted);font-size:12px;">No active protocol. <a href="#" onclick="nav(\'builder\');return false;" style="color:var(--primary-bright);">Build one →</a></div>';
+    try { p = JSON.parse(activeData); } catch(e) {}
   }
-
+  renderProtocolCard(p);
   renderCycleProgress(p);
   renderVitalsToCards();
   updateTopbarBadge();
+}
+
+function renderProtocolCard(protocol) {
+  const pd = document.getElementById('protocol-display');
+  if (!pd) return;
+  if (!protocol?.compounds?.length) {
+    pd.innerHTML = '<div style="font-size:13px;color:var(--text-muted);">No active protocol. <a href="#" onclick="nav(\'builder\');return false;" style="color:var(--primary-bright);">Build one →</a></div>';
+    return;
+  }
+  const p = normalizeProtocol ? normalizeProtocol(protocol) : protocol;
+  const modeColor = p.mode === 'performance' ? 'var(--primary-bright)'
+                  : p.mode === 'offseason'   ? 'var(--green)'
+                  : 'var(--teal)';
+  const modeLabel = p.mode === 'performance' ? 'Performance'
+                  : p.mode === 'offseason'   ? 'Offseason'
+                  : 'TRT / Cruise';
+  const weeksLabel = p.cycleLengthWeeks || parseInt(p.weeks) ? `${p.cycleLengthWeeks || parseInt(p.weeks) || '?'}wk` : '';
+  const freqShort = f => {
+    if (!f) return '';
+    if (Array.isArray(f)) return f.join(', ');
+    const u = (f + '').toUpperCase().trim();
+    if (u === 'ED') return 'ED';
+    if (u === 'EOD') return 'EOD';
+    if (u.startsWith('E3')) return 'E3D';
+    if (u.startsWith('E7') || u === 'WEEKLY') return 'Wkly';
+    if (u.startsWith('E3.5') || u === 'TWICE WEEKLY') return '2×Wk';
+    return f;
+  };
+  const rows = (p.compounds || []).map(raw => {
+    const c = normalizeCompound ? normalizeCompound(raw) : raw;
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:0.5px solid rgba(255,255,255,0.04);">
+      <div style="display:flex;align-items:center;gap:8px;min-width:0;">
+        <div style="width:6px;height:6px;border-radius:50%;flex-shrink:0;background:${modeColor};opacity:0.8;"></div>
+        <span style="font-size:13px;color:var(--text-primary);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(c.name)}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:8px;">
+        <span style="font-family:var(--font-data);font-size:13px;color:${modeColor};">${escHtml(String(c.dose))}${escHtml(c.unit)}</span>
+        <span style="font-size:11px;color:var(--text-muted);background:rgba(255,255,255,0.05);padding:2px 6px;border-radius:4px;">${escHtml(freqShort(c.freq))}</span>
+      </div>
+    </div>`;
+  }).join('');
+  pd.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px;">
+      <div style="font-size:13px;font-weight:600;color:var(--text-primary);">${escHtml(p.name || 'Protocol')}</div>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <span style="font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:${modeColor};background:${modeColor}18;padding:3px 8px;border-radius:5px;">${modeLabel}</span>
+        ${weeksLabel ? `<span style="font-size:10px;color:var(--text-muted);">${weeksLabel}</span>` : ''}
+      </div>
+    </div>
+    <div>${rows}</div>
+    ${p.startDate ? `<div style="font-size:11px;color:var(--text-muted);margin-top:8px;">Started ${p.startDate}</div>` : ''}`;
 }
 
 // ── getCycleChartData: extract chart data and labels for mood/energy/weight ──
@@ -3983,12 +4024,7 @@ function nav(page) {
     if (activeData) {
       try {
         const p = JSON.parse(activeData);
-        const pills = (p.compounds || []).map(raw => {
-          const c = normalizeCompound(raw);
-          return `<span class="pill pill-primary">${escHtml(String(c.name))} ${escHtml(String(c.dose))}${escHtml(String(c.unit))} ${escHtml(String(c.freq))}</span>`;
-        }).join(' ');
-        const pd = document.getElementById('protocol-display');
-        if (pd && pills) pd.innerHTML = `<div style="margin-bottom:8px;">${pills}</div>`;
+        renderProtocolCard(p);
         renderCycleProgress(p);
       } catch(e) { console.error('[loadProtocols] active protocol render failed:', e); }
     }
@@ -8390,12 +8426,7 @@ function _doSwitch(newIndex) {
   localStorage.setItem('hrt_active_protocol', p.saved_at);
   localStorage.setItem('hrt_active_protocol_data', JSON.stringify(p));
   renderProtocolsPage();
-  const pills = (p.compounds || []).map(raw => {
-    const c = normalizeCompound(raw);
-    return `<span class="pill pill-primary">${escHtml(c.name)} ${escHtml(String(c.dose))}${escHtml(c.unit)} ${escHtml(String(c.freq))}</span>`;
-  }).join(' ');
-  const pd = document.getElementById('protocol-display');
-  if (pd) pd.innerHTML = `<div style="margin-bottom:8px;">${pills}</div>`;
+  renderProtocolCard(p);
   renderCycleProgress(p);
   renderUpcoming();
   updateTopbarBadge();
