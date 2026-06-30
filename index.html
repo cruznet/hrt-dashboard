@@ -1490,6 +1490,31 @@ body {
         </div>
       </div>
 
+      <!-- Compliance heatmap -->
+      <div class="card" id="compliance-heatmap-card" style="margin-bottom:14px;display:none;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--primary-bright)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <div class="card-title" style="margin-bottom:0;">Compliance — Last 12 Weeks</div>
+          </div>
+          <div id="compliance-heatmap-pct" style="font-size:12px;font-family:var(--font-data);color:var(--primary-bright);"></div>
+        </div>
+        <div style="overflow-x:auto;">
+          <div id="compliance-heatmap-grid" style="display:inline-grid;grid-template-rows:repeat(7,1fr);grid-auto-flow:column;gap:3px;min-width:min-content;"></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:10px;">
+          <span style="font-size:10px;color:var(--text-muted);">Less</span>
+          <div style="width:10px;height:10px;border-radius:2px;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.1);"></div>
+          <div style="width:10px;height:10px;border-radius:2px;background:rgba(245,197,24,0.25);"></div>
+          <div style="width:10px;height:10px;border-radius:2px;background:rgba(245,197,24,0.6);"></div>
+          <div style="width:10px;height:10px;border-radius:2px;background:var(--green);"></div>
+          <span style="font-size:10px;color:var(--text-muted);">More</span>
+          <span style="font-size:10px;color:var(--text-muted);margin-left:8px;">— No doses scheduled</span>
+          <div style="width:10px;height:10px;border-radius:2px;background:rgba(248,113,113,0.35);"></div>
+          <span style="font-size:10px;color:var(--text-muted);">Missed</span>
+        </div>
+      </div>
+
       <!-- TRENDS section -->
       <div class="dash-section-label">Trends</div>
 
@@ -3923,7 +3948,7 @@ function nav(page) {
   if (page === 'wellness') renderWellnessPage();
   if (page === 'calculator') setTimeout(() => { calcBuildCompoundSelect(); pepUpdate(); }, 100);
   if (page === 'settings') setTimeout(populateShowForm, 50);
-  if (page === 'dashboard') { renderReadinessCard(); renderStreakCard(); renderShowCountdown(); renderModeContextCard(); renderDashboardCheckinCard(); renderVitalsToCards(); renderBwDashStrip(); renderPhysiqueDashStrip(); setTimeout(() => { if (_supa && _supaUser) renderRealCharts(); else renderDemoCharts(); }, 100); setTimeout(checkLabReminder, 1200); }
+  if (page === 'dashboard') { renderReadinessCard(); renderStreakCard(); renderComplianceHeatmap(); renderShowCountdown(); renderModeContextCard(); renderDashboardCheckinCard(); renderVitalsToCards(); renderBwDashStrip(); renderPhysiqueDashStrip(); setTimeout(() => { if (_supa && _supaUser) renderRealCharts(); else renderDemoCharts(); }, 100); setTimeout(checkLabReminder, 1200); }
   // Load active protocol on dashboard
   if (page === 'dashboard') {
     const activeData = localStorage.getItem('hrt_active_protocol_data');
@@ -5501,7 +5526,7 @@ async function submitWeeklyCheckin() {
   closeModal('ci-modal');
   renderWeeklyCheckinSection();
   renderDashboardCheckinCard();
-  if (currentPage === 'dashboard') { renderReadinessCard(); renderStreakCard(); }
+  if (currentPage === 'dashboard') { renderReadinessCard(); renderStreakCard(); renderComplianceHeatmap(); }
   showCheckinReveal(row);
 }
 
@@ -9180,6 +9205,71 @@ function renderStreakCard() {
       ${streak >= 7 ? `<div style="margin-left:auto;font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:${color};background:${color}22;padding:4px 8px;border-radius:6px;">${streak >= 30 ? '🏆 Elite' : streak >= 14 ? '⚡ On Fire' : '✓ Solid'}</div>` : ''}
     </div>
   </div>`;
+}
+
+function renderComplianceHeatmap() {
+  const card = document.getElementById('compliance-heatmap-card');
+  const grid = document.getElementById('compliance-heatmap-grid');
+  const pctEl = document.getElementById('compliance-heatmap-pct');
+  if (!card || !grid) return;
+
+  const protocol = lsGet('hrt_active_protocol_data', null);
+  if (!protocol?.compounds?.length) { card.style.display = 'none'; return; }
+
+  const taken = lsGet('hrt_doses_taken', []);
+  const today = new Date();
+  const days = 84; // 12 weeks
+
+  // Align to Sunday of the week containing today
+  const startDate = new Date(today);
+  startDate.setDate(today.getDate() - (today.getDay()) - (days - 7));
+
+  let totalScheduled = 0, totalTaken = 0;
+  const cells = [];
+
+  for (let i = 0; i < days; i++) {
+    const d = new Date(startDate);
+    d.setDate(startDate.getDate() + i);
+    const ds = localDate(d);
+    const isFuture = ds > localDate(today);
+
+    const due = protocol.compounds.filter(c =>
+      isDueOnDate(c.freq, c.start || protocol.saved_at?.slice(0,10), ds)
+    );
+
+    let state = 'none'; // not scheduled
+    if (due.length > 0) {
+      const takenCount = due.filter(c => taken.some(t => t.date === ds && t.name === c.name)).length;
+      if (!isFuture) {
+        totalScheduled += due.length;
+        totalTaken += takenCount;
+      }
+      if (isFuture) state = 'future';
+      else if (takenCount === due.length) state = 'full';
+      else if (takenCount > 0) state = 'partial';
+      else state = 'missed';
+    }
+    cells.push({ ds, state, due: due.length, isFuture });
+  }
+
+  const pct = totalScheduled > 0 ? Math.round((totalTaken / totalScheduled) * 100) : null;
+  if (pctEl) pctEl.textContent = pct !== null ? `${pct}% on-protocol` : '';
+
+  const dayLabels = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+  grid.innerHTML = dayLabels.map((label, idx) =>
+    `<div style="font-size:9px;color:var(--text-muted);height:14px;display:flex;align-items:center;padding-right:4px;grid-row:${idx+1};">${label}</div>`
+  ).join('') + cells.map(({ ds, state, isFuture }) => {
+    const bg = state === 'full'    ? 'rgba(34,197,94,0.75)'
+             : state === 'partial' ? 'rgba(245,197,24,0.55)'
+             : state === 'missed'  ? 'rgba(248,113,113,0.35)'
+             : state === 'future'  ? 'rgba(255,255,255,0.03)'
+             : 'rgba(255,255,255,0.05)';
+    const border = state === 'none' || state === 'future' ? '0.5px solid rgba(255,255,255,0.07)' : 'none';
+    const title = `${ds} — ${state === 'full' ? 'All doses taken' : state === 'partial' ? 'Partial' : state === 'missed' ? 'Missed' : state === 'future' ? 'Upcoming' : 'Not scheduled'}`;
+    return `<div title="${title}" style="width:13px;height:13px;border-radius:2px;background:${bg};border:${border};cursor:default;transition:opacity 0.1s;" onmouseenter="this.style.opacity='0.75'" onmouseleave="this.style.opacity='1'"></div>`;
+  }).join('');
+
+  card.style.display = '';
 }
 
 // ── Item 4: Post Check-In Reveal ─────────────────────────────────────────────
