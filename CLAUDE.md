@@ -110,6 +110,7 @@ Cloudflare's bot force-pushes `cloudflare/workers-autoconfig` regularly. Always 
 | `hrt_mode` | UI mode preference |
 | `hrt_anon_id` | UUID generated on first visit — shared between `landing.html` and `index.html` (same origin). Used to join pre-signup funnel events to post-signup user behavior. |
 | `hrt_first_log_tracked` | `"1"` once `first_log` has been fired. Guards `trackFirstLogIfNeeded()` from firing more than once. |
+| `hrt_theme` | `"dark"` (default) or `"light"` — persists theme toggle selection. Applied via `data-theme` attribute on `<html>`. |
 
 ---
 
@@ -149,6 +150,8 @@ Cloudflare's bot force-pushes `cloudflare/workers-autoconfig` regularly. Always 
 | `makeChart(id, type, labels, datasets, opts)` | Destroys existing chart before re-creating |
 | `track(eventName, props)` | Fire-and-forget funnel event to `POST /api/track`. Defined in both `landing.html` and `index.html`. Never throws; analytics must not break the page. |
 | `trackFirstLogIfNeeded(logType)` | Fires `first_log` event exactly once per browser (guarded by `hrt_first_log_tracked` localStorage flag). Called from `checkDose`, `submitLog`, and `submitWeeklyCheckin`. |
+| `setTheme(mode)` | Sets `data-theme` on `<html>`, persists to `hrt_theme`, and updates the topbar toggle icon. Mode is `"dark"` or `"light"`. |
+| `initTheme()` | Reads `hrt_theme` from localStorage and calls `setTheme()`. Called once in `DOMContentLoaded`. Anti-FOUC inline script in `<head>` also applies theme before CSS renders. |
 
 ---
 

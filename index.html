@@ -15,6 +15,13 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script>
+// Apply saved theme before first paint to prevent FOUC
+(function() {
+  const t = localStorage.getItem('hrt_theme');
+  if (t === 'light') document.documentElement.setAttribute('data-theme', 'light');
+})();
+</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
@@ -63,6 +70,75 @@
   --radius:    8px;
   --radius-lg: 12px;
   --transition: 150ms ease;
+}
+
+/* ── Light Mode ── override only tokens that change; structural tokens stay the same ── */
+[data-theme="light"] {
+  --bg-deep:        #EEECEA;
+  --bg-base:        #F7F5F2;
+  --bg-card:        #FFFFFF;
+  --bg-card-hover:  #F4F3F0;
+  --bg-sidebar:     #E8E6E2;
+
+  --primary:        #7B5507;
+  --primary-bright: #9A6A09;
+  --primary-dim:    rgba(123,85,7,0.08);
+  --primary-border: rgba(123,85,7,0.24);
+
+  --teal:           #0891B2;
+  --teal-dim:       rgba(8,145,178,0.10);
+  --teal-border:    rgba(8,145,178,0.24);
+  --green:          #16A34A;
+  --green-dim:      rgba(22,163,74,0.10);
+  --red:            #DC2626;
+  --red-dim:        rgba(220,38,38,0.10);
+  --amber:          #D97706;
+  --amber-dim:      rgba(217,119,6,0.10);
+  --purple:         #9333EA;
+  --purple-dim:     rgba(147,51,234,0.10);
+
+  --text-primary:   #111118;
+  --text-secondary: #2C2C3A;
+  --text-muted:     #6B6B78;
+  --text-label:     #4A4A58;
+
+  --border:         rgba(0,0,0,0.09);
+  --border-mid:     rgba(0,0,0,0.16);
+}
+
+/* Light mode — fix elements that use hardcoded dark rgba values instead of tokens */
+[data-theme="light"] .toast {
+  background: #FFFFFF;
+  border-color: rgba(0,0,0,0.10);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+  color: var(--text-secondary);
+}
+[data-theme="light"] .shimmer {
+  background: linear-gradient(90deg, rgba(0,0,0,0.04) 25%, rgba(0,0,0,0.09) 50%, rgba(0,0,0,0.04) 75%);
+  background-size: 200% 100%;
+}
+[data-theme="light"] .dose-cb-styled {
+  border-color: rgba(0,0,0,0.25);
+  background: rgba(0,0,0,0.03);
+}
+[data-theme="light"] .dose-cb-styled:checked::after { border-color: #FFFFFF; }
+[data-theme="light"] label.dose-row:hover { background: rgba(0,0,0,0.04); }
+[data-theme="light"] .nav-item:hover {
+  background: rgba(0,0,0,0.04);
+  border-left-color: var(--primary-border);
+}
+[data-theme="light"] .data-table tr:hover td { background: rgba(0,0,0,0.025); }
+[data-theme="light"] .bw-marker-row:hover { background: rgba(0,0,0,0.025); }
+[data-theme="light"] .install-banner-btn-ghost {
+  background: rgba(0,0,0,0.05);
+  border-color: rgba(0,0,0,0.10);
+}
+[data-theme="light"] .auth-headline {
+  background: none;
+  -webkit-background-clip: unset;
+  background-clip: unset;
+  -webkit-text-fill-color: var(--text-primary);
+  color: var(--text-primary);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1515,6 +1591,9 @@ body {
     <div class="topbar-badge" id="topbar-badge">TRT Mode</div>
     <button class="topbar-btn-ghost" onclick="openModal('log-modal')">
       <i class="ti ti-plus" style="font-size:13px;"></i><span class="btn-text"> Log Entry</span>
+    </button>
+    <button class="topbar-btn-ghost" id="theme-toggle-btn" onclick="setTheme(document.documentElement.getAttribute('data-theme')==='light'?'dark':'light')" title="Toggle light/dark mode" aria-label="Toggle light/dark mode" style="padding:6px 9px;">
+      <i class="ti ti-sun" id="theme-icon" style="font-size:16px;"></i>
     </button>
     <button class="topbar-btn-ghost" id="sync-btn" onclick="syncAll()" title="Sync latest data" style="display:flex;align-items:center;gap:5px;">
       <i class="ti ti-refresh" id="sync-icon" style="font-size:15px;"></i>
@@ -3205,6 +3284,18 @@ function lsGet(key, fallback) {
   if (raw == null) return fallback;
   try { return JSON.parse(raw); }
   catch (e) { console.error(`[localStorage] corrupt "${key}", resetting:`, e); localStorage.removeItem(key); return fallback; }
+}
+
+// ── Theme ──
+function setTheme(mode) {
+  document.documentElement.setAttribute('data-theme', mode);
+  localStorage.setItem('hrt_theme', mode);
+  const icon = document.getElementById('theme-icon');
+  if (icon) icon.className = mode === 'light' ? 'ti ti-moon' : 'ti ti-sun';
+}
+function initTheme() {
+  const saved = localStorage.getItem('hrt_theme') || 'dark';
+  setTheme(saved);
 }
 
 // ── Funnel analytics ── fire-and-forget, never blocks the app ──
@@ -10998,6 +11089,7 @@ function pepUpdate() {
 
 // ── Init ──
 window.addEventListener('DOMContentLoaded', () => {
+  initTheme();
   initSupa();
   const savedMode = localStorage.getItem('hrt_mode') || 'trt';
   const validModes = ['trt', 'offseason', 'performance'];
