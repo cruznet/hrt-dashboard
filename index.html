@@ -5705,10 +5705,57 @@ function renderWorkoutsPage() {
   const totalVol   = workouts.reduce((s, w) => s + hevyWorkoutVolume(w), 0);
   const totalSets  = workouts.reduce((s, w) => s + w.exercises.reduce((ss, e) => ss + (e.sets?.length||0), 0), 0);
   const avgDurMins = workouts.reduce((s, w) => s + Math.max(0, hevyParseMs(w.end_time) - hevyParseMs(w.start_time)), 0) / workouts.length / 60000;
-  // workouts per week over last 4 weeks
   const fourWeeksAgo = Date.now() - 28 * 86400000;
   const recentCount  = workouts.filter(w => hevyParseMs(w.start_time) >= fourWeeksAgo).length;
   const perWeek      = (recentCount / 4).toFixed(1);
+
+  // ── Week-over-week volume delta ──
+  const nowMs = Date.now();
+  const todayD = new Date();
+  const msIntoDay = (todayD.getHours()*3600 + todayD.getMinutes()*60 + todayD.getSeconds()) * 1000;
+  const thisSunMs = nowMs - todayD.getDay() * 86400000 - msIntoDay;
+  const lastSunMs = thisSunMs - 7 * 86400000;
+  const prevSunMs = lastSunMs - 7 * 86400000;
+  const thisWeekVol = workouts.filter(w => hevyParseMs(w.start_time) >= thisSunMs).reduce((s,w)=>s+hevyWorkoutVolume(w), 0);
+  const lastWeekVol = workouts.filter(w => { const t=hevyParseMs(w.start_time); return t>=lastSunMs && t<thisSunMs; }).reduce((s,w)=>s+hevyWorkoutVolume(w), 0);
+  const prevWeekVol = workouts.filter(w => { const t=hevyParseMs(w.start_time); return t>=prevSunMs && t<lastSunMs; }).reduce((s,w)=>s+hevyWorkoutVolume(w), 0);
+  const [cmpA, cmpB] = thisWeekVol > 0 ? [thisWeekVol, lastWeekVol] : [lastWeekVol, prevWeekVol];
+  let volDeltaHtml = '';
+  if (cmpB > 0) {
+    const pct = Math.round(((cmpA - cmpB) / cmpB) * 100);
+    const clr = pct >= 0 ? '#4ADE80' : '#F87171';
+    volDeltaHtml = `<div style="font-size:11px;color:${clr};margin-top:2px;">${pct>=0?'↑':'↓'}${Math.abs(pct)}% vs last wk</div>`;
+  }
+
+  // ── 7-day dot streak ──
+  const dayNames7 = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+  const weekDayDots = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(nowMs - i * 86400000);
+    const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    const worked = workouts.some(w => { const t=hevyParseMs(w.start_time); return t>=dayStart && t<dayStart+86400000; });
+    weekDayDots.push({ worked, label: dayNames7[d.getDay()] });
+  }
+  const daysThisWeek = weekDayDots.filter(d => d.worked).length;
+
+  // ── Muscle group breakdown (last 30 days) ──
+  const thirtyDaysAgo = nowMs - 30 * 86400000;
+  const muscleGroups = { Pull:0, Push:0, Legs:0, Other:0 };
+  const tagClr = { Pull:'#38BDF8', Push:'#F87171', Legs:'#4ADE80', Other:'#64748B' };
+  workouts.filter(w => hevyParseMs(w.start_time) >= thirtyDaysAgo).forEach(w => {
+    const tag = hevyWorkoutTag(w.title);
+    if (tag) {
+      const key = (tag.label==='Upper'||tag.label==='Full') ? 'Push' : tag.label==='Lower' ? 'Legs' : tag.label==='Cardio' ? 'Other' : (tag.label in muscleGroups ? tag.label : 'Other');
+      muscleGroups[key]++;
+    } else {
+      const ex = (w.exercises||[]).map(e=>(e.title||'')).join(' ').toLowerCase();
+      if (/pull|back|row|deadlift|curl|lat|bicep/.test(ex)) muscleGroups.Pull++;
+      else if (/push|chest|press|delt|tricep|shoulder/.test(ex)) muscleGroups.Push++;
+      else if (/leg|squat|quad|hamstring|glute|calf/.test(ex)) muscleGroups.Legs++;
+      else muscleGroups.Other++;
+    }
+  });
+  const totalMuscle = Object.values(muscleGroups).reduce((s,v)=>s+v, 0);
 
   const kpiHtml = `<div class="metrics-grid" style="margin-bottom:14px;">
     <div class="metric-card">
@@ -5730,8 +5777,36 @@ function renderWorkoutsPage() {
       <div class="metric-label">TOTAL VOLUME</div>
       <div class="metric-value" style="color:var(--purple);">${(totalVol/1000).toFixed(0)}<span style="font-size:16px;">k</span></div>
       <div class="metric-unit">lbs</div>
+      ${volDeltaHtml}
     </div>
   </div>`;
+
+  const streakHtml = `<div class="card" style="margin-bottom:14px;padding:12px 16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;color:var(--text-muted);text-transform:uppercase;">This Week</div>
+      <div style="font-size:12px;color:var(--text-muted);">${daysThisWeek} session${daysThisWeek!==1?'s':''}</div>
+    </div>
+    <div style="display:flex;gap:4px;justify-content:space-between;">
+      ${weekDayDots.map(d => `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
+        <div style="width:30px;height:30px;border-radius:50%;background:${d.worked?'rgba(74,222,128,0.15)':'rgba(255,255,255,0.04)'};border:1.5px solid ${d.worked?'#4ADE80':'rgba(255,255,255,0.06)'};display:flex;align-items:center;justify-content:center;">
+          ${d.worked?'<i class="ti ti-check" style="font-size:12px;color:#4ADE80;"></i>':''}
+        </div>
+        <span style="font-size:10px;color:var(--text-muted);">${d.label}</span>
+      </div>`).join('')}
+    </div>
+  </div>`;
+
+  const muscleBreakdownHtml = totalMuscle > 0 ? `<div class="card" style="margin-bottom:14px;padding:12px 16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;color:var(--text-muted);text-transform:uppercase;">Split · 30 days</div>
+      <div style="display:flex;gap:12px;">
+        ${Object.entries(muscleGroups).filter(([,v])=>v>0).map(([k,v]) => `<span style="font-size:11px;color:${tagClr[k]||'#64748B'};">${k} <strong style="color:var(--text-secondary);">${v}</strong></span>`).join('')}
+      </div>
+    </div>
+    <div style="display:flex;height:8px;border-radius:99px;overflow:hidden;gap:2px;">
+      ${Object.entries(muscleGroups).filter(([,v])=>v>0).map(([k,v]) => `<div style="flex:${v};background:${tagClr[k]||'#64748B'};border-radius:2px;"></div>`).join('')}
+    </div>
+  </div>` : '';
 
   // ── Weekly volume chart ──
   const volByWeek = {};
@@ -5842,6 +5917,8 @@ function renderWorkoutsPage() {
   content.innerHTML = `
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">${syncedStr}</div>
     ${kpiHtml}
+    ${streakHtml}
+    ${muscleBreakdownHtml}
     ${chartHtml}
     ${groupsHtml}`;
 
