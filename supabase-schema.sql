@@ -1080,3 +1080,26 @@ CREATE POLICY "coach_read_athlete_settings" ON user_settings
         AND coach_user_id = auth.uid()
     )
   );
+
+-- 6. Funnel/retention analytics
+-- Written exclusively by the Cloudflare Worker's /api/track endpoint using the
+-- service role key (bypasses RLS). No client-side insert/select policy is
+-- granted — this table is intentionally not reachable directly from the
+-- browser's anon key, since events can be logged pre-signup (anon_id only).
+CREATE TABLE IF NOT EXISTS analytics_events (
+  id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  anon_id     TEXT,
+  user_id     UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  event_name  TEXT NOT NULL,
+  properties  JSONB,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_analytics_events_event_name ON analytics_events(event_name);
+CREATE INDEX IF NOT EXISTS idx_analytics_events_anon_id    ON analytics_events(anon_id);
+CREATE INDEX IF NOT EXISTS idx_analytics_events_user_id    ON analytics_events(user_id);
+CREATE INDEX IF NOT EXISTS idx_analytics_events_created_at ON analytics_events(created_at);
+
+ALTER TABLE analytics_events ENABLE ROW LEVEL SECURITY;
+-- No policies defined on purpose: only the service role (used by the Worker)
+-- can read/write. Regular users and the anon key get zero access.

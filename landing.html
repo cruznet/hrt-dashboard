@@ -816,8 +816,8 @@ footer {
     </ul>
 
     <div class="nav-ctas">
-      <a class="btn btn-ghost" href="/index.html">Sign In</a>
-      <a class="btn btn-gold" href="/index.html">Get Started</a>
+      <a class="btn btn-ghost" href="/index.html" onclick="track('cta_click',{cta_id:'nav-signin'})">Sign In</a>
+      <a class="btn btn-gold" href="/index.html" onclick="track('cta_click',{cta_id:'nav-getstarted'})">Get Started</a>
     </div>
 
     <button class="nav-toggle" onclick="toggleMobileMenu()" aria-label="Toggle menu">
@@ -835,8 +835,8 @@ footer {
   <a href="#coach" onclick="closeMobileMenu()">For Coaches</a>
   <a href="#pricing" onclick="closeMobileMenu()">Pricing</a>
   <div class="mobile-menu-ctas">
-    <a class="btn btn-ghost" href="/index.html">Sign In</a>
-    <a class="btn btn-gold" href="/index.html">Get Started</a>
+    <a class="btn btn-ghost" href="/index.html" onclick="track('cta_click',{cta_id:'mobile-nav-signin'})">Sign In</a>
+    <a class="btn btn-gold" href="/index.html" onclick="track('cta_click',{cta_id:'mobile-nav-getstarted'})">Get Started</a>
   </div>
 </div>
 
@@ -857,7 +857,7 @@ footer {
     </p>
 
     <div class="hero-ctas fade-up-4">
-      <a class="btn btn-gold btn-lg" href="/index.html">Start Tracking Free</a>
+      <a class="btn btn-gold btn-lg" href="/index.html" onclick="track('cta_click',{cta_id:'hero-start'})">Start Tracking Free</a>
       <a class="btn btn-ghost btn-lg" href="#features">See the Features &rarr;</a>
     </div>
 
@@ -1253,7 +1253,7 @@ footer {
             Coach report (1 coach connection)
           </div>
         </div>
-        <a href="/index.html" class="btn btn-gold-outline pricing-cta">Get Started Free</a>
+        <a href="/index.html" class="btn btn-gold-outline pricing-cta" onclick="track('cta_click',{cta_id:'pricing-free'})">Get Started Free</a>
       </div>
 
       <div class="pricing-card featured">
@@ -1294,7 +1294,7 @@ footer {
             Priority support
           </div>
         </div>
-        <a href="/index.html" class="btn btn-gold pricing-cta">Join Waitlist</a>
+        <a href="/index.html" class="btn btn-gold pricing-cta" onclick="track('cta_click',{cta_id:'pricing-waitlist'})">Join Waitlist</a>
       </div>
     </div>
   </div>
@@ -1361,7 +1361,7 @@ footer {
     <div class="cta-banner-title">Ready to track like a pro?</div>
     <div class="cta-banner-sub">Join athletes who have already moved past spreadsheets.</div>
     <div class="cta-banner-ctas">
-      <a class="btn btn-gold btn-lg" href="/index.html">Start Tracking Free</a>
+      <a class="btn btn-gold btn-lg" href="/index.html" onclick="track('cta_click',{cta_id:'banner-start'})">Start Tracking Free</a>
       <a class="btn btn-ghost btn-lg" href="#faq">Still have questions &rarr;</a>
     </div>
   </div>
@@ -1419,6 +1419,24 @@ footer {
 </footer>
 
 <script>
+// ── Funnel analytics ── fire-and-forget, never blocks the page ──
+function track(eventName, props) {
+  try {
+    let anonId = localStorage.getItem('hrt_anon_id');
+    if (!anonId) {
+      anonId = (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`);
+      localStorage.setItem('hrt_anon_id', anonId);
+    }
+    const payload = JSON.stringify({ event_name: eventName, anon_id: anonId, properties: props || {} });
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon('/api/track', new Blob([payload], { type: 'application/json' }));
+    } else {
+      fetch('/api/track', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: payload, keepalive: true });
+    }
+  } catch (e) { /* analytics must never break the page */ }
+}
+track('landing_view');
+
 function toggleMobileMenu() {
   const menu = document.getElementById('mobile-menu');
   const open = document.getElementById('nav-icon-open');

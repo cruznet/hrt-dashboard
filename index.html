@@ -3122,6 +3122,30 @@ function lsGet(key, fallback) {
   catch (e) { console.error(`[localStorage] corrupt "${key}", resetting:`, e); localStorage.removeItem(key); return fallback; }
 }
 
+// ── Funnel analytics ── fire-and-forget, never blocks the app ──
+function track(eventName, props) {
+  try {
+    let anonId = localStorage.getItem('hrt_anon_id');
+    if (!anonId) {
+      anonId = (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`);
+      localStorage.setItem('hrt_anon_id', anonId);
+    }
+    const payload = JSON.stringify({ event_name: eventName, anon_id: anonId, user_id: _supaUser?.id || null, properties: props || {} });
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon('/api/track', new Blob([payload], { type: 'application/json' }));
+    } else {
+      fetch('/api/track', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: payload, keepalive: true });
+    }
+  } catch (e) { /* analytics must never break the app */ }
+}
+
+// Fires 'first_log' exactly once per user via a localStorage flag
+function trackFirstLogIfNeeded(logType) {
+  if (localStorage.getItem('hrt_first_log_tracked')) return;
+  localStorage.setItem('hrt_first_log_tracked', '1');
+  track('first_log', { log_type: logType });
+}
+
 // Null-safe descending date comparator (YYYY-MM-DD strings)
 const dateCmp = (a, b) => (b || '').localeCompare(a || '');
 
@@ -3149,7 +3173,10 @@ async function _initSupaAuth() {
 
   _supa.auth.onAuthStateChange((event, session) => {
     _supaSession = session; _supaUser = session?.user || null;
-    if (_supaUser) { showApp(); loadUserData(); }
+    if (_supaUser) {
+      showApp(); loadUserData();
+      if (event === 'SIGNED_IN') track('auth_complete', { provider: 'google' });
+    }
     else if (event !== 'INITIAL_SESSION') { showAuthOverlay(); }
   });
 
@@ -3467,6 +3494,7 @@ function onboardFinish() {
   localStorage.setItem('hrt_onboarded', '1');
   const el = document.getElementById('onboard-overlay');
   if (el) el.style.display = 'none';
+  track('onboarding_complete', { mode: _obMode });
   syncProtocolsToSupabase();
   updateTopbarBadge();
   renderShowCountdown();
@@ -4680,6 +4708,7 @@ async function submitLog() {
 
   renderLastVitalsEntry();
   renderVitalsToCards(); // refresh dashboard cards + deltas + sparklines
+  trackFirstLogIfNeeded('vitals');
   status.textContent = isUpdate ? `✓ ${entry.date} updated.` : '✓ New entry saved.';
   status.style.color = 'var(--green)';
   status.style.display = 'block';
@@ -5817,6 +5846,7 @@ async function submitWeeklyCheckin() {
   renderWeeklyCheckinSection();
   renderDashboardCheckinCard();
   if (currentPage === 'dashboard') { renderReadinessCard(); renderStreakCard(); renderCoachNoteCallout(); renderComplianceHeatmap(); }
+  trackFirstLogIfNeeded('checkin');
   showCheckinReveal(row);
 }
 
@@ -10268,6 +10298,7 @@ async function checkDose(compound_name, dose, unit, date) {
   localStorage.setItem('hrt_doses_taken', JSON.stringify(taken));
   showToast(`${compound_name} ${dose}${unit} logged`, 'success', 2500);
   renderDoseSchedule();
+  trackFirstLogIfNeeded('dose');
   if (_supa && _supaUser) {
     const { data, error } = await _supa
       .from('administration_log')

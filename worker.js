@@ -13,9 +13,68 @@ export default {
       return new Response('Method Not Allowed', { status: 405 });
     }
 
+    if (url.pathname === '/api/track') {
+      if (request.method === 'POST')    return handleTrack(request, env);
+      if (request.method === 'OPTIONS') return new Response(null, { status: 204 });
+      return new Response('Method Not Allowed', { status: 405 });
+    }
+
     return env.ASSETS.fetch(request);
   },
 };
+
+// ── Funnel/retention analytics ingest ───────────────────────────────────────
+// POST /api/track — fire-and-forget event logging from landing.html + index.html.
+// Public (no auth) since events fire pre-signup with only an anon_id. Writes
+// via the service role key so the analytics_events table needs no client-
+// reachable RLS policy. Event names are allowlisted server-side to keep the
+// table from becoming a dumping ground for arbitrary client-supplied strings.
+
+const TRACK_EVENT_ALLOWLIST = new Set([
+  'landing_view',
+  'cta_click',
+  'auth_complete',
+  'onboarding_complete',
+  'first_log',
+]);
+
+async function handleTrack(request, env) {
+  if (!env.SUPABASE_SERVICE_KEY) return json({ error: 'SUPABASE_SERVICE_KEY not configured on worker' }, 500);
+
+  let body;
+  try {
+    body = await request.json();
+  } catch (e) {
+    return json({ error: 'Invalid JSON' }, 400);
+  }
+
+  const eventName = typeof body.event_name === 'string' ? body.event_name.trim() : '';
+  if (!TRACK_EVENT_ALLOWLIST.has(eventName)) return json({ error: 'Unknown event_name' }, 400);
+
+  const anonId = typeof body.anon_id === 'string' ? body.anon_id.slice(0, 64) : null;
+  const userId = typeof body.user_id === 'string' && /^[0-9a-f-]{36}$/i.test(body.user_id) ? body.user_id : null;
+  // Cap properties payload size — analytics should never be a vector for large blobs
+  let properties = (body.properties && typeof body.properties === 'object') ? body.properties : {};
+  if (JSON.stringify(properties).length > 2000) properties = { _truncated: true };
+
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/analytics_events`, {
+    method: 'POST',
+    headers: {
+      'Content-Type':  'application/json',
+      'apikey':        env.SUPABASE_SERVICE_KEY,
+      'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+      'Prefer':        'return=minimal',
+    },
+    body: JSON.stringify([{ event_name: eventName, anon_id: anonId, user_id: userId, properties }]),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    return json({ error: `Supabase error (${res.status}): ${errText}` }, 502);
+  }
+
+  return new Response(null, { status: 204 });
+}
 
 async function handleIngest(request, env) {
   const key = request.headers.get('X-Ingest-Key') || request.headers.get('x-ingest-key');

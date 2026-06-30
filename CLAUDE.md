@@ -25,12 +25,18 @@ A single-file Supabase-backed HRT tracking dashboard deployed on Cloudflare Work
 | File | Purpose |
 |---|---|
 | `index.html` | The full dashboard — single source of truth for all HTML/CSS/JS |
+| `landing.html` | Public marketing page — pre-signup funnel tracking lives here |
+| `worker.js` | Cloudflare Worker entrypoint — `/api/healthkit` ingest + `/api/track` analytics ingest |
 | `supabase-schema.sql` | Supabase DB schema — run in Supabase SQL editor to apply |
 | `wrangler.jsonc` | Cloudflare Workers config |
 | `server.py` | Local dev server — `python3 server.py` → `http://localhost:3000` |
 | `healthkit-data.csv` | Apple Health export — parsed by the HealthKit page (not yet built) |
 | `healthkit-sync.gs` | Google Apps Script — future automation to refresh CSV from Apple Health |
 | `tests/protocol-logic.html` | Browser test suite for pure JS functions — open in browser to run |
+| `tests/bloodwork-hevy-logic.html` | Browser test suite for bloodwork/Hevy logic — open in browser to run |
+| `tests/smoke-test.js` | Playwright pre-deploy smoke test — logic suites + unauthenticated pages. See file header for run command. |
+| `tests/PRE-DEPLOY-CHECKLIST.md` | Manual ~60-90s checklist for auth-gated paths the smoke test can't reach (OAuth can't be automated here) |
+| `docs/ANALYTICS.md` | Funnel/retention SQL queries against `analytics_events` |
 | `HEALTHKIT-TAB.md` | Spec for adding a HealthKit page to this dashboard (not yet implemented) |
 
 ---
@@ -46,7 +52,7 @@ A single-file Supabase-backed HRT tracking dashboard deployed on Cloudflare Work
 **Deploy:** Cloudflare Workers (static assets mode)
 
 **Supabase project:** `lnxhksnvcewtpwkaghrh.supabase.co`
-**Supabase tables:** `administration_log`, `daily_logs`, `lab_markers`
+**Supabase tables:** `administration_log`, `daily_logs`, `lab_markers`, `analytics_events` (funnel/retention events — service-role write only, no client RLS access; see `docs/ANALYTICS.md`)
 
 ---
 
@@ -102,6 +108,8 @@ Cloudflare's bot force-pushes `cloudflare/workers-autoconfig` regularly. Always 
 | `hrt_hevy_data` | Cached Hevy workout array |
 | `hrt_last_active` | ISO timestamp of last user interaction — used for inactivity timeout |
 | `hrt_mode` | UI mode preference |
+| `hrt_anon_id` | UUID generated on first visit — shared between `landing.html` and `index.html` (same origin). Used to join pre-signup funnel events to post-signup user behavior. |
+| `hrt_first_log_tracked` | `"1"` once `first_log` has been fired. Guards `trackFirstLogIfNeeded()` from firing more than once. |
 
 ---
 
@@ -139,6 +147,26 @@ Cloudflare's bot force-pushes `cloudflare/workers-autoconfig` regularly. Always 
 | `reportCopy()` | Builds plain-text coach report from all data sources, copies to clipboard |
 | `escHtml(s)` | XSS sanitization — use on all user-input before `innerHTML` |
 | `makeChart(id, type, labels, datasets, opts)` | Destroys existing chart before re-creating |
+| `track(eventName, props)` | Fire-and-forget funnel event to `POST /api/track`. Defined in both `landing.html` and `index.html`. Never throws; analytics must not break the page. |
+| `trackFirstLogIfNeeded(logType)` | Fires `first_log` event exactly once per browser (guarded by `hrt_first_log_tracked` localStorage flag). Called from `checkDose`, `submitLog`, and `submitWeeklyCheckin`. |
+
+---
+
+## Pre-deploy testing workflow
+
+Before every deploy, two steps — both are required:
+
+1. **Automated smoke test** (logic suites + unauthenticated pages):
+   ```bash
+   python3 server.py &          # or: already running
+   cd ~/.claude/skills/playwright-skill
+   node run.js /path/to/hrt-dashboard/tests/smoke-test.js
+   ```
+   Must exit 0. Fix any failures before proceeding.
+
+2. **Manual checklist** (`tests/PRE-DEPLOY-CHECKLIST.md`) — takes ~60-90 seconds.
+   Covers auth-gated paths (dashboard, dose logging, bloodwork, protocols, settings)
+   that Google OAuth prevents from being automated.
 
 ---
 
