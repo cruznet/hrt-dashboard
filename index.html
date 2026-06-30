@@ -1164,13 +1164,13 @@ body {
   <button class="bnav-item active" data-page="dashboard" onclick="nav('dashboard')" aria-label="Dashboard">
     <i class="ti ti-home"></i><span>Home</span>
   </button>
-  <button class="bnav-item" data-page="compliance" onclick="nav('compliance')" aria-label="Dose Compliance">
-    <i class="ti ti-calendar-check"></i><span>Doses</span>
+  <button class="bnav-item" data-page="checkin-action" onclick="openCheckinModal()" aria-label="Check-In">
+    <i class="ti ti-clipboard-check"></i><span>Check-In</span>
   </button>
-  <button class="bnav-item" data-page="workouts" onclick="nav('workouts')" aria-label="Workouts">
-    <i class="ti ti-barbell"></i><span>Workouts</span>
+  <button class="bnav-item" data-page="log-action" onclick="openModal('log-modal')" aria-label="Log">
+    <i class="ti ti-plus-circle"></i><span>Log</span>
   </button>
-  <button class="bnav-item" data-page="bloodwork" onclick="nav('bloodwork')" aria-label="Bloodwork">
+  <button class="bnav-item" data-page="bloodwork" onclick="nav('bloodwork')" aria-label="Labs">
     <i class="ti ti-test-pipe"></i><span>Labs</span>
   </button>
   <button class="bnav-item" onclick="toggleMobileMenu()" aria-label="More">
@@ -1205,6 +1205,12 @@ body {
 
     <!-- ── DASHBOARD PAGE ── -->
     <section class="page active" id="page-dashboard">
+
+      <!-- Daily Readiness Card -->
+      <div id="daily-readiness-card" style="margin-bottom:14px;"></div>
+
+      <!-- Compliance Streak -->
+      <div id="streak-dash-card" style="margin-bottom:14px;"></div>
 
       <!-- Show countdown banner (Prep mode) -->
       <div id="show-countdown" style="margin-bottom:14px;"></div>
@@ -1451,7 +1457,12 @@ body {
       <div class="card">
         <div class="card-title">Daily Log</div>
         <div id="vitals-table-wrap">
-          <div style="color:var(--text-muted);font-size:13px;text-align:center;padding:30px;">No vitals logged yet. Use Log Entry to add data.</div>
+          <div style="text-align:center;padding:28px 16px;">
+            <div style="font-size:32px;margin-bottom:10px;">💊</div>
+            <div style="font-size:14px;font-weight:600;color:var(--text-primary);margin-bottom:5px;">Start tracking daily vitals</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">BP, glucose, mood, energy — the daily signals showing how your body responds.</div>
+            <button class="btn-primary" onclick="openModal('log-modal')" style="padding:9px 20px;font-size:13px;">+ Log Entry</button>
+          </div>
         </div>
       </div>
     </section>
@@ -1484,11 +1495,12 @@ body {
       </div>
 
       <!-- Empty state -->
-      <div id="bw-empty" style="text-align:center;padding:64px 0;">
-        <i class="ti ti-test-pipe" style="font-size:44px;color:var(--text-muted);opacity:0.25;"></i>
-        <div style="font-size:15px;color:var(--text-secondary);margin:14px 0 6px;font-weight:500;">No bloodwork logged yet</div>
-        <div style="font-size:13px;color:var(--text-muted);margin-bottom:22px;">Log your first panel to track key health markers over time</div>
-        <button class="btn-primary" onclick="bwShowForm()">+ Log First Panel</button>
+      <div id="bw-empty" style="text-align:center;padding:48px 16px;">
+        <div style="font-size:48px;margin-bottom:16px;">🩸</div>
+        <div style="font-size:17px;font-weight:700;color:var(--text-primary);margin-bottom:8px;">Bloodwork is your protocol's report card</div>
+        <div style="font-size:13px;color:var(--text-muted);margin-bottom:6px;max-width:300px;margin-left:auto;margin-right:auto;">Track E2, lipids, CBC, liver enzymes — and see how every compound you run affects your health markers over time.</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:24px;opacity:0.7;">Most athletes log panels every 6–10 weeks on cycle.</div>
+        <button class="btn-primary" onclick="bwShowForm()" style="padding:12px 28px;font-size:14px;">+ Log First Panel</button>
       </div>
 
       <!-- Content (has panels) -->
@@ -1568,11 +1580,12 @@ body {
       </div>
 
       <!-- Empty state -->
-      <div id="ph-empty" style="text-align:center;padding:64px 0;">
-        <i class="ti ti-ruler-measure" style="font-size:44px;color:var(--text-muted);opacity:0.25;"></i>
-        <div style="font-size:15px;color:var(--text-secondary);margin:14px 0 6px;font-weight:500;">No check-ins logged yet</div>
-        <div style="font-size:13px;color:var(--text-muted);margin-bottom:22px;">Log your first physique check-in to track body composition over time</div>
-        <button class="btn-primary" onclick="measShowForm()">+ Log First Check-in</button>
+      <div id="ph-empty" style="text-align:center;padding:48px 16px;">
+        <div style="font-size:48px;margin-bottom:16px;">📐</div>
+        <div style="font-size:17px;font-weight:700;color:var(--text-primary);margin-bottom:8px;">Track your physique over time</div>
+        <div style="font-size:13px;color:var(--text-muted);margin-bottom:6px;max-width:300px;margin-left:auto;margin-right:auto;">Log weight, body fat, and measurements to see exactly how your body responds to each phase of your protocol.</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:24px;opacity:0.7;">Weekly measurements give the clearest trend data.</div>
+        <button class="btn-primary" onclick="measShowForm()" style="padding:12px 28px;font-size:14px;">+ Log First Measurement</button>
       </div>
 
       <!-- Content -->
@@ -2433,6 +2446,14 @@ body {
   </main>
 </div>
 
+<!-- ── Check-In Reveal Card ── -->
+<div id="ci-reveal-overlay" style="display:none;position:fixed;inset:0;z-index:8000;background:rgba(0,0,0,0.85);display:none;align-items:center;justify-content:center;padding:24px;" onclick="document.getElementById('ci-reveal-overlay').style.display='none';">
+  <div id="ci-reveal-card" style="background:var(--bg-card);border:0.5px solid rgba(245,197,24,0.3);border-radius:20px;padding:28px 24px;max-width:360px;width:100%;text-align:center;" onclick="event.stopPropagation();">
+    <div id="ci-reveal-content"></div>
+    <button class="btn-secondary" onclick="document.getElementById('ci-reveal-overlay').style.display='none'" style="margin-top:20px;width:100%;padding:12px;">Done</button>
+  </div>
+</div>
+
 <!-- ── Weekly Check-In Modal ── -->
 <div class="modal-overlay" id="ci-modal">
   <div class="modal" style="max-height:88vh;overflow-y:auto;">
@@ -2500,6 +2521,18 @@ body {
     </div>
 
     <button class="btn-primary" style="width:100%;padding:12px;" onclick="submitWeeklyCheckin()">Save Check-In</button>
+  </div>
+</div>
+
+<!-- ── Share Card Modal ── -->
+<div id="share-card-modal" class="modal-overlay" style="display:none;" onclick="closeModal('share-card-modal')">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:380px;">
+    <div class="modal-title">Share Check-In <span class="modal-close" onclick="closeModal('share-card-modal')"><i class="ti ti-x"></i></span></div>
+    <canvas id="share-canvas" style="width:100%;border-radius:12px;display:block;"></canvas>
+    <div style="display:flex;gap:8px;margin-top:14px;">
+      <button class="btn-secondary" onclick="downloadShareCard()" style="flex:1;padding:11px;"><i class="ti ti-download"></i> Save</button>
+      <button class="btn-primary" onclick="nativeShareCard()" style="flex:1;padding:11px;" id="share-native-btn"><i class="ti ti-share"></i> Share</button>
+    </div>
   </div>
 </div>
 
@@ -3604,7 +3637,7 @@ function nav(page) {
   if (page === 'wellness') renderWellnessPage();
   if (page === 'calculator') setTimeout(() => { calcBuildCompoundSelect(); pepUpdate(); }, 100);
   if (page === 'settings') setTimeout(populateShowForm, 50);
-  if (page === 'dashboard') { renderShowCountdown(); renderModeContextCard(); renderDashboardCheckinCard(); renderVitalsToCards(); renderBwDashStrip(); renderPhysiqueDashStrip(); setTimeout(() => { if (_supa && _supaUser) renderRealCharts(); else renderDemoCharts(); }, 100); setTimeout(checkLabReminder, 1200); }
+  if (page === 'dashboard') { renderReadinessCard(); renderStreakCard(); renderShowCountdown(); renderModeContextCard(); renderDashboardCheckinCard(); renderVitalsToCards(); renderBwDashStrip(); renderPhysiqueDashStrip(); setTimeout(() => { if (_supa && _supaUser) renderRealCharts(); else renderDemoCharts(); }, 100); setTimeout(checkLabReminder, 1200); }
   // Load active protocol on dashboard
   if (page === 'dashboard') {
     const activeData = localStorage.getItem('hrt_active_protocol_data');
@@ -4521,10 +4554,12 @@ function bwRenderPanel() {
         const dc    = bwTrendColor(key, val, prevVal);
         delta = `<span style="font-size:11px;font-family:var(--font-data);color:${dc};margin-left:4px;">${arrow}${Math.abs(diff)}</span>`;
       }
+      const sparkline = bwSparklineSvg(key, panels);
       html += `<div style="padding:9px 0;border-bottom:0.5px solid var(--border);">
         <div style="display:flex;align-items:center;justify-content:space-between;">
           <span style="font-size:13px;color:var(--text-secondary);">${m.label}</span>
           <div style="display:flex;align-items:center;gap:7px;">
+            ${sparkline}
             <span style="font-size:14px;font-weight:600;font-family:var(--font-data);color:${valColor};">${val}</span>
             <span style="font-size:11px;color:var(--text-muted);">${m.unit}</span>
             ${delta}
@@ -5178,9 +5213,10 @@ async function submitWeeklyCheckin() {
   }
 
   closeModal('ci-modal');
-  showToast('Check-in saved', 'success');
   renderWeeklyCheckinSection();
   renderDashboardCheckinCard();
+  if (currentPage === 'dashboard') { renderReadinessCard(); renderStreakCard(); }
+  showCheckinReveal(row);
 }
 
 function renderWeeklyCheckinSection() {
@@ -5188,7 +5224,12 @@ function renderWeeklyCheckinSection() {
   if (!el) return;
   const all = lsGet('hrt_weekly_checkins', []);
   if (!all.length) {
-    el.innerHTML = '<div style="text-align:center;padding:24px 0;font-size:13px;color:var(--text-muted);">No weekly check-ins yet. Log your first one to track condition and compliance across your prep.</div>';
+    el.innerHTML = `<div style="text-align:center;padding:32px 16px;">
+      <div style="font-size:36px;margin-bottom:12px;">📋</div>
+      <div style="font-size:15px;font-weight:600;color:var(--text-primary);margin-bottom:6px;">Log your first weekly check-in</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px;">Track condition, compliance, and wellbeing each week — your coach (or future self) will thank you.</div>
+      <button class="btn-primary" onclick="openCheckinModal()" style="padding:10px 22px;">+ Log Check-In</button>
+    </div>`;
     return;
   }
   const scoreClr = v => v == null ? 'var(--text-muted)' : v >= 8 ? 'var(--green)' : v >= 5 ? '#F5C518' : 'var(--red)';
@@ -5209,10 +5250,13 @@ function renderWeeklyCheckinSection() {
       c.sleep_score  != null ? `Sleep ${scoreBadge(c.sleep_score)}`   : '',
       c.mood_score   != null ? `Mood ${scoreBadge(c.mood_score)}`     : '',
     ].filter(Boolean).join('<span style="color:var(--border);margin:0 4px;">·</span>');
-    return `<div onclick="openCheckinModal('${c.check_in_date}')" style="padding:12px 0;border-bottom:0.5px solid var(--border);cursor:pointer;" class="hover-row">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+    return `<div style="padding:12px 0;border-bottom:0.5px solid var(--border);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;" onclick="openCheckinModal('${c.check_in_date}')" class="hover-row" style="cursor:pointer;">
         <div style="font-size:13px;font-weight:600;color:var(--text-primary);">${c.check_in_date}${wk}</div>
-        <div style="font-size:11px;color:var(--text-muted);">tap to edit</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <button onclick="event.stopPropagation();openShareModal('${c.check_in_date}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:2px 4px;font-size:13px;" title="Share"><i class="ti ti-share"></i></button>
+          <span style="font-size:11px;color:var(--text-muted);">tap to edit</span>
+        </div>
       </div>
       ${condRow  ? `<div style="font-size:12px;color:var(--text-secondary);margin-bottom:3px;">${condRow}</div>`  : ''}
       ${compRow  ? `<div style="font-size:12px;color:var(--text-secondary);margin-bottom:3px;">${compRow}</div>`  : ''}
@@ -5706,8 +5750,12 @@ async function renderCoachReport() {
   if (!sections.length) {
     el.innerHTML = `<div style="text-align:center;padding:64px 0;">
       <i class="ti ti-file-text" style="font-size:44px;color:var(--text-muted);opacity:0.25;"></i>
-      <div style="font-size:15px;color:var(--text-secondary);margin:14px 0 6px;font-weight:500;">No data yet</div>
-      <div style="font-size:13px;color:var(--text-muted);">Log bloodwork, physique, or vitals — or import data via Apple Health to generate a report</div>
+      <div style="font-size:17px;font-weight:700;color:var(--text-primary);margin:14px 0 6px;">Nothing logged yet</div>
+      <div style="font-size:13px;color:var(--text-muted);max-width:280px;margin:0 auto 20px;">Log your protocol, bloodwork, or a weekly check-in — your Coach Report will build automatically.</div>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+        <button class="btn-secondary" onclick="nav('bloodwork')" style="font-size:13px;padding:9px 16px;">Log Bloodwork</button>
+        <button class="btn-primary" onclick="openCheckinModal()" style="font-size:13px;padding:9px 16px;">Log Check-In</button>
+      </div>
     </div>`;
     return;
   }
@@ -7088,7 +7136,12 @@ function renderVitalsPage() {
   const logs = lsGet('hrt_vitals_log', []);
 
   if (!logs.length) {
-    wrap.innerHTML = '<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:30px;">No vitals logged yet. Use Log Entry to add data.</div>';
+    wrap.innerHTML = `<div style="text-align:center;padding:28px 16px;">
+      <div style="font-size:32px;margin-bottom:10px;">💊</div>
+      <div style="font-size:14px;font-weight:600;color:var(--text-primary);margin-bottom:5px;">Start tracking daily vitals</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">BP, glucose, mood, energy — the daily signals that show how your body responds to your protocol.</div>
+      <button class="btn-primary" onclick="openModal('log-modal')" style="padding:9px 20px;font-size:13px;">+ Log Entry</button>
+    </div>`;
     // Draw empty state charts
     renderVitalsCharts([]);
     return;
@@ -8670,6 +8723,322 @@ function athleteCard(name, latestCheckin, latestBw, show, isSelf) {
     </div>
     ${isSelf ? `<div style="margin-top:10px;"><button class="btn-secondary" onclick="openCheckinModal()" style="font-size:12px;padding:5px 12px;"><i class="ti ti-plus"></i> Log Check-In</button></div>` : ''}
   </div>`;
+}
+
+// ── Item 1: Daily Readiness Card ─────────────────────────────────────────────
+
+function renderReadinessCard() {
+  const el = document.getElementById('daily-readiness-card');
+  if (!el) return;
+
+  // HRV — last 7 days from HK data
+  const hkRows = (_hkSupaData || _hkData || []);
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 7);
+  const recentHk = hkRows.filter(r => r.date >= localDate(cutoff));
+  const hrvVals  = recentHk.map(r => r['Heart Rate Variability (ms)'] ?? r.hrv_ms).filter(v => v != null);
+  const sleepVals = recentHk.map(r => r['Sleep Analysis [Total] (hr)'] ?? r.sleep_total_hr).filter(v => v != null);
+  const avgHrv   = hrvVals.length  ? hrvVals.reduce((a,b)=>a+b,0)/hrvVals.length   : null;
+  const avgSleep = sleepVals.length ? sleepVals.reduce((a,b)=>a+b,0)/sleepVals.length : null;
+
+  // Wellbeing — last check-in
+  const checkins = lsGet('hrt_weekly_checkins', []).sort((a,b) => dateCmp(a.check_in_date, b.check_in_date));
+  const lastCi   = checkins[0] || null;
+  const wellScores = lastCi ? [lastCi.energy_score, lastCi.sleep_score, lastCi.mood_score].filter(v => v != null) : [];
+  const avgWell  = wellScores.length ? wellScores.reduce((a,b)=>a+b,0)/wellScores.length : null;
+
+  // Compliance — last 7 days
+  const protocol = (() => { try { return JSON.parse(localStorage.getItem('hrt_active_protocol_data')); } catch { return null; } })();
+  let compliancePct = null;
+  if (protocol?.compounds?.length) {
+    const taken = lsGet('hrt_doses_taken', []);
+    let sched = 0, done = 0;
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(); d.setDate(d.getDate() - i);
+      const ds = localDate(d);
+      protocol.compounds.forEach(c => {
+        if (isDueOnDate(c.freq, c.start || protocol.saved_at?.slice(0,10), ds)) {
+          sched++;
+          if (taken.some(t => t.date === ds && t.name === c.name)) done++;
+        }
+      });
+    }
+    if (sched > 0) compliancePct = Math.round((done / sched) * 100);
+  }
+
+  // Component scores (0-100)
+  const hrvScore   = avgHrv   != null ? Math.min(100, Math.round((avgHrv / 60) * 100))  : null;
+  const sleepScore = avgSleep != null ? Math.min(100, Math.round((avgSleep / 8.5) * 100)) : null;
+  const wellScore  = avgWell  != null ? Math.round((avgWell / 10) * 100) : null;
+  const compScore  = compliancePct;
+
+  const scores = [hrvScore, sleepScore, wellScore, compScore].filter(v => v != null);
+  if (!scores.length) { el.innerHTML = ''; return; }
+
+  const overall = Math.round(scores.reduce((a,b)=>a+b,0) / scores.length);
+  const grade   = overall >= 90 ? 'A' : overall >= 75 ? 'B' : overall >= 60 ? 'C' : 'D';
+  const gc      = overall >= 80 ? 'var(--green)' : overall >= 60 ? '#F5C518' : 'var(--red)';
+  const label   = overall >= 80 ? 'Ready' : overall >= 60 ? 'Moderate' : 'Recovery Needed';
+
+  const bar = (score, label, color) => score == null ? '' :
+    `<div style="margin-bottom:6px;">
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-bottom:3px;">
+        <span>${label}</span><span style="color:${color};font-weight:600;">${score}%</span>
+      </div>
+      <div style="height:4px;background:rgba(255,255,255,0.06);border-radius:2px;">
+        <div style="height:4px;border-radius:2px;background:${color};width:${score}%;transition:width 0.6s ease;"></div>
+      </div>
+    </div>`;
+
+  el.innerHTML = `<div class="card" style="border-color:${gc};border-opacity:0.3;background:rgba(0,0,0,0.2);" onclick="nav('wellness')" style="cursor:pointer;">
+    <div style="display:flex;align-items:center;gap:20px;">
+      <div style="text-align:center;flex-shrink:0;">
+        <div style="font-size:42px;font-weight:800;color:${gc};font-family:var(--font-data);line-height:1;">${overall}</div>
+        <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:${gc};margin-top:2px;">${label}</div>
+      </div>
+      <div style="flex:1;min-width:0;">
+        ${bar(hrvScore,    'HRV',         hrvScore   >= 70 ? 'var(--green)' : hrvScore   >= 45 ? '#F5C518' : 'var(--red)')}
+        ${bar(sleepScore,  'Sleep',       sleepScore >= 80 ? 'var(--green)' : sleepScore >= 65 ? '#F5C518' : 'var(--red)')}
+        ${bar(wellScore,   'Wellbeing',   wellScore  >= 70 ? 'var(--green)' : wellScore  >= 50 ? '#F5C518' : 'var(--red)')}
+        ${bar(compScore,   'Compliance',  compScore  >= 90 ? 'var(--green)' : compScore  >= 70 ? '#F5C518' : 'var(--red)')}
+      </div>
+    </div>
+    <div style="font-size:10px;color:var(--text-muted);margin-top:8px;text-align:right;">Daily Readiness · tap for Wellness →</div>
+  </div>`;
+}
+
+// ── Item 5: Compliance Streak ─────────────────────────────────────────────────
+
+function computeDoseStreak() {
+  const protocol = (() => { try { return JSON.parse(localStorage.getItem('hrt_active_protocol_data')); } catch { return null; } })();
+  if (!protocol?.compounds?.length) return 0;
+  const taken = lsGet('hrt_doses_taken', []);
+  let streak = 0;
+  for (let i = 0; i < 365; i++) {
+    const d  = new Date(); d.setDate(d.getDate() - i);
+    const ds = localDate(d);
+    const due = protocol.compounds.filter(c => isDueOnDate(c.freq, c.start || protocol.saved_at?.slice(0,10), ds));
+    if (!due.length) continue; // no doses scheduled — don't break streak
+    const allTaken = due.every(c => taken.some(t => t.date === ds && t.name === c.name));
+    if (allTaken) { streak++; } else { if (i > 0) break; } // allow today to be pending
+  }
+  return streak;
+}
+
+function renderStreakCard() {
+  const streak = computeDoseStreak();
+  const el = document.getElementById('streak-dash-card');
+  if (!el) return;
+  if (!streak) { el.innerHTML = ''; return; }
+  const color = streak >= 14 ? 'var(--green)' : streak >= 7 ? '#F5C518' : 'var(--primary)';
+  el.innerHTML = `<div class="card" style="border-color:${color};background:rgba(0,0,0,0.15);">
+    <div style="display:flex;align-items:center;gap:14px;">
+      <div style="font-size:32px;line-height:1;">🔥</div>
+      <div>
+        <div style="font-size:22px;font-weight:800;color:${color};font-family:var(--font-data);line-height:1;">${streak} day${streak !== 1 ? 's' : ''}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">Protocol compliance streak</div>
+      </div>
+      ${streak >= 7 ? `<div style="margin-left:auto;font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:${color};background:${color}22;padding:4px 8px;border-radius:6px;">${streak >= 30 ? '🏆 Elite' : streak >= 14 ? '⚡ On Fire' : '✓ Solid'}</div>` : ''}
+    </div>
+  </div>`;
+}
+
+// ── Item 4: Post Check-In Reveal ─────────────────────────────────────────────
+
+function showCheckinReveal(row) {
+  const all     = lsGet('hrt_weekly_checkins', []).sort((a,b) => dateCmp(a.check_in_date, b.check_in_date));
+  const prev    = all.find(c => c.check_in_date < row.check_in_date) || null;
+  const show    = getShow();
+  const profile = lsGet('hrt_user_profile', null);
+
+  const scoreClr = v => v == null ? 'var(--text-muted)' : v >= 8 ? 'var(--green)' : v >= 5 ? '#F5C518' : 'var(--red)';
+  const condVals = [row.fullness, row.dryness, row.vascularity].filter(v => v != null);
+  const wellVals = [row.energy_score, row.sleep_score, row.mood_score].filter(v => v != null);
+  const condAvg  = condVals.length ? (condVals.reduce((a,b)=>a+b,0)/condVals.length).toFixed(1) : null;
+  const wellAvg  = wellVals.length ? (wellVals.reduce((a,b)=>a+b,0)/wellVals.length).toFixed(1) : null;
+
+  let prevCondAvg = null;
+  if (prev) {
+    const pv = [prev.fullness, prev.dryness, prev.vascularity].filter(v => v != null);
+    prevCondAvg = pv.length ? (pv.reduce((a,b)=>a+b,0)/pv.length).toFixed(1) : null;
+  }
+
+  const trend = (cur, prv) => {
+    if (cur == null || prv == null) return '';
+    const diff = (parseFloat(cur) - parseFloat(prv)).toFixed(1);
+    const arrow = diff > 0 ? '↑' : diff < 0 ? '↓' : '→';
+    const c = diff > 0 ? 'var(--green)' : diff < 0 ? 'var(--red)' : 'var(--text-muted)';
+    return `<span style="font-size:13px;color:${c};margin-left:6px;">${arrow} ${Math.abs(diff)}</span>`;
+  };
+
+  let weeksLine = '';
+  if (show?.date) {
+    const days = Math.round((new Date(show.date + 'T00:00:00') - new Date(row.check_in_date + 'T00:00:00')) / 86400000);
+    if (days > 0) weeksLine = `<div style="font-size:11px;font-weight:700;color:var(--primary);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:12px;">${Math.ceil(days/7)} Weeks Out${show.name ? ' · ' + escHtml(show.name) : ''}</div>`;
+  }
+
+  document.getElementById('ci-reveal-content').innerHTML = `
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Check-In Complete</div>
+    <div style="font-size:18px;font-weight:700;color:var(--text-primary);margin-bottom:4px;">${profile?.name ? escHtml(profile.name) : 'Week Review'}</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">${row.check_in_date}</div>
+    ${weeksLine}
+    <div style="display:flex;gap:20px;justify-content:center;margin-bottom:16px;">
+      ${condAvg != null ? `<div><div style="font-size:32px;font-weight:800;color:${scoreClr(condAvg)};font-family:var(--font-data);line-height:1;">${condAvg}${trend(condAvg, prevCondAvg)}</div><div style="font-size:10px;color:var(--text-muted);margin-top:3px;">Condition</div></div>` : ''}
+      ${wellAvg != null ? `<div><div style="font-size:32px;font-weight:800;color:${scoreClr(wellAvg)};font-family:var(--font-data);line-height:1;">${wellAvg}</div><div style="font-size:10px;color:var(--text-muted);margin-top:3px;">Wellbeing</div></div>` : ''}
+      ${row.diet_adherence != null ? `<div><div style="font-size:32px;font-weight:800;color:${scoreClr(row.diet_adherence/10)};font-family:var(--font-data);line-height:1;">${row.diet_adherence}%</div><div style="font-size:10px;color:var(--text-muted);margin-top:3px;">Diet</div></div>` : ''}
+    </div>
+    ${row.coach_note ? `<div style="background:rgba(245,197,24,0.08);border:0.5px solid rgba(245,197,24,0.25);border-radius:10px;padding:12px;text-align:left;font-size:13px;color:var(--text-secondary);font-style:italic;margin-bottom:4px;"><span style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--primary);display:block;margin-bottom:4px;">Coach Note</span>${escHtml(row.coach_note)}</div>` : ''}
+    <button class="btn-secondary" onclick="openShareModal('${row.check_in_date}')" style="width:100%;padding:10px;margin-top:8px;font-size:13px;"><i class="ti ti-share"></i> Share This Check-In</button>`;
+
+  const overlay = document.getElementById('ci-reveal-overlay');
+  overlay.style.display = 'flex';
+}
+
+// ── Item 6: Bloodwork Sparklines ─────────────────────────────────────────────
+
+function bwSparklineSvg(key, panels) {
+  const pts = panels
+    .map(p => ({ date: p.date, v: p.markers?.[key] }))
+    .filter(p => p.v != null)
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(-12);
+  if (pts.length < 2) return '';
+
+  const W = 80, H = 28, pad = 3;
+  const vals = pts.map(p => p.v);
+  const mn = Math.min(...vals), mx = Math.max(...vals);
+  const range = mx - mn || 1;
+  const x = i => pad + (i / (pts.length - 1)) * (W - pad * 2);
+  const y = v => H - pad - ((v - mn) / range) * (H - pad * 2);
+  const d = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(p.v).toFixed(1)}`).join(' ');
+  const lastStatus = bwRangeStatus(key, pts[pts.length - 1].v);
+  const stroke = lastStatus === 'ok' ? '#4ADE80' : lastStatus === 'none' ? '#64748B' : '#F5C518';
+  const lastX = x(pts.length - 1).toFixed(1);
+  const lastY = y(pts[pts.length - 1].v).toFixed(1);
+
+  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:inline-block;vertical-align:middle;opacity:0.8;">
+    <path d="${d}" fill="none" stroke="${stroke}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="${lastX}" cy="${lastY}" r="2.5" fill="${stroke}"/>
+  </svg>`;
+}
+
+// ── Item 7: Share Card ────────────────────────────────────────────────────────
+
+function openShareModal(dateStr) {
+  const all  = lsGet('hrt_weekly_checkins', []);
+  const row  = all.find(c => c.check_in_date === dateStr);
+  if (!row) return;
+  closeModal('ci-reveal-overlay-fake');
+  document.getElementById('ci-reveal-overlay').style.display = 'none';
+  generateShareCanvas(row);
+  openModal('share-card-modal');
+}
+
+function generateShareCanvas(row) {
+  const canvas = document.getElementById('share-canvas');
+  const S = 1080;
+  canvas.width = S; canvas.height = S;
+  canvas.style.width = '100%';
+  const ctx = canvas.getContext('2d');
+
+  // Background
+  ctx.fillStyle = '#0D0D15';
+  ctx.fillRect(0, 0, S, S);
+
+  // Gold border
+  ctx.strokeStyle = 'rgba(245,197,24,0.4)';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(24, 24, S - 48, S - 48);
+
+  // Header
+  ctx.fillStyle = '#F5C518';
+  ctx.font = `700 ${S * 0.028}px -apple-system, system-ui, sans-serif`;
+  ctx.letterSpacing = `${S * 0.012}px`;
+  ctx.fillText('HRT TRACKER', S * 0.5, S * 0.1, S * 0.8);
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#F5C518';
+  ctx.font = `700 ${S * 0.028}px -apple-system, system-ui, sans-serif`;
+  ctx.fillText('HRT TRACKER', S * 0.5, S * 0.1);
+
+  const profile = lsGet('hrt_user_profile', null);
+  const name = profile?.name || _supaUser?.user_metadata?.full_name || '';
+
+  // Athlete name
+  if (name) {
+    ctx.fillStyle = '#E8E8ED';
+    ctx.font = `700 ${S * 0.055}px -apple-system, system-ui, sans-serif`;
+    ctx.fillText(name.toUpperCase(), S * 0.5, S * 0.2);
+  }
+
+  // Date / weeks out
+  const show = getShow();
+  let subtitle = row.check_in_date;
+  if (show?.date) {
+    const days = Math.round((new Date(show.date + 'T00:00:00') - new Date(row.check_in_date + 'T00:00:00')) / 86400000);
+    if (days > 0) subtitle = `${Math.ceil(days/7)} WEEKS OUT · ${row.check_in_date}`;
+  }
+  ctx.fillStyle = '#F5C518';
+  ctx.font = `600 ${S * 0.032}px -apple-system, system-ui, sans-serif`;
+  ctx.fillText(subtitle, S * 0.5, S * 0.27);
+
+  // Score grid
+  const metrics = [
+    ['Fullness',    row.fullness],
+    ['Dryness',     row.dryness],
+    ['Vascularity', row.vascularity],
+    ['Energy',      row.energy_score],
+    ['Sleep',       row.sleep_score],
+    ['Mood',        row.mood_score],
+  ].filter(([,v]) => v != null);
+
+  const cols = 3;
+  const cellW = (S - 120) / cols;
+  const cellH = S * 0.18;
+  const startY = S * 0.36;
+
+  metrics.forEach(([label, val], i) => {
+    const col = i % cols;
+    const row_i = Math.floor(i / cols);
+    const cx = 60 + col * cellW + cellW / 2;
+    const cy = startY + row_i * cellH;
+    const c = val >= 8 ? '#4ADE80' : val >= 5 ? '#F5C518' : '#F87171';
+    ctx.fillStyle = c;
+    ctx.font = `800 ${S * 0.1}px -apple-system, system-ui, sans-serif`;
+    ctx.fillText(val, cx, cy + S * 0.07);
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.font = `500 ${S * 0.028}px -apple-system, system-ui, sans-serif`;
+    ctx.fillText(label.toUpperCase(), cx, cy + S * 0.115);
+  });
+
+  // Diet adherence if present
+  if (row.diet_adherence != null) {
+    const dietY = startY + Math.ceil(metrics.length / cols) * cellH + S * 0.04;
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.font = `500 ${S * 0.03}px -apple-system, system-ui, sans-serif`;
+    ctx.fillText(`DIET ADHERENCE  ${row.diet_adherence}%`, S * 0.5, dietY);
+  }
+
+  // Footer
+  ctx.fillStyle = 'rgba(245,197,24,0.4)';
+  ctx.font = `500 ${S * 0.022}px -apple-system, system-ui, sans-serif`;
+  ctx.fillText('hrt.cruznetllc.com', S * 0.5, S * 0.94);
+}
+
+function downloadShareCard() {
+  const canvas = document.getElementById('share-canvas');
+  const a = document.createElement('a');
+  a.download = `checkin-${localDate()}.png`;
+  a.href = canvas.toDataURL('image/png');
+  a.click();
+}
+
+async function nativeShareCard() {
+  if (!navigator.share) { downloadShareCard(); return; }
+  const canvas = document.getElementById('share-canvas');
+  canvas.toBlob(async blob => {
+    try {
+      await navigator.share({ files: [new File([blob], 'checkin.png', { type: 'image/png' })], title: 'Weekly Check-In' });
+    } catch(e) { if (e.name !== 'AbortError') downloadShareCard(); }
+  }, 'image/png');
 }
 
 function renderShowCountdown() {
