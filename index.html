@@ -803,10 +803,10 @@ body {
   position: fixed;
   bottom: 0; left: 0; right: 0;
   z-index: 95;
-  background: rgba(10, 12, 18, 0.92);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border-top: 0.5px solid var(--border);
+  background: rgba(9, 10, 16, 0.95);
+  backdrop-filter: blur(32px) saturate(200%);
+  -webkit-backdrop-filter: blur(32px) saturate(200%);
+  border-top: 0.5px solid rgba(255,255,255,0.07);
   padding-bottom: env(safe-area-inset-bottom, 0px);
   flex-direction: row;
   align-items: stretch;
@@ -815,30 +815,49 @@ body {
   flex: 1; position: relative;
   display: flex; flex-direction: column;
   align-items: center; justify-content: flex-start;
-  gap: 3px; padding: 10px 4px 6px; min-height: 54px;
+  gap: 3px; padding: 10px 4px 8px; min-height: 56px;
   background: none; border: none;
   color: var(--text-muted); font-size: 10px;
   font-family: var(--font-ui); font-weight: 500;
-  letter-spacing: 0.1px; cursor: pointer; user-select: none;
+  letter-spacing: 0.02em; cursor: pointer; user-select: none;
+  transition: color 150ms ease;
 }
-.bnav-item::before {
-  content: ''; position: absolute; top: 0; left: 50%;
+.bnav-item::after {
+  content: ''; position: absolute; bottom: 5px; left: 50%;
   transform: translateX(-50%) scaleX(0);
-  width: 28px; height: 2.5px;
-  border-radius: 0 0 3px 3px;
+  width: 20px; height: 3px; border-radius: 2px;
   background: var(--primary-bright);
-  transition: transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.bnav-item.active::before { transform: translateX(-50%) scaleX(1); }
+.bnav-item.active::after { transform: translateX(-50%) scaleX(1); }
+.bnav-item .bnav-icon-wrap {
+  width: 38px; height: 28px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 200ms ease, transform 200ms cubic-bezier(0.34,1.56,0.64,1);
+}
+.bnav-item.active .bnav-icon-wrap { background: rgba(245,197,24,0.12); }
 .bnav-item i {
-  font-size: 23px; line-height: 1;
+  font-size: 22px; line-height: 1;
   transition: transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1), color 150ms ease;
 }
-.bnav-item span { transition: color 150ms ease; }
+.bnav-item span { transition: color 150ms ease; font-weight: 500; }
 .bnav-item.active { color: var(--primary-bright); }
-.bnav-item.active i { transform: scale(1.14); }
-.bnav-item:active i { transform: scale(0.82); transition-duration: 70ms; }
-.bnav-item:active { opacity: 0.55; }
+.bnav-item.active i { transform: scale(1.1); }
+.bnav-item:active .bnav-icon-wrap { transform: scale(0.85); transition-duration: 70ms; }
+.bnav-item:active { opacity: 0.7; }
+/* Center FAB (Log action) */
+.bnav-item.bnav-fab {
+  position: relative; overflow: visible; padding-top: 0;
+}
+.bnav-fab-btn {
+  width: 48px; height: 48px; border-radius: 14px;
+  background: linear-gradient(135deg, var(--primary-bright), #E8B000);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 16px rgba(245,197,24,0.4), 0 0 0 0.5px rgba(245,197,24,0.3);
+  margin-top: -8px; flex-shrink: 0;
+  transition: transform 200ms cubic-bezier(0.34,1.56,0.64,1), box-shadow 200ms ease;
+}
+.bnav-item.bnav-fab:active .bnav-fab-btn { transform: scale(0.88); box-shadow: 0 2px 8px rgba(245,197,24,0.3); }
 
 /* Mobile-specific layout overrides */
 @media (max-width: 768px) {
@@ -1293,19 +1312,26 @@ body {
 <!-- ── Bottom Tab Bar (mobile only) ── -->
 <nav id="bottom-nav" role="tablist" aria-label="Main navigation">
   <button class="bnav-item active" data-page="dashboard" onclick="nav('dashboard')" aria-label="Dashboard">
-    <i class="ti ti-home"></i><span>Home</span>
+    <div class="bnav-icon-wrap"><i class="ti ti-home"></i></div>
+    <span>Home</span>
   </button>
   <button class="bnav-item" data-page="checkin-action" onclick="openCheckinModal()" aria-label="Check-In">
-    <i class="ti ti-clipboard-check"></i><span>Check-In</span>
+    <div class="bnav-icon-wrap"><i class="ti ti-clipboard-check"></i></div>
+    <span>Check-In</span>
   </button>
-  <button class="bnav-item" data-page="log-action" onclick="openModal('log-modal')" aria-label="Log">
-    <i class="ti ti-plus-circle"></i><span>Log</span>
+  <button class="bnav-item bnav-fab" data-page="log-action" onclick="openModal('log-modal')" aria-label="Log Vitals">
+    <div class="bnav-fab-btn">
+      <i class="ti ti-plus" style="font-size:22px;color:#0D0D15;font-weight:700;"></i>
+    </div>
+    <span style="margin-top:4px;">Log</span>
   </button>
   <button class="bnav-item" data-page="bloodwork" onclick="nav('bloodwork')" aria-label="Labs">
-    <i class="ti ti-test-pipe"></i><span>Labs</span>
+    <div class="bnav-icon-wrap"><i class="ti ti-test-pipe"></i></div>
+    <span>Labs</span>
   </button>
   <button class="bnav-item" onclick="toggleMobileMenu()" aria-label="More">
-    <i class="ti ti-layout-grid"></i><span>More</span>
+    <div class="bnav-icon-wrap"><i class="ti ti-layout-grid"></i></div>
+    <span>More</span>
   </button>
 </nav>
 
