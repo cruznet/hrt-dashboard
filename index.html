@@ -5228,15 +5228,18 @@ async function renderCoachReport() {
   // Kick off HK load in background — don't block rendering on it
   if (!_hkSupaData) hkLoadFromSupabase().catch(() => {});
 
+  try {
+
+  const dateCmp   = (a, b) => (b || '').localeCompare(a || '');
   const protocol  = (() => { try { return JSON.parse(localStorage.getItem('hrt_active_protocol_data')); } catch { return null; } })();
-  const panels    = bwLoad().sort((a, b) => b.date.localeCompare(a.date));
+  const panels    = bwLoad().sort((a, b) => dateCmp(a.date, b.date));
   const bwLatest  = panels[0] || null;
   const bwPrev    = panels[1] || null;
-  const measList  = measLoad().sort((a, b) => b.date.localeCompare(a.date));
+  const measList  = measLoad().sort((a, b) => dateCmp(a.date, b.date));
   const phLatest  = measList[0] || null;
   const phPrev    = measList[1] || null;
-  const vitals    = lsGet('hrt_vitals_log', []).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
-  const checkins  = lsGet('hrt_weekly_checkins', []).sort((a,b) => b.check_in_date.localeCompare(a.check_in_date)).slice(0, 4);
+  const vitals    = lsGet('hrt_vitals_log', []).sort((a, b) => dateCmp(a.date, b.date)).slice(0, 5);
+  const checkins  = lsGet('hrt_weekly_checkins', []).sort((a, b) => dateCmp(a.check_in_date, b.check_in_date)).slice(0, 4);
   const show      = getShow();
   const profile   = lsGet('hrt_user_profile', null);
   const today     = localDate();
@@ -5492,17 +5495,27 @@ async function renderCoachReport() {
   el.innerHTML = `
     <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;"></div>
     ${sections.join('')}`;
+
+  } catch(e) {
+    console.error('[renderCoachReport]', e);
+    el.innerHTML = `<div style="text-align:center;padding:40px 16px;color:var(--text-muted);">
+      <i class="ti ti-alert-circle" style="font-size:32px;color:var(--red);display:block;margin-bottom:10px;"></i>
+      <div style="font-size:13px;color:var(--text-secondary);margin-bottom:6px;">Report render error</div>
+      <div style="font-size:11px;font-family:var(--font-data);color:var(--text-muted);opacity:0.7;">${escHtml(e.message)}</div>
+    </div>`;
+  }
 }
 
 function reportCopy() {
+  const dateCmp   = (a, b) => (b || '').localeCompare(a || '');
   const protocol  = (() => { try { return JSON.parse(localStorage.getItem('hrt_active_protocol_data')); } catch { return null; } })();
-  const panels    = bwLoad().sort((a, b) => b.date.localeCompare(a.date));
+  const panels    = bwLoad().sort((a, b) => dateCmp(a.date, b.date));
   const bwLatest  = panels[0] || null;
-  const measList  = measLoad().sort((a, b) => b.date.localeCompare(a.date));
+  const measList  = measLoad().sort((a, b) => dateCmp(a.date, b.date));
   const phLatest  = measList[0] || null;
   const phPrev    = measList[1] || null;
-  const vitals    = lsGet('hrt_vitals_log', []).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
-  const checkins  = lsGet('hrt_weekly_checkins', []).sort((a,b) => b.check_in_date.localeCompare(a.check_in_date)).slice(0, 4);
+  const vitals    = lsGet('hrt_vitals_log', []).sort((a, b) => dateCmp(a.date, b.date)).slice(0, 5);
+  const checkins  = lsGet('hrt_weekly_checkins', []).sort((a, b) => dateCmp(a.check_in_date, b.check_in_date)).slice(0, 4);
   const show      = getShow();
   const profile   = lsGet('hrt_user_profile', null);
   const today     = localDate();
