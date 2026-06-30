@@ -218,6 +218,27 @@ body {
   font-size: 13px; letter-spacing: 0; text-transform: none;
   color: var(--text-label); margin-bottom: 14px; font-weight: 600;
 }
+.page-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 20px; padding-bottom: 16px;
+  border-bottom: 0.5px solid var(--border);
+}
+.page-header-icon {
+  width: 40px; height: 40px; border-radius: 12px; border: 0.5px solid rgba(255,255,255,0.08);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.page-header-title { font-size: 16px; font-weight: 700; color: var(--text-primary); line-height: 1.2; }
+.page-header-sub   { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.empty-state {
+  display: flex; flex-direction: column; align-items: center;
+  text-align: center; padding: 52px 20px; gap: 0;
+}
+.empty-state-icon {
+  width: 64px; height: 64px; border-radius: 18px; border: 0.5px solid rgba(255,255,255,0.08);
+  display: flex; align-items: center; justify-content: center; margin-bottom: 20px;
+}
+.empty-state-title { font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 10px; }
+.empty-state-body  { font-size: 13px; color: var(--text-muted); max-width: 320px; line-height: 1.6; margin-bottom: 24px; }
 
 /* ── Metric cards ── */
 .metrics-grid {
@@ -1590,8 +1611,16 @@ body {
 
     <!-- ── BLOODWORK PAGE ── -->
     <section class="page" id="page-bloodwork">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding-bottom:12px;border-bottom:0.5px solid var(--border);">
-        <div style="font-size:15px;font-weight:600;color:var(--text-primary);">Bloodwork</div>
+      <div class="page-header">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div class="page-header-icon" style="background:rgba(248,113,113,0.1);border-color:rgba(248,113,113,0.15);">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></svg>
+          </div>
+          <div>
+            <div class="page-header-title">Bloodwork</div>
+            <div class="page-header-sub">Lab panels, hormone markers &amp; trends</div>
+          </div>
+        </div>
         <div style="display:flex;gap:8px;">
           <button class="btn-secondary" onclick="bwCopySummary()" style="padding:7px 14px;font-size:13px;" id="bw-copy-btn">Copy Summary</button>
           <button class="btn-primary" onclick="bwShowForm()" style="padding:7px 16px;font-size:13px;">+ Log Panel</button>
@@ -1616,29 +1645,35 @@ body {
       </div>
 
       <!-- Empty state -->
-      <div id="bw-empty" style="text-align:center;padding:48px 16px;">
-        <div style="font-size:48px;margin-bottom:16px;">🩸</div>
-        <div style="font-size:17px;font-weight:700;color:var(--text-primary);margin-bottom:8px;">Bloodwork is your protocol's report card</div>
-        <div style="font-size:13px;color:var(--text-muted);margin-bottom:6px;max-width:300px;margin-left:auto;margin-right:auto;">Track E2, lipids, CBC, liver enzymes — and see how every compound you run affects your health markers over time.</div>
-        <div style="font-size:12px;color:var(--text-muted);margin-bottom:24px;opacity:0.7;">Most athletes log panels every 6–10 weeks on cycle.</div>
-        <button class="btn-primary" onclick="bwShowForm()" style="padding:12px 28px;font-size:14px;">+ Log First Panel</button>
+      <div id="bw-empty" class="empty-state">
+        <div class="empty-state-icon" style="background:rgba(248,113,113,0.08);border-color:rgba(248,113,113,0.15);">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#F87171" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></svg>
+        </div>
+        <div class="empty-state-title">Bloodwork is your protocol's report card</div>
+        <div class="empty-state-body">Track E2, lipids, CBC, liver enzymes — and see how every compound affects your markers over time. Most athletes log panels every 6–10 weeks on cycle.</div>
+        <button class="btn-primary" onclick="bwShowForm()" style="padding:11px 28px;font-size:14px;">+ Log First Panel</button>
       </div>
 
       <!-- Content (has panels) -->
       <div id="bw-content" style="display:none;">
 
-        <div id="bw-last-info" style="font-size:13px;color:var(--text-muted);margin-bottom:14px;"></div>
+        <div id="bw-last-info" style="font-size:12px;color:var(--text-muted);margin-bottom:14px;letter-spacing:0.02em;"></div>
 
         <!-- Intelligence summary card -->
         <div id="bw-intelligence" style="margin-bottom:14px;"></div>
 
         <!-- Key KPI cards -->
+        <div class="dash-section-label">Key Markers</div>
         <div class="metrics-grid" id="bw-kpi-row" style="margin-bottom:14px;"></div>
 
         <!-- Trend Charts -->
+        <div class="dash-section-label">Marker Trends</div>
         <div class="card" style="margin-bottom:14px;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
-            <div class="card-title" style="margin-bottom:0;">Trends</div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              <div class="card-title" style="margin-bottom:0;">Trends</div>
+            </div>
             <div id="bw-trend-pills" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
           </div>
           <div style="height:220px;position:relative;">
@@ -1647,6 +1682,7 @@ body {
         </div>
 
         <!-- Panel detail + history -->
+        <div class="dash-section-label">Panels</div>
         <div class="grid-2-1" style="margin-bottom:14px;">
           <div class="card">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
