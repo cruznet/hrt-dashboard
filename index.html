@@ -1349,6 +1349,9 @@ body {
       <!-- Show countdown banner (Prep mode) -->
       <div id="show-countdown" style="margin-bottom:14px;"></div>
 
+      <!-- Coach note callout -->
+      <div id="coach-note-callout" style="display:none;margin-bottom:14px;"></div>
+
       <!-- Mode context card (TRT/Cruise or Offseason when no show date) -->
       <div id="mode-context-card" style="margin-bottom:14px;"></div>
 
@@ -4029,7 +4032,7 @@ function nav(page) {
   if (page === 'wellness') renderWellnessPage();
   if (page === 'calculator') setTimeout(() => { calcBuildCompoundSelect(); pepUpdate(); }, 100);
   if (page === 'settings') setTimeout(populateShowForm, 50);
-  if (page === 'dashboard') { renderReadinessCard(); renderStreakCard(); renderComplianceHeatmap(); renderShowCountdown(); renderModeContextCard(); renderDashboardCheckinCard(); renderVitalsToCards(); renderBwDashStrip(); renderPhysiqueDashStrip(); renderUpcoming(); setTimeout(() => { if (_supa && _supaUser) renderRealCharts(); else renderDemoCharts(); }, 100); setTimeout(checkLabReminder, 1200); }
+  if (page === 'dashboard') { renderReadinessCard(); renderStreakCard(); renderCoachNoteCallout(); renderComplianceHeatmap(); renderShowCountdown(); renderModeContextCard(); renderDashboardCheckinCard(); renderVitalsToCards(); renderBwDashStrip(); renderPhysiqueDashStrip(); renderUpcoming(); setTimeout(() => { if (_supa && _supaUser) renderRealCharts(); else renderDemoCharts(); }, 100); setTimeout(checkLabReminder, 1200); }
   // Load active protocol on dashboard
   if (page === 'dashboard') {
     const activeData = localStorage.getItem('hrt_active_protocol_data');
@@ -5667,7 +5670,7 @@ async function submitWeeklyCheckin() {
   closeModal('ci-modal');
   renderWeeklyCheckinSection();
   renderDashboardCheckinCard();
-  if (currentPage === 'dashboard') { renderReadinessCard(); renderStreakCard(); renderComplianceHeatmap(); }
+  if (currentPage === 'dashboard') { renderReadinessCard(); renderStreakCard(); renderCoachNoteCallout(); renderComplianceHeatmap(); }
   showCheckinReveal(row);
 }
 
@@ -9428,6 +9431,31 @@ function renderStreakCard() {
       ${streak >= 7 ? `<div style="margin-left:auto;font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:${color};background:${color}22;padding:4px 8px;border-radius:6px;">${streak >= 30 ? '🏆 Elite' : streak >= 14 ? '⚡ On Fire' : '✓ Solid'}</div>` : ''}
     </div>
   </div>`;
+}
+
+function renderCoachNoteCallout() {
+  const el = document.getElementById('coach-note-callout');
+  if (!el) return;
+  const checkins = lsGet('hrt_weekly_checkins', []).sort((a, b) => dateCmp(b.check_in_date, a.check_in_date));
+  const withNote = checkins.find(c => c.coach_note && c.coach_note.trim());
+  if (!withNote) { el.style.display = 'none'; return; }
+
+  const daysSince = Math.floor((Date.now() - Date.parse(withNote.check_in_date)) / 86400000);
+  const recency = daysSince === 0 ? 'Today' : daysSince === 1 ? 'Yesterday' : `${daysSince} days ago`;
+
+  el.style.display = '';
+  el.innerHTML = `
+    <div style="background:linear-gradient(135deg,rgba(245,197,24,0.07),rgba(245,197,24,0.03));border:0.5px solid rgba(245,197,24,0.25);border-radius:14px;padding:16px 18px;position:relative;overflow:hidden;">
+      <div style="position:absolute;top:0;left:0;width:3px;height:100%;background:linear-gradient(180deg,var(--primary-bright),rgba(245,197,24,0.3));border-radius:3px 0 0 3px;"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding-left:8px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--primary-bright)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--primary-bright);">Coach Note</span>
+        </div>
+        <span style="font-size:11px;color:var(--text-muted);">${recency} · ${withNote.check_in_date}</span>
+      </div>
+      <div style="font-size:14px;color:var(--text-primary);line-height:1.6;font-style:italic;padding-left:8px;">"${escHtml(withNote.coach_note.trim())}"</div>
+    </div>`;
 }
 
 function renderComplianceHeatmap() {
