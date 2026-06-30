@@ -239,6 +239,16 @@ body {
 }
 .empty-state-title { font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 10px; }
 .empty-state-body  { font-size: 13px; color: var(--text-muted); max-width: 320px; line-height: 1.6; margin-bottom: 24px; }
+.chart-empty-state {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  height: 100%; gap: 10px;
+}
+.chart-empty-btn {
+  padding: 4px 14px; border-radius: 6px; font-size: 12px; cursor: pointer;
+  background: rgba(245,197,24,0.08); border: 0.5px solid rgba(245,197,24,0.2);
+  color: var(--primary-bright); transition: background var(--transition);
+}
+.chart-empty-btn:hover { background: rgba(245,197,24,0.15); }
 
 /* ── Metric cards ── */
 .metrics-grid {
@@ -1484,30 +1494,66 @@ body {
       <div class="dash-section-label">Trends</div>
 
       <!-- ROW 3: Trend charts -->
-      <div class="grid-2" style="margin-bottom:14px;">
+      <div class="grid-2" style="margin-bottom:12px;">
         <div class="card">
-          <div class="card-title">Mood Trend</div>
-          <div class="chart-wrap" style="height:180px;position:relative;">
+          <div style="display:flex;align-items:center;gap:7px;margin-bottom:14px;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#C084FC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+            <div class="card-title" style="margin-bottom:0;">Mood</div>
+          </div>
+          <div class="chart-wrap" style="height:160px;position:relative;">
             <canvas id="chart-mood" style="display:none;"></canvas>
-            <div id="chart-mood-empty" style="display:flex;align-items:center;justify-content:center;height:100%;">
-              <div style="border:1.5px dashed rgba(255,255,255,0.1);border-radius:10px;padding:18px 22px;display:flex;flex-direction:column;align-items:center;gap:7px;text-align:center;">
-                <i class="ti ti-mood-smile" style="font-size:22px;color:var(--text-muted);opacity:0.4;"></i>
-                <div style="font-size:13px;color:var(--text-muted);">No mood data yet</div>
-                <button onclick="openModal('log-modal')" style="padding:4px 14px;border-radius:6px;background:rgba(245,197,24,0.1);border:0.5px solid rgba(245,197,24,0.25);color:var(--primary-bright);font-size:12px;cursor:pointer;">+ Log Entry</button>
-              </div>
+            <div id="chart-mood-empty" class="chart-empty-state">
+              <div style="font-size:12px;color:var(--text-muted);">No mood data yet</div>
+              <button onclick="openModal('log-modal')" class="chart-empty-btn">+ Log Entry</button>
             </div>
           </div>
         </div>
         <div class="card">
-          <div class="card-title">Energy Trend</div>
-          <div class="chart-wrap" style="height:180px;position:relative;">
+          <div style="display:flex;align-items:center;gap:7px;margin-bottom:14px;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FB923C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            <div class="card-title" style="margin-bottom:0;">Energy</div>
+          </div>
+          <div class="chart-wrap" style="height:160px;position:relative;">
             <canvas id="chart-energy" style="display:none;"></canvas>
-            <div id="chart-energy-empty" style="display:flex;align-items:center;justify-content:center;height:100%;">
-              <div style="border:1.5px dashed rgba(255,255,255,0.1);border-radius:10px;padding:18px 22px;display:flex;flex-direction:column;align-items:center;gap:7px;text-align:center;">
-                <i class="ti ti-bolt" style="font-size:22px;color:var(--text-muted);opacity:0.4;"></i>
-                <div style="font-size:13px;color:var(--text-muted);">No energy data yet</div>
-                <button onclick="openModal('log-modal')" style="padding:4px 14px;border-radius:6px;background:rgba(245,197,24,0.1);border:0.5px solid rgba(245,197,24,0.25);color:var(--primary-bright);font-size:12px;cursor:pointer;">+ Log Entry</button>
-              </div>
+            <div id="chart-energy-empty" class="chart-empty-state">
+              <div style="font-size:12px;color:var(--text-muted);">No energy data yet</div>
+              <button onclick="openModal('log-modal')" class="chart-empty-btn">+ Log Entry</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ROW 4: HRV + Sleep trends (HealthKit) -->
+      <div class="grid-2" style="margin-bottom:14px;">
+        <div class="card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+            <div style="display:flex;align-items:center;gap:7px;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#22D3EE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              <div class="card-title" style="margin-bottom:0;">HRV</div>
+            </div>
+            <span id="hrv-trend-avg" style="font-size:11px;color:var(--text-muted);font-family:var(--font-data);"></span>
+          </div>
+          <div class="chart-wrap" style="height:160px;position:relative;">
+            <canvas id="chart-hrv-dash" style="display:none;"></canvas>
+            <div id="chart-hrv-dash-empty" class="chart-empty-state">
+              <div style="font-size:12px;color:var(--text-muted);">Sync Apple Health to see HRV</div>
+              <button onclick="nav('apple-health')" class="chart-empty-btn">Import Data</button>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+            <div style="display:flex;align-items:center;gap:7px;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#A78BFA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              <div class="card-title" style="margin-bottom:0;">Sleep</div>
+            </div>
+            <span id="sleep-trend-avg" style="font-size:11px;color:var(--text-muted);font-family:var(--font-data);"></span>
+          </div>
+          <div class="chart-wrap" style="height:160px;position:relative;">
+            <canvas id="chart-sleep-dash" style="display:none;"></canvas>
+            <div id="chart-sleep-dash-empty" class="chart-empty-state">
+              <div style="font-size:12px;color:var(--text-muted);">Sync Apple Health to see sleep</div>
+              <button onclick="nav('apple-health')" class="chart-empty-btn">Import Data</button>
             </div>
           </div>
         </div>
@@ -3609,6 +3655,54 @@ function renderMoodEnergyCharts(supaLogs) {
       [{ label: 'Energy (1–10)', data: eEntries.map(l => parseInt(l.energy)),
          borderColor: 'var(--amber)', backgroundColor: 'rgba(245,158,11,0.08)',
          tension: 0.4, fill: true, pointBackgroundColor: '#FCD34D', pointRadius: 3 }]);
+  }
+
+  renderHkvCharts();
+}
+
+function getHkTimeSeries(key, limit) {
+  const rows = (_hkSupaData || _hkData || []);
+  const results = [];
+  for (const r of rows) {
+    const v = parseFloat(r[key]);
+    const d = (r['Date/Time'] || '').slice(0, 10);
+    if (v > 0 && d) results.push({ date: d, value: v });
+  }
+  results.sort((a, b) => a.date.localeCompare(b.date));
+  const unique = [];
+  const seen = new Set();
+  for (const r of results) {
+    if (!seen.has(r.date)) { seen.add(r.date); unique.push(r); }
+  }
+  return unique.slice(-limit);
+}
+
+function renderHkvCharts() {
+  const hrv = getHkTimeSeries('Heart Rate Variability (ms)', 30);
+  if (hrv.length >= 2) {
+    showChart('chart-hrv-dash');
+    const avg = (hrv.reduce((s, r) => s + r.value, 0) / hrv.length).toFixed(0);
+    const avgEl = document.getElementById('hrv-trend-avg');
+    if (avgEl) avgEl.textContent = `avg ${avg} ms`;
+    makeChart('chart-hrv-dash', 'line',
+      hrv.map(r => { const [,m,d] = r.date.split('-'); return `${+m}/${+d}`; }),
+      [{ label: 'HRV (ms)', data: hrv.map(r => r.value),
+         borderColor: 'var(--teal)', backgroundColor: 'rgba(34,211,238,0.06)',
+         tension: 0.35, fill: true, pointBackgroundColor: '#22D3EE', pointRadius: 2, pointHoverRadius: 4 }]);
+  }
+
+  const sleep = getHkTimeSeries('Sleep Analysis [Total] (hr)', 30);
+  if (sleep.length >= 2) {
+    showChart('chart-sleep-dash');
+    const avg = (sleep.reduce((s, r) => s + r.value, 0) / sleep.length).toFixed(1);
+    const avgEl = document.getElementById('sleep-trend-avg');
+    if (avgEl) avgEl.textContent = `avg ${avg} hrs`;
+    makeChart('chart-sleep-dash', 'bar',
+      sleep.map(r => { const [,m,d] = r.date.split('-'); return `${+m}/${+d}`; }),
+      [{ label: 'Sleep (hrs)', data: sleep.map(r => r.value),
+         backgroundColor: sleep.map(r => r.value >= 7.5 ? 'rgba(167,139,250,0.7)' : r.value >= 6 ? 'rgba(251,146,60,0.7)' : 'rgba(248,113,113,0.7)'),
+         borderColor: 'transparent', borderRadius: 3 }],
+      { scales: { y: { min: 0, max: 10, ticks: { stepSize: 2 } } } });
   }
 }
 
