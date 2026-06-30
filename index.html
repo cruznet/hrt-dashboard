@@ -1030,6 +1030,10 @@ body {
     <button class="topbar-btn-ghost" onclick="openModal('log-modal')">
       <i class="ti ti-plus" style="font-size:13px;"></i><span class="btn-text"> Log Entry</span>
     </button>
+    <button class="topbar-btn-ghost" id="sync-btn" onclick="syncAll()" title="Sync latest data" style="display:flex;align-items:center;gap:5px;">
+      <i class="ti ti-refresh" id="sync-icon" style="font-size:15px;"></i>
+      <span class="btn-text" id="sync-label">Sync</span>
+    </button>
     <button class="topbar-btn-ghost" onclick="supaSignOut()" style="display:flex;align-items:center;gap:6px;padding:4px 8px;">
       <div class="avatar" id="topbar-avatar" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">LC</div>
       <span class="btn-text">Sign Out</span>
@@ -2387,6 +2391,52 @@ async function supaSignOut() {
   _hkSupaData = null; // clear Supabase wellness cache on sign-out
   try { if (_supa) { const { error } = await _supa.auth.signOut(); if (error) console.error('[auth] signOut:', error); } }
   finally { showAuthOverlay(); }
+}
+
+let _lastSyncTs = null;
+
+async function syncAll() {
+  const btn  = document.getElementById('sync-btn');
+  const icon = document.getElementById('sync-icon');
+  const lbl  = document.getElementById('sync-label');
+  if (btn.disabled) return;
+
+  btn.disabled = true;
+  if (icon) icon.style.animation = 'spin 0.8s linear infinite';
+  if (lbl)  lbl.textContent = 'Syncing…';
+
+  try {
+    _hkSupaData = null; // force fresh fetch
+    await hkLoadFromSupabase();
+
+    // Re-render current page
+    switch (currentPage) {
+      case 'dashboard':
+        renderVitalsToCards();
+        renderBwDashStrip();
+        renderPhysiqueDashStrip();
+        if (_supa && _supaUser) renderRealCharts();
+        break;
+      case 'report':    renderCoachReport();    break;
+      case 'wellness':  renderWellnessPage();   break;
+      case 'bloodwork': renderBloodworkPage();  break;
+      case 'physique':  renderPhysiquePage();   break;
+      case 'workouts':  hevyAutoSync();         break;
+      case 'compliance': renderCompliancePage(); break;
+    }
+
+    _lastSyncTs = new Date();
+    const timeStr = _lastSyncTs.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    btn.title = `Last synced ${timeStr}`;
+    showToast(`Synced · ${timeStr}`, 'success');
+  } catch (e) {
+    console.error('[sync] failed:', e);
+    showToast('Sync failed — check connection', 'error');
+  } finally {
+    btn.disabled = false;
+    if (icon) icon.style.animation = '';
+    if (lbl)  lbl.textContent = 'Sync';
+  }
 }
 
 const _INACTIVITY_MS = 8 * 60 * 60 * 1000; // 8 hours
