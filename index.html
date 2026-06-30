@@ -907,6 +907,33 @@ body {
   font-family:var(--font-data); margin:0 auto 28px; transition:all 0.2s;
 }
 
+/* ── Check-in reveal card redesign (Item 20) ── */
+@keyframes ciRevealIn { from { opacity:0; transform:scale(0.92) translateY(8px); } to { opacity:1; transform:scale(1) translateY(0); } }
+@keyframes ciCheckPulse { 0% { box-shadow:0 0 0 0 rgba(74,222,128,0.4); } 70% { box-shadow:0 0 0 14px rgba(74,222,128,0); } 100% { box-shadow:0 0 0 0 rgba(74,222,128,0); } }
+#ci-reveal-card {
+  background:linear-gradient(180deg, rgba(245,197,24,0.05) 0%, var(--bg-card) 22%) !important;
+  position:relative; overflow:hidden;
+  animation:ciRevealIn 0.32s cubic-bezier(0.34,1.56,0.64,1);
+  box-shadow:0 24px 60px rgba(0,0,0,0.5);
+}
+.ci-reveal-check {
+  width:52px; height:52px; border-radius:50%;
+  background:rgba(74,222,128,0.12); border:1.5px solid rgba(74,222,128,0.35);
+  display:flex; align-items:center; justify-content:center;
+  margin:0 auto 16px; animation:ciCheckPulse 1.6s ease-out 0.3s 1;
+}
+.ci-reveal-statgrid { display:flex; gap:10px; justify-content:center; margin-bottom:16px; }
+.ci-reveal-stat {
+  flex:1; max-width:108px; padding:14px 8px;
+  border-radius:14px; border:0.5px solid var(--border); background:rgba(255,255,255,0.02);
+}
+.ci-reveal-weeks-pill {
+  display:inline-block; padding:4px 12px; border-radius:20px;
+  background:rgba(245,197,24,0.1); border:0.5px solid rgba(245,197,24,0.25);
+  font-size:11px; font-weight:700; color:var(--primary); letter-spacing:0.06em;
+  text-transform:uppercase; margin-bottom:14px;
+}
+
 /* Mobile-specific layout overrides */
 @media (max-width: 768px) {
   /* Show bottom nav */
@@ -2829,9 +2856,9 @@ body {
 
 <!-- ── Check-In Reveal Card ── -->
 <div id="ci-reveal-overlay" style="display:none;position:fixed;inset:0;z-index:8000;background:rgba(0,0,0,0.85);display:none;align-items:center;justify-content:center;padding:24px;" onclick="document.getElementById('ci-reveal-overlay').style.display='none';">
-  <div id="ci-reveal-card" style="background:var(--bg-card);border:0.5px solid rgba(245,197,24,0.3);border-radius:20px;padding:28px 24px;max-width:360px;width:100%;text-align:center;" onclick="event.stopPropagation();">
+  <div id="ci-reveal-card" style="border:0.5px solid rgba(245,197,24,0.3);border-radius:20px;padding:28px 24px;max-width:360px;width:100%;text-align:center;" onclick="event.stopPropagation();">
     <div id="ci-reveal-content"></div>
-    <button class="btn-secondary" onclick="document.getElementById('ci-reveal-overlay').style.display='none'" style="margin-top:20px;width:100%;padding:12px;">Done</button>
+    <button class="btn-primary" onclick="document.getElementById('ci-reveal-overlay').style.display='none'" style="margin-top:20px;width:100%;padding:12px;">Done</button>
   </div>
 </div>
 
@@ -9672,18 +9699,21 @@ function showCheckinReveal(row) {
   let weeksLine = '';
   if (show?.date) {
     const days = Math.round((new Date(show.date + 'T00:00:00') - new Date(row.check_in_date + 'T00:00:00')) / 86400000);
-    if (days > 0) weeksLine = `<div style="font-size:11px;font-weight:700;color:var(--primary);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:12px;">${Math.ceil(days/7)} Weeks Out${show.name ? ' · ' + escHtml(show.name) : ''}</div>`;
+    if (days > 0) weeksLine = `<div class="ci-reveal-weeks-pill">${Math.ceil(days/7)} Weeks Out${show.name ? ' · ' + escHtml(show.name) : ''}</div>`;
   }
 
   document.getElementById('ci-reveal-content').innerHTML = `
-    <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Check-In Complete</div>
-    <div style="font-size:18px;font-weight:700;color:var(--text-primary);margin-bottom:4px;">${profile?.name ? escHtml(profile.name) : 'Week Review'}</div>
-    <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">${row.check_in_date}</div>
+    <div class="ci-reveal-check">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+    </div>
+    <div style="font-size:11px;color:var(--text-muted);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">Check-In Complete</div>
+    <div style="font-size:19px;font-weight:700;color:var(--text-primary);margin-bottom:4px;">${profile?.name ? escHtml(profile.name) : 'Week Review'}</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px;font-family:var(--font-data);">${row.check_in_date}</div>
     ${weeksLine}
-    <div style="display:flex;gap:20px;justify-content:center;margin-bottom:16px;">
-      ${condAvg != null ? `<div><div style="font-size:32px;font-weight:800;color:${scoreClr(condAvg)};font-family:var(--font-data);line-height:1;">${condAvg}${trend(condAvg, prevCondAvg)}</div><div style="font-size:10px;color:var(--text-muted);margin-top:3px;">Condition</div></div>` : ''}
-      ${wellAvg != null ? `<div><div style="font-size:32px;font-weight:800;color:${scoreClr(wellAvg)};font-family:var(--font-data);line-height:1;">${wellAvg}</div><div style="font-size:10px;color:var(--text-muted);margin-top:3px;">Wellbeing</div></div>` : ''}
-      ${row.diet_adherence != null ? `<div><div style="font-size:32px;font-weight:800;color:${scoreClr(row.diet_adherence/10)};font-family:var(--font-data);line-height:1;">${row.diet_adherence}%</div><div style="font-size:10px;color:var(--text-muted);margin-top:3px;">Diet</div></div>` : ''}
+    <div class="ci-reveal-statgrid">
+      ${condAvg != null ? `<div class="ci-reveal-stat"><div style="font-size:26px;font-weight:800;color:${scoreClr(condAvg)};font-family:var(--font-data);line-height:1;">${condAvg}</div><div style="font-size:13px;line-height:1.2;">${trend(condAvg, prevCondAvg)}</div><div style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-top:5px;">Condition</div></div>` : ''}
+      ${wellAvg != null ? `<div class="ci-reveal-stat"><div style="font-size:26px;font-weight:800;color:${scoreClr(wellAvg)};font-family:var(--font-data);line-height:1;">${wellAvg}</div><div style="font-size:13px;line-height:1.2;">&nbsp;</div><div style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-top:5px;">Wellbeing</div></div>` : ''}
+      ${row.diet_adherence != null ? `<div class="ci-reveal-stat"><div style="font-size:26px;font-weight:800;color:${scoreClr(row.diet_adherence/10)};font-family:var(--font-data);line-height:1;">${row.diet_adherence}%</div><div style="font-size:13px;line-height:1.2;">&nbsp;</div><div style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-top:5px;">Diet</div></div>` : ''}
     </div>
     ${row.coach_note ? `<div style="background:rgba(245,197,24,0.08);border:0.5px solid rgba(245,197,24,0.25);border-radius:10px;padding:12px;text-align:left;font-size:13px;color:var(--text-secondary);font-style:italic;margin-bottom:4px;"><span style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--primary);display:block;margin-bottom:4px;">Coach Note</span>${escHtml(row.coach_note)}</div>` : ''}
     <button class="btn-secondary" onclick="openShareModal('${row.check_in_date}')" style="width:100%;padding:10px;margin-top:8px;font-size:13px;"><i class="ti ti-share"></i> Share This Check-In</button>`;
