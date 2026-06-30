@@ -1237,21 +1237,8 @@ body {
         </div>
       </div>
 
-      <!-- ROW 3: All trend charts in one row -->
-      <div class="grid-3" style="margin-bottom:14px;">
-        <div class="card">
-          <div class="card-title">Weight &amp; Body Comp</div>
-          <div class="chart-wrap" style="height:180px;position:relative;">
-            <canvas id="chart-weight" style="display:none;"></canvas>
-            <div id="chart-weight-empty" style="display:flex;align-items:center;justify-content:center;height:100%;">
-              <div style="border:1.5px dashed rgba(255,255,255,0.1);border-radius:10px;padding:18px 22px;display:flex;flex-direction:column;align-items:center;gap:7px;text-align:center;">
-                <i class="ti ti-weight" style="font-size:22px;color:var(--text-muted);opacity:0.4;"></i>
-                <div style="font-size:13px;color:var(--text-muted);">No weight data yet</div>
-                <button onclick="nav('log')" style="padding:4px 14px;border-radius:6px;background:rgba(245,197,24,0.1);border:0.5px solid rgba(245,197,24,0.25);color:var(--primary-bright);font-size:12px;cursor:pointer;">+ Log Entry</button>
-              </div>
-            </div>
-          </div>
-        </div>
+      <!-- ROW 3: Trend charts -->
+      <div class="grid-2" style="margin-bottom:14px;">
         <div class="card">
           <div class="card-title">Mood Trend</div>
           <div class="chart-wrap" style="height:180px;position:relative;">
@@ -2998,16 +2985,6 @@ function renderVitalsToCards() {
     updateMetricCard('m-spo2', spo2.toFixed(1), spo2Badge[0], spo2Badge[1]);
   }
 
-  // ── Weight chart from local data ──
-  const { entries: wEntries, labels: wLabels } = getCycleChartData(logs, 'weight', protocol);
-  if (wEntries.length >= 2) {
-    const data = wEntries.map(l => parseFloat(l.weight).toFixed(1));
-    showChart('chart-weight');
-    makeChart('chart-weight', 'line', wLabels,
-      [{ label:'Weight (lbs)', data, borderColor:'#F59E0B', backgroundColor:'rgba(245,158,11,0.08)',
-         tension:0.4, fill:true, pointBackgroundColor:'#FCD34D', pointRadius:3 }]);
-  }
-
   renderMoodEnergyCharts();
 }
 
@@ -3174,22 +3151,6 @@ function renderMetrics(data) {
 function parseLocalDate(s) { return new Date(s + 'T12:00:00'); }
 
 function renderRealCharts() {
-  const weights = window._weightHistory || [];
-
-  // Weight chart from daily_logs
-  if (weights.length > 1) {
-    const wSorted = [...weights].filter(w => w.weight_lbs).reverse().slice(-8);
-    const wLabels = wSorted.map(w => {
-      const d = parseLocalDate(w.date);
-      return d.toLocaleDateString('en-US', { month:'short', day:'numeric' });
-    });
-    const wData = wSorted.map(w => parseFloat(w.weight_lbs).toFixed(1));
-    showChart('chart-weight');
-    makeChart('chart-weight','line', wLabels,
-      [{ label:'Weight (lbs)', data:wData, borderColor:'#22D3EE', backgroundColor:'rgba(34,211,238,0.08)', tension:0.4, fill:true, pointBackgroundColor:'#22D3EE', pointRadius:3 }]);
-  }
-  // else: leave empty state visible
-
   const moodEnergyLogs = (window._weightHistory || [])
     .filter(r => r.mood || r.energy)
     .map(r => ({ date: r.date, mood: r.mood, energy: r.energy }));
@@ -3261,7 +3222,7 @@ function nav(page) {
   if (page === 'bloodwork') renderBloodworkPage();
   if (page === 'physique') { renderPhysiquePage(); hevyMeasAutoSync(); }
   if (page === 'workouts') { renderWorkoutsPage(); hevyAutoSync(); }
-  if (page === 'report') renderCoachReport();
+  if (page === 'report') renderCoachReport(); // async — shows loading state then renders
   if (page === 'compliance') renderCompliancePage();
   if (page === 'wellness') renderWellnessPage();
   if (page === 'calculator') setTimeout(() => { calcBuildCompoundSelect(); pepUpdate(); }, 100);
@@ -4752,9 +4713,17 @@ function renderCycleRetro() {
     </div>`;
 }
 
-function renderCoachReport() {
+async function renderCoachReport() {
   const el = document.getElementById('report-content');
   if (!el) return;
+
+  // Ensure HealthKit data is loaded before rendering
+  if (!_hkSupaData) {
+    el.innerHTML = `<div style="text-align:center;padding:40px 0;color:var(--text-muted);font-size:13px;">
+      <i class="ti ti-loader-2" style="font-size:28px;animation:spin 1s linear infinite;display:block;margin-bottom:10px;"></i>
+      Loading health data…</div>`;
+    await hkLoadFromSupabase();
+  }
 
   const protocol = (() => { try { return JSON.parse(localStorage.getItem('hrt_active_protocol_data')); } catch { return null; } })();
   const panels   = bwLoad().sort((a, b) => b.date.localeCompare(a.date));
