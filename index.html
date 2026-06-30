@@ -4677,16 +4677,16 @@ function renderCoachReport() {
   // ── Apple Health ──
   {
     const hkPairs = [
-      ['hrv_ms',             'HRV',           'ms',    v => v >= 50 ? 'var(--green)' : v >= 30 ? 'var(--amber)' : 'var(--red)'],
-      ['resting_hr',         'Resting HR',    'bpm',   v => v <= 60 ? 'var(--green)' : v <= 80 ? 'var(--amber)' : 'var(--red)'],
-      ['spo2_pct',           'SpO₂',          '%',     v => v >= 97 ? 'var(--green)' : v >= 94 ? 'var(--amber)' : 'var(--red)'],
-      ['sleep_total_hr',     'Sleep Total',   'hr',    v => v >= 7.5 ? 'var(--green)' : v >= 6 ? 'var(--amber)' : 'var(--red)'],
-      ['sleep_deep_hr',      'Deep Sleep',    'hr',    null],
-      ['sleep_rem_hr',       'REM Sleep',     'hr',    null],
-      ['steps',              'Steps',         'steps', v => v >= 10000 ? 'var(--green)' : v >= 7000 ? 'var(--amber)' : 'var(--red)'],
-      ['active_energy_kcal', 'Active Energy', 'kcal',  null],
-      ['body_fat_pct',       'Body Fat',      '%',     v => v < 18 ? 'var(--green)' : v < 25 ? 'var(--amber)' : 'var(--red)'],
-      ['weight_lbs',         'Weight',        'lbs',   null],
+      ['Heart Rate Variability (ms)',  'HRV',           'ms',    v => v >= 50 ? 'var(--green)' : v >= 30 ? 'var(--amber)' : 'var(--red)'],
+      ['Resting Heart Rate (bpm)',     'Resting HR',    'bpm',   v => v <= 60 ? 'var(--green)' : v <= 80 ? 'var(--amber)' : 'var(--red)'],
+      ['Oxygen Saturation (%)',        'SpO₂',          '%',     v => v >= 97 ? 'var(--green)' : v >= 94 ? 'var(--amber)' : 'var(--red)'],
+      ['Sleep Analysis [Total] (hr)',  'Sleep Total',   'hr',    v => v >= 7.5 ? 'var(--green)' : v >= 6 ? 'var(--amber)' : 'var(--red)'],
+      ['Sleep Analysis [Deep] (hr)',   'Deep Sleep',    'hr',    null],
+      ['Sleep Analysis [REM] (hr)',    'REM Sleep',     'hr',    null],
+      ['Step Count (steps)',           'Steps',         'steps', v => v >= 10000 ? 'var(--green)' : v >= 7000 ? 'var(--amber)' : 'var(--red)'],
+      ['Active Energy (kcal)',         'Active Energy', 'kcal',  null],
+      ['Body Fat Percentage (%)',      'Body Fat',      '%',     v => v < 18 ? 'var(--green)' : v < 25 ? 'var(--amber)' : 'var(--red)'],
+      ['Weight (lbs)',                 'Weight',        'lbs',   null],
     ];
     const hkRows = [];
     for (const [key, label, unit, colorFn] of hkPairs) {
