@@ -3109,7 +3109,7 @@ async function loadUserData() {
     // Load coach_athletes roster
     try {
       const { data: caRows } = await _supa.from('coach_athletes')
-        .select('*, athlete:athlete_user_id(id)')
+        .select('*')
         .or(`coach_user_id.eq.${uid},athlete_user_id.eq.${uid}`);
       if (caRows) localStorage.setItem('hrt_coach_athletes', JSON.stringify(caRows));
     } catch(e) { console.warn('[loadUserData] coach_athletes:', e.message); }
