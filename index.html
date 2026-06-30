@@ -5225,12 +5225,8 @@ async function renderCoachReport() {
   const el = document.getElementById('report-content');
   if (!el) return;
 
-  if (!_hkSupaData) {
-    el.innerHTML = `<div style="text-align:center;padding:40px 0;color:var(--text-muted);font-size:13px;">
-      <i class="ti ti-loader-2" style="font-size:28px;animation:spin 1s linear infinite;display:block;margin-bottom:10px;"></i>
-      Loading health data…</div>`;
-    await hkLoadFromSupabase();
-  }
+  // Kick off HK load in background — don't block rendering on it
+  if (!_hkSupaData) hkLoadFromSupabase().catch(() => {});
 
   const protocol  = (() => { try { return JSON.parse(localStorage.getItem('hrt_active_protocol_data')); } catch { return null; } })();
   const panels    = bwLoad().sort((a, b) => b.date.localeCompare(a.date));
