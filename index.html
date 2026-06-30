@@ -2458,71 +2458,102 @@ body {
 
 <!-- ── Weekly Check-In Modal ── -->
 <div class="modal-overlay" id="ci-modal">
-  <div class="modal" style="max-height:88vh;overflow-y:auto;">
-    <div class="modal-title">
-      Weekly Check-In
-      <span class="modal-close" onclick="closeModal('ci-modal')"><i class="ti ti-x"></i></span>
-    </div>
+  <div class="modal" style="max-height:92vh;overflow-y:auto;padding:0;border-radius:18px;">
 
-    <!-- Date + weeks out -->
-    <div class="form-row" style="margin-bottom:18px;">
-      <div class="form-group">
-        <label class="form-label">Date</label>
-        <input type="date" class="form-input" id="ci-date" oninput="ciUpdateWeeksOut()">
+    <!-- Modal Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 20px 14px;border-bottom:0.5px solid var(--border);position:sticky;top:0;background:var(--bg-card);backdrop-filter:blur(12px);z-index:2;border-radius:18px 18px 0 0;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:32px;height:32px;border-radius:9px;background:rgba(245,197,24,0.1);border:0.5px solid rgba(245,197,24,0.25);display:flex;align-items:center;justify-content:center;">
+          <i class="ti ti-clipboard-check" style="font-size:15px;color:var(--primary-bright);"></i>
+        </div>
+        <div>
+          <div style="font-size:15px;font-weight:600;color:var(--text-primary);line-height:1.2;">Weekly Check-In</div>
+          <div style="font-size:11px;color:var(--text-muted);">Log your week's condition &amp; wellbeing</div>
+        </div>
       </div>
-      <div class="form-group">
-        <label class="form-label">Weeks Out</label>
-        <div id="ci-weeks-out" style="font-size:24px;font-weight:800;font-family:var(--font-data);color:var(--primary-bright);padding:6px 0;line-height:1;">—</div>
+      <span class="modal-close" onclick="closeModal('ci-modal')" style="width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.05);border:0.5px solid var(--border);">
+        <i class="ti ti-x" style="font-size:14px;"></i>
+      </span>
+    </div>
+
+    <div style="padding:18px 20px 20px;">
+
+      <!-- Date + Weeks Out -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px;">
+        <div>
+          <label class="form-label">Check-In Date</label>
+          <input type="date" class="form-input" id="ci-date" oninput="ciUpdateWeeksOut()">
+        </div>
+        <div>
+          <label class="form-label">Weeks Out</label>
+          <div id="ci-weeks-out" style="font-size:28px;font-weight:800;font-family:var(--font-data);color:var(--primary-bright);line-height:1;padding:9px 0 0;">—</div>
+        </div>
       </div>
-    </div>
 
-    <!-- Condition scores -->
-    <div style="margin-bottom:18px;">
-      <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px;padding-bottom:6px;border-bottom:0.5px solid var(--border);">Condition</div>
-      <div id="ci-fullness-row"    style="margin-bottom:10px;"></div>
-      <div id="ci-dryness-row"     style="margin-bottom:10px;"></div>
-      <div id="ci-vascularity-row" style="margin-bottom:0;"></div>
-    </div>
-
-    <!-- Compliance -->
-    <div class="form-row" style="margin-bottom:18px;">
-      <div class="form-group">
-        <label class="form-label">Diet Adherence</label>
-        <select class="form-input" id="ci-diet">
-          <option value="">— Select —</option>
-          <option value="100">100% — Perfect</option>
-          <option value="90">90% — 1 slip</option>
-          <option value="80">80% — 2 slips</option>
-          <option value="70">70% — 3 slips</option>
-          <option value="60">60% — Several off meals</option>
-          <option value="50">50% or below</option>
-        </select>
+      <!-- Condition Section -->
+      <div style="background:rgba(255,255,255,0.02);border:0.5px solid var(--border);border-radius:12px;padding:14px 14px 10px;margin-bottom:14px;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:14px;">
+          <div style="width:5px;height:5px;border-radius:50%;background:var(--primary-bright);"></div>
+          <span style="font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);">Condition</span>
+        </div>
+        <div id="ci-fullness-row"    style="margin-bottom:10px;"></div>
+        <div id="ci-dryness-row"     style="margin-bottom:10px;"></div>
+        <div id="ci-vascularity-row" style="margin-bottom:0;"></div>
       </div>
-      <div class="form-group">
-        <label class="form-label">Cardio Sessions</label>
-        <input type="number" min="0" max="21" class="form-input" id="ci-cardio" placeholder="0">
+
+      <!-- Compliance Section -->
+      <div style="background:rgba(255,255,255,0.02);border:0.5px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:14px;">
+          <div style="width:5px;height:5px;border-radius:50%;background:#4ade80;"></div>
+          <span style="font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);">Compliance</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div>
+            <label class="form-label">Diet Adherence</label>
+            <select class="form-input" id="ci-diet">
+              <option value="">— Select —</option>
+              <option value="100">100% — Perfect</option>
+              <option value="90">90% — 1 slip</option>
+              <option value="80">80% — 2 slips</option>
+              <option value="70">70% — 3 slips</option>
+              <option value="60">60% — Several off meals</option>
+              <option value="50">50% or below</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label">Cardio Sessions</label>
+            <input type="number" min="0" max="21" class="form-input" id="ci-cardio" placeholder="0">
+          </div>
+        </div>
       </div>
-    </div>
 
-    <!-- Wellbeing -->
-    <div style="margin-bottom:18px;">
-      <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px;padding-bottom:6px;border-bottom:0.5px solid var(--border);">Wellbeing (Weekly Average)</div>
-      <div id="ci-energy-row" style="margin-bottom:10px;"></div>
-      <div id="ci-sleep-row"  style="margin-bottom:10px;"></div>
-      <div id="ci-mood-row"   style="margin-bottom:0;"></div>
-    </div>
+      <!-- Wellbeing Section -->
+      <div style="background:rgba(255,255,255,0.02);border:0.5px solid var(--border);border-radius:12px;padding:14px 14px 10px;margin-bottom:14px;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:14px;">
+          <div style="width:5px;height:5px;border-radius:50%;background:#60a5fa;"></div>
+          <span style="font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);">Wellbeing <span style="font-weight:400;text-transform:none;letter-spacing:0;">(weekly avg)</span></span>
+        </div>
+        <div id="ci-energy-row" style="margin-bottom:10px;"></div>
+        <div id="ci-sleep-row"  style="margin-bottom:10px;"></div>
+        <div id="ci-mood-row"   style="margin-bottom:0;"></div>
+      </div>
 
-    <!-- Notes -->
-    <div class="form-group" style="margin-bottom:12px;">
-      <label class="form-label">Athlete Notes</label>
-      <textarea class="form-input" id="ci-notes" rows="2" style="resize:vertical;" placeholder="Conditioning updates, how you're feeling this week…"></textarea>
-    </div>
-    <div class="form-group" style="margin-bottom:20px;">
-      <label class="form-label" style="color:var(--primary);">Coach Note</label>
-      <textarea class="form-input" id="ci-coach-note" rows="2" style="resize:vertical;border-color:rgba(245,197,24,0.3);" placeholder="Coaching feedback, protocol adjustments, directives…"></textarea>
-    </div>
+      <!-- Notes Section -->
+      <div style="margin-bottom:14px;">
+        <label class="form-label">Athlete Notes</label>
+        <textarea class="form-input" id="ci-notes" rows="2" style="resize:vertical;" placeholder="Conditioning updates, how you're feeling this week…"></textarea>
+      </div>
+      <div style="background:rgba(245,197,24,0.04);border:0.5px solid rgba(245,197,24,0.2);border-radius:12px;padding:12px;margin-bottom:20px;">
+        <label class="form-label" style="color:var(--primary-bright);margin-bottom:8px;display:block;">
+          <i class="ti ti-shield-check" style="font-size:12px;margin-right:4px;"></i>Coach Note
+        </label>
+        <textarea class="form-input" id="ci-coach-note" rows="2" style="resize:vertical;background:rgba(245,197,24,0.04);border-color:rgba(245,197,24,0.2);" placeholder="Coaching feedback, protocol adjustments, directives…"></textarea>
+      </div>
 
-    <button class="btn-primary" style="width:100%;padding:12px;" onclick="submitWeeklyCheckin()">Save Check-In</button>
+      <button class="btn-primary" style="width:100%;padding:13px;font-size:14px;font-weight:600;border-radius:12px;" onclick="submitWeeklyCheckin()">
+        <i class="ti ti-check" style="margin-right:6px;"></i>Save Check-In
+      </button>
+    </div>
   </div>
 </div>
 
