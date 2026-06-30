@@ -239,6 +239,21 @@ body {
 }
 .empty-state-title { font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 10px; }
 .empty-state-body  { font-size: 13px; color: var(--text-muted); max-width: 320px; line-height: 1.6; margin-bottom: 24px; }
+.stat-compare-row {
+  display: flex; gap: 0; overflow-x: auto; border-radius: var(--radius-lg);
+  background: var(--bg-card); border: 0.5px solid var(--border);
+}
+.stat-compare-cell {
+  flex: 1; min-width: 100px; padding: 14px 16px;
+  border-right: 0.5px solid var(--border); display: flex; flex-direction: column; gap: 4px;
+}
+.stat-compare-cell:last-child { border-right: none; }
+.stat-compare-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); }
+.stat-compare-current { font-size: 22px; font-family: var(--font-data); font-weight: 600; color: var(--text-primary); line-height: 1.1; }
+.stat-compare-prev { font-size: 11px; color: var(--text-muted); font-family: var(--font-data); }
+.stat-compare-delta { font-size: 11px; font-weight: 700; font-family: var(--font-data); }
+.stat-compare-bar-wrap { height: 3px; background: rgba(255,255,255,0.06); border-radius: 2px; margin-top: 6px; }
+.stat-compare-bar { height: 100%; border-radius: 2px; transition: width 0.7s ease; }
 .chart-empty-state {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   height: 100%; gap: 10px;
@@ -1742,6 +1757,9 @@ body {
 
         <!-- Intelligence summary card -->
         <div id="bw-intelligence" style="margin-bottom:14px;"></div>
+
+        <!-- Stat comparison row -->
+        <div id="bw-stat-compare" style="display:none;margin-bottom:14px;"></div>
 
         <!-- Key KPI cards -->
         <div class="dash-section-label">Key Markers</div>
@@ -4689,6 +4707,7 @@ function renderBloodworkPage() {
     </div>`;
 
   bwRenderIntelligence(latest, panels[1]);
+  bwRenderStatCompare(latest, panels[1]);
   bwRenderKpiCards(latest, panels[1]);
   bwRenderPanelSelect(panels);
   bwRenderPanel();
@@ -4809,6 +4828,57 @@ function bwRenderIntelligence(latest, prev) {
       </div>
     </div>
   </div>`;
+}
+
+function bwRenderStatCompare(latest, prev) {
+  const el = document.getElementById('bw-stat-compare');
+  if (!el) return;
+  if (!prev) { el.style.display = 'none'; return; }
+
+  const cells = BW_KPI_KEYS.map(key => {
+    const m       = BW_MARKERS[key];
+    const cur     = latest.markers[key];
+    const prv     = prev.markers[key];
+    if (cur == null) return '';
+    const status  = bwRangeStatus(key, cur);
+    const clr     = status === 'ok' ? 'var(--green)' : status === 'high' ? 'var(--red)' : 'var(--amber)';
+
+    let deltaHtml = '';
+    if (prv != null) {
+      const diff    = parseFloat((cur - prv).toFixed(1));
+      const pct     = prv !== 0 ? Math.round(Math.abs(diff / prv) * 100) : 0;
+      const arrow   = diff > 0 ? '↑' : diff < 0 ? '↓' : '→';
+      const good    = m.higherBetter ? diff >= 0 : diff <= 0;
+      const deltaClr = diff === 0 ? 'var(--text-muted)' : good ? 'var(--green)' : 'var(--red)';
+      deltaHtml = `<div class="stat-compare-delta" style="color:${deltaClr};">${arrow} ${Math.abs(diff)} ${m.unit} ${pct > 0 ? `(${pct}%)` : ''}</div>`;
+    }
+
+    // Bar shows position within normal range [min, max]
+    let barPct = 50;
+    if (m.lo != null && m.hi != null && isFinite(m.hi) && cur != null) {
+      const span = m.hi - m.lo;
+      barPct = span > 0 ? Math.max(0, Math.min(100, Math.round(((cur - m.lo) / span) * 100))) : 50;
+    }
+
+    return `<div class="stat-compare-cell">
+      <div class="stat-compare-label">${m.label}</div>
+      <div class="stat-compare-current" style="color:${clr};">${cur}</div>
+      <div class="stat-compare-unit" style="font-size:10px;color:var(--text-muted);">${m.unit}</div>
+      ${deltaHtml}
+      ${prv != null ? `<div class="stat-compare-prev">prev: ${prv}</div>` : ''}
+      <div class="stat-compare-bar-wrap">
+        <div class="stat-compare-bar" style="width:${barPct}%;background:${clr};opacity:0.7;"></div>
+      </div>
+    </div>`;
+  }).filter(Boolean).join('');
+
+  if (!cells) { el.style.display = 'none'; return; }
+  el.innerHTML = `
+    <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;">
+      ${latest.date} vs ${prev.date}
+    </div>
+    <div class="stat-compare-row">${cells}</div>`;
+  el.style.display = '';
 }
 
 function bwRenderKpiCards(latest, prev) {
