@@ -1611,6 +1611,9 @@ body {
     <!-- ── DASHBOARD PAGE ── -->
     <section class="page active" id="page-dashboard">
 
+      <!-- Setup prompt — rendered by renderSetupPromptCard(), hidden once a protocol exists -->
+      <div id="setup-prompt-card" style="margin-bottom:14px;"></div>
+
       <!-- TODAY section -->
       <div class="dash-section-label">Today</div>
 
@@ -3753,7 +3756,8 @@ function onboardFinish() {
   renderShowCountdown();
   renderModeContextCard();
   renderDashboardCheckinCard();
-  showToast('Welcome to HRT Tracker', 'success');
+  renderSetupPromptCard();
+  showToast('Welcome to HRT Tracker — build your protocol to get started', 'success');
 }
 function showAuthOverlay() { document.getElementById('auth-overlay').classList.add('visible'); _checkPwaAuthNote(); }
 
@@ -4459,7 +4463,7 @@ function nav(page) {
   if (page === 'wellness') renderWellnessPage();
   if (page === 'calculator') setTimeout(() => { calcBuildCompoundSelect(); pepUpdate(); }, 100);
   if (page === 'settings') setTimeout(populateShowForm, 50);
-  if (page === 'dashboard') { renderReadinessCard(); renderStreakCard(); renderCoachNoteCallout(); renderComplianceHeatmap(); renderShowCountdown(); renderModeContextCard(); renderDashboardCheckinCard(); renderVitalsToCards(); renderBwDashStrip(); renderPhysiqueDashStrip(); renderUpcoming(); setTimeout(() => { if (_supa && _supaUser) renderRealCharts(); else renderDemoCharts(); }, 100); setTimeout(checkLabReminder, 1200); }
+  if (page === 'dashboard') { renderSetupPromptCard(); renderReadinessCard(); renderStreakCard(); renderCoachNoteCallout(); renderComplianceHeatmap(); renderShowCountdown(); renderModeContextCard(); renderDashboardCheckinCard(); renderVitalsToCards(); renderBwDashStrip(); renderPhysiqueDashStrip(); renderUpcoming(); setTimeout(() => { if (_supa && _supaUser) renderRealCharts(); else renderDemoCharts(); }, 100); setTimeout(checkLabReminder, 1200); }
   // Load active protocol on dashboard
   if (page === 'dashboard') {
     const activeData = localStorage.getItem('hrt_active_protocol_data');
@@ -4620,6 +4624,27 @@ function buildWeekStrip(currentWeek, totalWeeks) {
     <div style="position:relative;padding:4px 0 0;">
       <div style="display:flex;gap:2px;align-items:flex-end;overflow-x:auto;padding-bottom:4px;">
         ${cells.join('')}
+      </div>
+    </div>`;
+}
+
+function renderSetupPromptCard() {
+  const el = document.getElementById('setup-prompt-card');
+  if (!el) return;
+  if (localStorage.getItem('hrt_active_protocol')) { el.innerHTML = ''; return; }
+  el.innerHTML = `
+    <div class="card" style="border-top:2px solid var(--primary-bright);padding:20px 20px 18px;position:relative;overflow:hidden;">
+      <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 0% 0%,rgba(245,197,24,0.05) 0%,transparent 65%);pointer-events:none;"></div>
+      <div style="margin-bottom:10px;">
+        <span style="font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--primary-bright);background:var(--primary-dim);padding:3px 8px;border-radius:4px;border:0.5px solid var(--primary-border);">Start Here</span>
+      </div>
+      <div style="font-size:15px;font-weight:700;color:var(--text-primary);margin-bottom:6px;line-height:1.25;">Build your protocol to unlock your dashboard</div>
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:18px;line-height:1.6;max-width:540px;">Your dose schedule, cycle progress, compliance tracker, and coach report all run from an active protocol. Add your compounds, doses, and start date — takes about 2 minutes.</div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <button onclick="nav('builder')" class="btn-primary" style="padding:10px 20px;font-size:13px;display:inline-flex;align-items:center;gap:7px;">
+          <i class="ti ti-plus" style="font-size:13px;"></i>Build My Protocol
+        </button>
+        <span style="font-size:12px;color:var(--text-muted);">or import from <a href="#" onclick="nav('protocols');return false;" style="color:var(--primary-bright);text-decoration:none;">My Protocols →</a></span>
       </div>
     </div>`;
 }
@@ -8918,6 +8943,7 @@ function _doSwitch(newIndex) {
   if (!p) return;
   localStorage.setItem('hrt_active_protocol', p.saved_at);
   localStorage.setItem('hrt_active_protocol_data', JSON.stringify(p));
+  renderSetupPromptCard();
   renderProtocolsPage();
   renderProtocolCard(p);
   renderCycleProgress(p);
@@ -9121,6 +9147,7 @@ function pbSaveAndActivate() {
   protocol.status = 'active';
   localStorage.setItem('hrt_active_protocol', protocol.saved_at);
   localStorage.setItem('hrt_active_protocol_data', JSON.stringify(protocol));
+  renderSetupPromptCard();
   renderCycleProgress(protocol);
   renderUpcoming();
   updateTopbarBadge();
