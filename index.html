@@ -1113,6 +1113,9 @@ body {
     <!-- ── DASHBOARD PAGE ── -->
     <section class="page active" id="page-dashboard">
 
+      <!-- Show countdown banner -->
+      <div id="show-countdown" style="margin-bottom:14px;"></div>
+
       <!-- Metric cards -->
       <div class="metrics-grid" id="metrics-grid">
         <div class="metric-card mc-red">
@@ -2232,6 +2235,51 @@ body {
           <label class="form-label">Supabase URL</label>
           <input type="text" class="form-input" id="supa-url" value="https://lnxhksnvcewtpwkaghrh.supabase.co" readonly>
         </div>
+        <hr class="divider">
+        <div class="card-title">Active Competition</div>
+        <div class="form-row">
+          <div class="form-group" style="grid-column:span 2;">
+            <label class="form-label">Show Name</label>
+            <input type="text" class="form-input" id="show-name" placeholder="NPC Greater Gulf States 2026">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Show Date</label>
+            <input type="date" class="form-input" id="show-date">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Federation</label>
+            <select class="form-input" id="show-federation">
+              <option value="">— Select —</option>
+              <option value="NPC">NPC</option>
+              <option value="IFBB">IFBB Pro</option>
+              <option value="OCB">OCB</option>
+              <option value="WNBF">WNBF</option>
+              <option value="NPA">NPA</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Division</label>
+            <select class="form-input" id="show-division">
+              <option value="">— Select —</option>
+              <option value="Classic Physique">Classic Physique</option>
+              <option value="Men's Physique">Men's Physique</option>
+              <option value="Bodybuilding">Bodybuilding</option>
+              <option value="Bikini">Bikini</option>
+              <option value="Figure">Figure</option>
+              <option value="Wellness">Wellness</option>
+              <option value="Women's Physique">Women's Physique</option>
+            </select>
+          </div>
+          <div class="form-group" style="display:flex;align-items:flex-end;gap:8px;">
+            <button class="btn-primary" onclick="saveShowFromSettings()" style="flex:1;">Save</button>
+            <button class="btn-secondary" onclick="clearShow()" style="padding:8px 12px;" title="Clear competition"><i class="ti ti-trash"></i></button>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -2717,6 +2765,14 @@ async function loadUserData() {
         // If the user is already on the Workouts page, re-render and sync now that the key arrived
         if (currentPage === 'workouts') { renderWorkoutsPage(); hevyAutoSync(); }
       }
+      if (settings.show_date) {
+        localStorage.setItem('hrt_show_date', settings.show_date);
+        if (settings.show_name)       localStorage.setItem('hrt_show_name', settings.show_name);
+        if (settings.show_federation) localStorage.setItem('hrt_show_federation', settings.show_federation);
+        if (settings.show_division)   localStorage.setItem('hrt_show_division', settings.show_division);
+        updateTopbarBadge();
+        if (currentPage === 'dashboard') renderShowCountdown();
+      }
     }
 
     if (logsRes.data?.length) renderLastEntry(logsRes.data[0]);
@@ -2789,6 +2845,10 @@ async function syncProtocolsToSupabase() {
     user_profile:          lsGet('hrt_user_profile', null),
     app_mode:              localStorage.getItem('hrt_mode') || 'trt',
     hevy_api_key:          localStorage.getItem(HEVY_KEY_LS) || null,
+    show_date:             localStorage.getItem('hrt_show_date') || null,
+    show_name:             localStorage.getItem('hrt_show_name') || null,
+    show_federation:       localStorage.getItem('hrt_show_federation') || null,
+    show_division:         localStorage.getItem('hrt_show_division') || null,
     updated_at:            new Date().toISOString()
   }, { onConflict: 'user_id' });
   if (error) console.warn('[syncProtocols]', error.message);
@@ -3234,7 +3294,8 @@ function nav(page) {
   if (page === 'compliance') renderCompliancePage();
   if (page === 'wellness') renderWellnessPage();
   if (page === 'calculator') setTimeout(() => { calcBuildCompoundSelect(); pepUpdate(); }, 100);
-  if (page === 'dashboard') { renderVitalsToCards(); renderBwDashStrip(); renderPhysiqueDashStrip(); setTimeout(() => { if (_supa && _supaUser) renderRealCharts(); else renderDemoCharts(); }, 100); setTimeout(checkLabReminder, 1200); }
+  if (page === 'settings') setTimeout(populateShowForm, 50);
+  if (page === 'dashboard') { renderShowCountdown(); renderVitalsToCards(); renderBwDashStrip(); renderPhysiqueDashStrip(); setTimeout(() => { if (_supa && _supaUser) renderRealCharts(); else renderDemoCharts(); }, 100); setTimeout(checkLabReminder, 1200); }
   // Load active protocol on dashboard
   if (page === 'dashboard') {
     const activeData = localStorage.getItem('hrt_active_protocol_data');
@@ -7477,6 +7538,21 @@ function setMode(mode, save = true) {
 }
 
 function updateTopbarBadge() {
+  const badge = document.getElementById('topbar-badge');
+  if (!badge) return;
+
+  const showDate = localStorage.getItem('hrt_show_date');
+  if (showDate) {
+    const show = new Date(showDate + 'T00:00:00');
+    const today = new Date(); today.setHours(0,0,0,0);
+    const daysOut = Math.round((show - today) / 86400000);
+    if (daysOut > 7)      { badge.textContent = `${Math.ceil(daysOut / 7)} Wks Out`; return; }
+    if (daysOut > 1)      { badge.textContent = `${daysOut} Days Out`; return; }
+    if (daysOut === 1)    { badge.textContent = 'Tomorrow'; return; }
+    if (daysOut === 0)    { badge.textContent = 'SHOW DAY'; return; }
+    if (daysOut >= -6)    { badge.textContent = 'Post-Show'; return; }
+  }
+
   const mode = localStorage.getItem('hrt_mode') || 'trt';
   const modeLabel = mode === 'performance' ? 'Performance' : 'TRT Mode';
   const active = localStorage.getItem('hrt_active_protocol_data');
@@ -7485,11 +7561,101 @@ function updateTopbarBadge() {
     try {
       const p = JSON.parse(active);
       const daysDone = Math.max(0, (Date.now() - new Date(p.saved_at)) / 86400000);
-      const week = Math.floor(daysDone / 7) + 1;
-      weekLabel = `Week ${week} · `;
-    } catch(e) { console.error('[updateTopbarBadge] failed:', e); }
+      weekLabel = `Week ${Math.floor(daysDone / 7) + 1} · `;
+    } catch(e) { console.error('[updateTopbarBadge]', e); }
   }
-  document.getElementById('topbar-badge').textContent = `${weekLabel}${modeLabel}`;
+  badge.textContent = `${weekLabel}${modeLabel}`;
+}
+
+// ── Competition / Show countdown ──
+function getShow() {
+  const d = localStorage.getItem('hrt_show_date');
+  if (!d) return null;
+  return {
+    date:       d,
+    name:       localStorage.getItem('hrt_show_name')       || '',
+    federation: localStorage.getItem('hrt_show_federation') || '',
+    division:   localStorage.getItem('hrt_show_division')   || ''
+  };
+}
+
+function saveShowFromSettings() {
+  const name = (document.getElementById('show-name')?.value       || '').trim();
+  const date  = document.getElementById('show-date')?.value        || '';
+  const fed   = document.getElementById('show-federation')?.value  || '';
+  const div   = document.getElementById('show-division')?.value    || '';
+  if (!date) { showToast('Please set a show date', 'info'); return; }
+  localStorage.setItem('hrt_show_date',        date);
+  localStorage.setItem('hrt_show_name',        name);
+  localStorage.setItem('hrt_show_federation',  fed);
+  localStorage.setItem('hrt_show_division',    div);
+  syncProtocolsToSupabase();
+  updateTopbarBadge();
+  renderShowCountdown();
+  showToast('Competition saved', 'success');
+}
+
+function clearShow() {
+  ['hrt_show_date','hrt_show_name','hrt_show_federation','hrt_show_division'].forEach(k => localStorage.removeItem(k));
+  syncProtocolsToSupabase();
+  updateTopbarBadge();
+  renderShowCountdown();
+  showToast('Competition cleared', 'info');
+}
+
+function populateShowForm() {
+  const show = getShow();
+  if (!show) return;
+  const n = document.getElementById('show-name');       if (n) n.value = show.name;
+  const d = document.getElementById('show-date');       if (d) d.value = show.date;
+  const f = document.getElementById('show-federation'); if (f) f.value = show.federation;
+  const v = document.getElementById('show-division');   if (v) v.value = show.division;
+}
+
+function renderShowCountdown() {
+  const el = document.getElementById('show-countdown');
+  if (!el) return;
+  const show = getShow();
+  if (!show?.date) { el.innerHTML = ''; return; }
+
+  const showDate = new Date(show.date + 'T00:00:00');
+  const today    = new Date(); today.setHours(0,0,0,0);
+  const daysOut  = Math.round((showDate - today) / 86400000);
+
+  if (daysOut < -7) { el.innerHTML = ''; return; }
+
+  // Progress bar: assume 16-week (112-day) prep ending on show date
+  const elapsed  = Math.max(0, 112 - daysOut);
+  const progress = Math.min(100, Math.round((elapsed / 112) * 100));
+
+  const dateFormatted = showDate.toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
+  const metaLine = [show.federation, show.division].filter(Boolean).join(' · ');
+
+  let bigNum, bigLabel;
+  if (daysOut === 0)       { bigNum = 'SHOW'; bigLabel = 'DAY'; }
+  else if (daysOut < 0)    { bigNum = `+${Math.abs(daysOut)}d`; bigLabel = 'Post-Show'; }
+  else if (daysOut <= 13)  { bigNum = daysOut; bigLabel = daysOut === 1 ? 'Day Out' : 'Days Out'; }
+  else                     { bigNum = Math.ceil(daysOut / 7); bigLabel = 'Weeks Out'; }
+
+  const bigFontSize = String(bigNum).length > 2 ? '40px' : '52px';
+
+  el.innerHTML = `
+    <div class="card" style="background:linear-gradient(135deg,rgba(245,197,24,0.07) 0%,rgba(245,197,24,0.01) 100%);border-color:rgba(245,197,24,0.28);cursor:pointer;" onclick="nav('settings')">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+        <div style="flex:1;min-width:0;">
+          ${metaLine ? `<div style="font-size:10px;font-weight:700;letter-spacing:0.1em;color:var(--primary);text-transform:uppercase;margin-bottom:3px;">${escHtml(metaLine)}</div>` : ''}
+          <div style="font-size:15px;font-weight:600;color:var(--text-primary);margin-bottom:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(show.name || 'Competition')}</div>
+          <div style="height:4px;background:rgba(255,255,255,0.07);border-radius:99px;overflow:hidden;margin-bottom:6px;max-width:260px;">
+            <div style="height:100%;width:${progress}%;background:var(--primary-bright);border-radius:99px;"></div>
+          </div>
+          <div style="font-size:11px;color:var(--text-muted);">${dateFormatted}${daysOut > 0 ? ` · ${daysOut} days` : ''}</div>
+        </div>
+        <div style="text-align:center;flex-shrink:0;padding-left:8px;">
+          <div style="font-size:${bigFontSize};font-weight:800;font-family:var(--font-data);color:var(--primary-bright);line-height:1;">${bigNum}</div>
+          <div style="font-size:10px;font-weight:700;letter-spacing:0.08em;color:var(--primary);text-transform:uppercase;margin-top:3px;">${bigLabel}</div>
+        </div>
+      </div>
+    </div>`;
 }
 
 // ── Normalize compound (handles old "mg E3.5D" combined unit vs new separate unit+freq) ──
