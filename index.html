@@ -3087,9 +3087,8 @@ async function loadUserData() {
         localStorage.setItem('hrt_user_profile', JSON.stringify(settings.user_profile));
       if (settings.app_mode)
         setMode(settings.app_mode, false);
-      if (settings.hevy_api_key && !hevyKey()) {
+      if (settings.hevy_api_key) {
         localStorage.setItem(HEVY_KEY_LS, settings.hevy_api_key);
-        // If the user is already on the Workouts page, re-render and sync now that the key arrived
         if (currentPage === 'workouts') { renderWorkoutsPage(); hevyAutoSync(); }
       }
       if (settings.show_date) {
