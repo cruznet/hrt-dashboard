@@ -2386,37 +2386,47 @@ async function syncAll() {
   if (icon) icon.style.animation = 'spin 0.8s linear infinite';
   if (lbl)  lbl.textContent = 'Syncing…';
 
+  // Fetch — isolated so a network error doesn't skip the re-render
+  let fetchOk = false;
   try {
-    _hkSupaData = null; // force fresh fetch
+    _hkSupaData = null;
     await hkLoadFromSupabase();
+    fetchOk = true;
+  } catch (e) {
+    console.error('[sync] fetch failed:', e);
+  }
 
-    // Re-render current page
+  // Re-render with whatever data is now available (localStorage always works)
+  try {
     switch (currentPage) {
       case 'dashboard':
         renderVitalsToCards();
         renderBwDashStrip();
         renderPhysiqueDashStrip();
-        if (_supa && _supaUser) renderRealCharts();
+        if (_supa && _supaUser) setTimeout(() => renderRealCharts(), 50);
         break;
-      case 'report':    renderCoachReport();    break;
-      case 'wellness':  renderWellnessPage();   break;
-      case 'bloodwork': renderBloodworkPage();  break;
-      case 'physique':  renderPhysiquePage();   break;
-      case 'workouts':  hevyAutoSync();         break;
-      case 'compliance': renderCompliancePage(); break;
+      case 'report':     renderCoachReport();     break;
+      case 'wellness':   renderWellnessPage();    break;
+      case 'bloodwork':  renderBloodworkPage();   break;
+      case 'physique':   renderPhysiquePage();    break;
+      case 'workouts':   hevyAutoSync();          break;
+      case 'compliance': renderCompliancePage();  break;
     }
+  } catch (e) {
+    console.error('[sync] render failed:', e);
+  }
 
+  btn.disabled = false;
+  if (icon) icon.style.animation = '';
+  if (lbl)  lbl.textContent = 'Sync';
+
+  if (fetchOk) {
     _lastSyncTs = new Date();
     const timeStr = _lastSyncTs.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     btn.title = `Last synced ${timeStr}`;
     showToast(`Synced · ${timeStr}`, 'success');
-  } catch (e) {
-    console.error('[sync] failed:', e);
-    showToast('Sync failed — check connection', 'error');
-  } finally {
-    btn.disabled = false;
-    if (icon) icon.style.animation = '';
-    if (lbl)  lbl.textContent = 'Sync';
+  } else {
+    showToast('Could not reach server — showing cached data', 'warn');
   }
 }
 
