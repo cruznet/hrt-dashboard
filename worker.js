@@ -117,7 +117,14 @@ function parseCsv(text) {
 
     // "2026-06-17 00:00:00 +0000" → "2026-06-17"
     const date = dateStr.split(' ')[0];
-    const row  = { date };
+    // All rows must have identical keys for Supabase batch upsert — use null for missing values
+    const row  = {
+      date,
+      weight_lbs: null, body_fat_pct: null, lean_mass_lbs: null,
+      hrv_ms: null, resting_hr: null, hr_min: null, hr_avg: null, hr_max: null,
+      sleep_total_hr: null, sleep_deep_hr: null, sleep_rem_hr: null,
+      steps: null, active_energy_kcal: null, exercise_min: null,
+    };
 
     for (const [csvCol, [dbCol, type]] of Object.entries(CSV_COL)) {
       const v = raw[csvCol];
@@ -169,7 +176,13 @@ function parseHAEJson(body) {
     for (const d of (metric.data ?? [])) {
       const date = (d.date || '').split(' ')[0];
       if (!date) continue;
-      if (!byDate[date]) byDate[date] = { date };
+      if (!byDate[date]) byDate[date] = {
+        date,
+        weight_lbs: null, body_fat_pct: null, lean_mass_lbs: null,
+        hrv_ms: null, resting_hr: null, hr_min: null, hr_avg: null, hr_max: null,
+        sleep_total_hr: null, sleep_deep_hr: null, sleep_rem_hr: null,
+        steps: null, active_energy_kcal: null, exercise_min: null,
+      };
       const mapped = mapper(d);
       for (const [k, v] of Object.entries(mapped)) {
         if (v != null) byDate[date][k] = v;
