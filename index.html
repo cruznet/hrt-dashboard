@@ -1617,6 +1617,71 @@ body {
       <!-- TODAY section -->
       <div class="dash-section-label">Today</div>
 
+      <!-- Dose Schedule + Active Protocol + Cycle Progress — primary daily interaction, shown first -->
+      <div class="grid-dash-main" style="margin-bottom:14px;">
+
+        <!-- Left: Today's dose checklist — the #1 daily interaction -->
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <div class="card-title" style="margin-bottom:0;">Dose Schedule</div>
+            <div id="dose-streak-badge"></div>
+          </div>
+          <div id="dose-schedule-content" style="line-height:1.9;"></div>
+        </div>
+
+        <!-- Right: Protocol + Cycle, stacked -->
+        <div style="display:flex;flex-direction:column;gap:12px;">
+
+          <div class="card">
+            <div class="card-title">Active Protocol</div>
+            <div id="protocol-display">
+              <div style="color:var(--text-muted);font-size:13px;">No active protocol. <a href="#" onclick="nav('builder');return false;" style="color:var(--primary-bright);">Build one →</a></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--primary-bright)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <div class="card-title" style="margin-bottom:0;">Cycle Progress</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:18px;margin-bottom:12px;">
+              <!-- Progress ring 96px, r=40, circumference=251.3 -->
+              <svg width="96" height="96" viewBox="0 0 96 96" style="flex-shrink:0;">
+                <defs>
+                  <linearGradient id="ring-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#F5C518"/>
+                    <stop offset="100%" stop-color="#FDE68A"/>
+                  </linearGradient>
+                </defs>
+                <circle cx="48" cy="48" r="40" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="6"/>
+                <circle id="cycle-ring-arc" cx="48" cy="48" r="40" fill="none"
+                        stroke="url(#ring-grad)" stroke-width="6" stroke-linecap="round"
+                        stroke-dasharray="251.3" stroke-dashoffset="251.3"
+                        transform="rotate(-90 48 48)"
+                        style="transition:stroke-dashoffset 0.9s cubic-bezier(0.4,0,0.2,1);"/>
+                <text id="cycle-ring-pct" x="48" y="53" text-anchor="middle"
+                      fill="#F5C518" font-size="16" font-family="'JetBrains Mono',monospace" font-weight="700">—</text>
+              </svg>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:14px;font-weight:600;color:var(--text-primary);" id="cycle-label">—</div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;margin-bottom:5px;">
+                  <span style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;">Steady State</span>
+                  <span style="font-size:12px;font-family:var(--font-data);color:var(--primary);" id="ss-label">—</span>
+                </div>
+                <div class="progress-wrap">
+                  <div class="progress-bar" id="ss-bar" style="width:0%;background:var(--primary);"></div>
+                </div>
+              </div>
+            </div>
+            <div id="cycle-week-strip" style="overflow-x:auto;margin-bottom:8px;display:none;"></div>
+            <span id="cycle-pct" style="display:none;"></span>
+            <div style="display:none;"><div class="progress-bar" id="cycle-bar"></div></div>
+            <div id="cycle-active-compounds" style="display:none;"></div>
+          </div>
+
+        </div>
+      </div>
+
       <!-- Readiness + Streak side-by-side -->
       <div class="dash-row-2">
         <div id="daily-readiness-card"></div>
@@ -1726,74 +1791,6 @@ body {
       <div id="bw-dash-strip" style="display:none;margin-bottom:8px;cursor:pointer;" onclick="nav('bloodwork')"></div>
       <!-- Latest Physique strip -->
       <div id="ph-dash-strip" style="display:none;margin-bottom:12px;cursor:pointer;" onclick="nav('physique')"></div>
-
-      <!-- PROTOCOL section -->
-      <div class="dash-section-label">Protocol</div>
-
-      <!-- ROW 2: Daily doses (left, primary action) + Protocol context (right) -->
-      <div class="grid-dash-main" style="margin-bottom:14px;">
-
-        <!-- Left: Today's dose checklist — the #1 daily interaction -->
-        <div class="card">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-            <div class="card-title" style="margin-bottom:0;">Dose Schedule</div>
-            <div id="dose-streak-badge"></div>
-          </div>
-          <div id="dose-schedule-content" style="line-height:1.9;"></div>
-        </div>
-
-        <!-- Right: Protocol + Cycle, stacked -->
-        <div style="display:flex;flex-direction:column;gap:12px;">
-
-          <div class="card">
-            <div class="card-title">Active Protocol</div>
-            <div id="protocol-display">
-              <div style="color:var(--text-muted);font-size:13px;">No active protocol. <a href="#" onclick="nav('builder');return false;" style="color:var(--primary-bright);">Build one →</a></div>
-            </div>
-          </div>
-
-          <div class="card">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--primary-bright)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-              <div class="card-title" style="margin-bottom:0;">Cycle Progress</div>
-            </div>
-            <div style="display:flex;align-items:center;gap:18px;margin-bottom:12px;">
-              <!-- Progress ring 96px, r=40, circumference=251.3 -->
-              <svg width="96" height="96" viewBox="0 0 96 96" style="flex-shrink:0;">
-                <defs>
-                  <linearGradient id="ring-grad" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stop-color="#F5C518"/>
-                    <stop offset="100%" stop-color="#FDE68A"/>
-                  </linearGradient>
-                </defs>
-                <circle cx="48" cy="48" r="40" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="6"/>
-                <circle id="cycle-ring-arc" cx="48" cy="48" r="40" fill="none"
-                        stroke="url(#ring-grad)" stroke-width="6" stroke-linecap="round"
-                        stroke-dasharray="251.3" stroke-dashoffset="251.3"
-                        transform="rotate(-90 48 48)"
-                        style="transition:stroke-dashoffset 0.9s cubic-bezier(0.4,0,0.2,1);"/>
-                <text id="cycle-ring-pct" x="48" y="53" text-anchor="middle"
-                      fill="#F5C518" font-size="16" font-family="'JetBrains Mono',monospace" font-weight="700">—</text>
-              </svg>
-              <div style="flex:1;min-width:0;">
-                <div style="font-size:14px;font-weight:600;color:var(--text-primary);" id="cycle-label">—</div>
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;margin-bottom:5px;">
-                  <span style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;">Steady State</span>
-                  <span style="font-size:12px;font-family:var(--font-data);color:var(--primary);" id="ss-label">—</span>
-                </div>
-                <div class="progress-wrap">
-                  <div class="progress-bar" id="ss-bar" style="width:0%;background:var(--primary);"></div>
-                </div>
-              </div>
-            </div>
-            <div id="cycle-week-strip" style="overflow-x:auto;margin-bottom:8px;display:none;"></div>
-            <span id="cycle-pct" style="display:none;"></span>
-            <div style="display:none;"><div class="progress-bar" id="cycle-bar"></div></div>
-            <div id="cycle-active-compounds" style="display:none;"></div>
-          </div>
-
-        </div>
-      </div>
 
       <!-- Compliance heatmap -->
       <div class="card" id="compliance-heatmap-card" style="margin-bottom:14px;display:none;">
@@ -4079,6 +4076,44 @@ function getBestWeight() {
 function renderVitalsToCards() {
   const logs = lsGet('hrt_vitals_log', []);
   const protocol = lsGet('hrt_active_protocol_data', null);
+
+  // Collapse 8 empty cards into a single nudge when there's no data of any kind
+  const hasHk = (_hkSupaData || _hkData || []).length > 0;
+  const grid = document.getElementById('metrics-grid');
+  if (!logs.length && !hasHk) {
+    if (grid) grid.outerHTML = `<div id="metrics-grid-prompt" style="margin-bottom:14px;">
+      <div class="card" style="display:flex;align-items:center;justify-content:space-between;padding:16px 18px;cursor:pointer;" onclick="nav('vitals')">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="width:36px;height:36px;border-radius:50%;background:var(--primary-dim);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <i class="ti ti-activity-heartbeat" style="font-size:16px;color:var(--primary-bright);"></i>
+          </div>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:2px;">No health metrics yet</div>
+            <div style="font-size:12px;color:var(--text-muted);">Log today's vitals to track BP, glucose, mood, energy & more →</div>
+          </div>
+        </div>
+        <i class="ti ti-chevron-right" style="font-size:14px;color:var(--text-muted);flex-shrink:0;"></i>
+      </div>
+    </div>`;
+    renderMoodEnergyCharts();
+    return;
+  }
+
+  // Restore the full metrics grid if data has arrived but we previously collapsed it
+  const promptEl = document.getElementById('metrics-grid-prompt');
+  if (promptEl) {
+    promptEl.outerHTML = `<div class="metrics-grid" id="metrics-grid">
+      <div class="metric-card" id="m-bp"><div class="metric-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#F87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div><div class="metric-label">Blood Pressure</div><div class="metric-value" id="m-bp">—</div><div class="metric-unit">mmHg</div><span class="metric-badge badge-muted" id="m-bp-badge">No data</span><div class="metric-delta" id="m-bp-delta"></div></div>
+      <div class="metric-card" id="m-glucose"><div class="metric-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#FB923C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/></svg></div><div class="metric-label">Glucose</div><div class="metric-value" id="m-glucose">—</div><div class="metric-unit">mg/dL</div><span class="metric-badge badge-muted" id="m-glucose-badge">No data</span><div class="metric-delta" id="m-glucose-delta"></div></div>
+      <div class="metric-card" id="m-mood"><div class="metric-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#A78BFA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 13s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></div><div class="metric-label">Mood</div><div class="metric-value" id="m-mood">—</div><div class="metric-unit">/10</div><span class="metric-badge badge-muted" id="m-mood-badge">No data</span><div class="metric-delta" id="m-mood-delta"></div></div>
+      <div class="metric-card" id="m-energy"><div class="metric-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#FCD34D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div><div class="metric-label">Energy</div><div class="metric-value" id="m-energy">—</div><div class="metric-unit">/10</div><span class="metric-badge badge-muted" id="m-energy-badge">No data</span><div class="metric-delta" id="m-energy-delta"></div></div>
+      <div class="metric-card" id="m-hrv"><div class="metric-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#34D399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div><div class="metric-label">HRV</div><div class="metric-value" id="m-hrv">—</div><div class="metric-unit">ms</div><span class="metric-badge badge-muted" id="m-hrv-badge">No data</span><div class="metric-delta" id="m-hrv-delta"></div></div>
+      <div class="metric-card" id="m-resting-hr"><div class="metric-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#F87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div><div class="metric-label">Resting HR</div><div class="metric-value" id="m-resting-hr">—</div><div class="metric-unit">bpm</div><span class="metric-badge badge-muted" id="m-resting-hr-badge">No data</span><div class="metric-delta" id="m-resting-hr-delta"></div></div>
+      <div class="metric-card" id="m-sleep"><div class="metric-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#60A5FA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></div><div class="metric-label">Sleep</div><div class="metric-value" id="m-sleep">—</div><div class="metric-unit">hrs</div><span class="metric-badge badge-muted" id="m-sleep-badge">No data</span><div class="metric-delta" id="m-sleep-delta"></div></div>
+      <div class="metric-card" id="m-spo2"><div class="metric-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#22D3EE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></svg></div><div class="metric-label">SpO₂</div><div class="metric-value" id="m-spo2">—</div><div class="metric-unit">%</div><span class="metric-badge badge-muted" id="m-spo2-badge">No data</span><div class="metric-delta" id="m-spo2-delta"></div></div>
+    </div>`;
+  }
+
   // logs are sorted newest-first
   if (!logs.length) {
     ['m-bp','m-glucose','m-mood','m-energy'].forEach(id =>
@@ -4324,13 +4359,14 @@ function countUp(el, target, decimals = 0, duration = 650, useLocale = false) {
   requestAnimationFrame(tick);
 }
 
-function showToast(msg, type = 'success', duration = 3500) {
+function showToast(msg, type = 'success', duration = 3500, allowHtml = false) {
   const c = document.getElementById('toast-container');
   if (!c) return;
   const icons = { success: 'ti-circle-check', error: 'ti-alert-circle', warn: 'ti-alert-triangle', info: 'ti-info-circle' };
   const t = document.createElement('div');
   t.className = `toast toast-${type}`;
-  t.innerHTML = `<i class="ti ${icons[type] || 'ti-info-circle'} toast-icon"></i><span>${String(msg).replace(/</g,'&lt;').replace(/>/g,'&gt;')}</span>`;
+  const safeMsg = allowHtml ? msg : String(msg).replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  t.innerHTML = `<i class="ti ${icons[type] || 'ti-info-circle'} toast-icon"></i><span>${safeMsg}</span>`;
   c.appendChild(t);
   const rm = () => { t.classList.add('toast-exit'); setTimeout(() => t.remove(), 200); };
   const tid = setTimeout(rm, duration);
@@ -9793,7 +9829,7 @@ function renderReadinessCard() {
   const compScore  = compliancePct;
 
   const scores = [hrvScore, sleepScore, wellScore, compScore].filter(v => v != null);
-  if (!scores.length) { el.innerHTML = ''; return; }
+  if (scores.length < 2) { el.innerHTML = ''; return; }
 
   const overall = Math.round(scores.reduce((a,b)=>a+b,0) / scores.length);
   const grade   = overall >= 90 ? 'A' : overall >= 75 ? 'B' : overall >= 60 ? 'C' : 'D';
@@ -10573,7 +10609,12 @@ async function checkDose(compound_name, dose, unit, date) {
   const entry = { label: compound_name, date, ts: new Date().toISOString(), id: null };
   taken.push(entry);
   localStorage.setItem('hrt_doses_taken', JSON.stringify(taken));
-  showToast(`${compound_name} ${dose}${unit} logged`, 'success', 2500);
+  const hasVitals = lsGet('hrt_vitals_log', []).length > 0 || (_hkSupaData || _hkData || []).length > 0;
+  if (!hasVitals) {
+    showToast(`${compound_name} ${dose}${unit} logged ✓ &mdash; <a href="#" onclick="nav('vitals');return false;" style="color:var(--primary-bright);text-decoration:underline;font-weight:600;">log your vitals while you're here →</a>`, 'success', 6000, true);
+  } else {
+    showToast(`${compound_name} ${dose}${unit} logged`, 'success', 2500);
+  }
   renderDoseSchedule();
   trackFirstLogIfNeeded('dose');
   if (_supa && _supaUser) {
