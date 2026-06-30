@@ -268,6 +268,13 @@ label.dose-row { display: flex; align-items: center; gap: 10px; cursor: pointer;
 label.dose-row:hover { background: rgba(255,255,255,0.03); }
 label.dose-row.dose-done { opacity: 0.55; }
 label.dose-row.dose-done .dose-name { text-decoration: line-through; }
+@keyframes dosePulse {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(0.96); }
+  70%  { transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
+.dose-pulse { animation: dosePulse 0.28s ease; }
 .metric-label { font-size: 12px; color: var(--text-label); letter-spacing: 0; text-transform: none; margin-bottom: 5px; font-weight: 500; }
 .metric-value { font-size: 28px; font-family: var(--font-data); font-weight: 500; color: var(--text-primary); line-height: 1.1; letter-spacing: -0.5px; }
 .metric-unit  { font-size: 12px; margin-top: 4px; font-family: var(--font-data); font-weight: 500; }
@@ -1029,22 +1036,31 @@ body {
 
           <div class="card">
             <div class="card-title">Cycle Progress</div>
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-              <span style="font-size:13px;color:var(--text-secondary);" id="cycle-label">—</span>
-              <span style="font-size:13px;font-family:var(--font-data);color:var(--primary-bright);" id="cycle-pct">—</span>
+            <div style="display:flex;align-items:center;gap:16px;margin-bottom:10px;">
+              <svg width="76" height="76" viewBox="0 0 76 76" style="flex-shrink:0;">
+                <circle cx="38" cy="38" r="32" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="5"/>
+                <circle id="cycle-ring-arc" cx="38" cy="38" r="32" fill="none"
+                        stroke="var(--primary-bright)" stroke-width="5" stroke-linecap="round"
+                        stroke-dasharray="201.1" stroke-dashoffset="201.1"
+                        transform="rotate(-90 38 38)"
+                        style="transition:stroke-dashoffset 0.8s ease;"/>
+                <text id="cycle-ring-pct" x="38" y="43" text-anchor="middle"
+                      fill="var(--primary-bright)" font-size="13" font-family="'JetBrains Mono',monospace" font-weight="600">—</text>
+              </svg>
+              <div>
+                <div style="font-size:13px;color:var(--text-secondary);" id="cycle-label">—</div>
+              </div>
             </div>
-            <div class="progress-wrap">
-              <div class="progress-bar" id="cycle-bar" style="width:0%;background:var(--primary-bright);"></div>
-            </div>
-            <div id="cycle-week-strip" style="overflow-x:auto;margin:8px 0;display:none;"></div>
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;margin-bottom:6px;">
+            <div id="cycle-week-strip" style="overflow-x:auto;margin-bottom:8px;display:none;"></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;margin-bottom:6px;">
               <span style="font-size:13px;color:var(--text-muted);">Steady State</span>
-              <span style="font-size:13px;font-family:var(--font-data);color:var(--primary-bright);" id="ss-label">—</span>
+              <span style="font-size:13px;font-family:var(--font-data);color:var(--primary);" id="ss-label">—</span>
             </div>
             <div class="progress-wrap">
               <div class="progress-bar" id="ss-bar" style="width:0%;background:var(--primary);"></div>
             </div>
-            <!-- cycle-active-compounds hidden: dose schedule above is the canonical view -->
+            <span id="cycle-pct" style="display:none;"></span>
+            <div style="display:none;"><div class="progress-bar" id="cycle-bar"></div></div>
             <div id="cycle-active-compounds" style="display:none;"></div>
           </div>
 
@@ -2788,9 +2804,32 @@ function calcLogStreak(logs) {
   return streak;
 }
 
+function countUp(el, target, decimals = 0, duration = 650, useLocale = false) {
+  const startTime = performance.now();
+  function tick(now) {
+    const t    = Math.min(1, (now - startTime) / duration);
+    const ease = 1 - Math.pow(1 - t, 3);
+    const val  = target * ease;
+    el.textContent = useLocale
+      ? Math.round(val).toLocaleString()
+      : decimals > 0 ? val.toFixed(decimals) : Math.round(val).toString();
+    if (t < 1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+
 function updateMetricCard(id, value, badge, badgeClass) {
   const el = document.getElementById(id);
-  if (el) el.textContent = value;
+  if (el) {
+    const num = parseFloat(value);
+    if (!isNaN(num) && /^\d[\d.]*$/.test(String(value))) {
+      const dec = String(value).includes('.') ? String(value).split('.')[1].length : 0;
+      el.textContent = String(value);
+      countUp(el, num, dec);
+    } else {
+      el.textContent = value;
+    }
+  }
   const badgeEl = document.getElementById(id + '-badge');
   if (badgeEl) { badgeEl.textContent = badge; badgeEl.className = 'metric-badge ' + badgeClass; }
 }
@@ -3088,6 +3127,10 @@ function renderCycleProgress(rawProtocol) {
     if (bar) bar.style.width = '0%';
     if (ssBar) ssBar.style.width = '0%';
     if (ssLbl) ssLbl.textContent = '—';
+    const ringArc0 = document.getElementById('cycle-ring-arc');
+    const ringPct0 = document.getElementById('cycle-ring-pct');
+    if (ringArc0) ringArc0.style.strokeDashoffset = 201.1;
+    if (ringPct0) ringPct0.textContent = '—';
     const weekStripEl = document.getElementById('cycle-week-strip');
     if (weekStripEl) weekStripEl.style.display = 'none';
     return;
@@ -3104,6 +3147,10 @@ function renderCycleProgress(rawProtocol) {
     if (bar) { bar.style.width = '0%'; }
     if (ssBar) { ssBar.style.width = '0%'; }
     if (ssLbl) { ssLbl.textContent = '—'; }
+    const ringArc1 = document.getElementById('cycle-ring-arc');
+    const ringPct1 = document.getElementById('cycle-ring-pct');
+    if (ringArc1) ringArc1.style.strokeDashoffset = 201.1;
+    if (ringPct1) ringPct1.textContent = '—';
     const weekStripEl = document.getElementById('cycle-week-strip');
     if (weekStripEl) weekStripEl.style.display = 'none';
     return;
@@ -3117,6 +3164,10 @@ function renderCycleProgress(rawProtocol) {
   label.textContent = totalWeeks > 0 ? `Week ${currentWeek} of ${totalWeeks}` : `Week ${currentWeek}`;
   pct.textContent   = totalWeeks > 0 ? `${progressPct}%` : '—';
   if (bar) bar.style.width = `${progressPct}%`;
+  const ringArc = document.getElementById('cycle-ring-arc');
+  const ringPctEl = document.getElementById('cycle-ring-pct');
+  if (ringArc) ringArc.style.strokeDashoffset = (2 * Math.PI * 32) * (1 - progressPct / 100);
+  if (ringPctEl) ringPctEl.textContent = totalWeeks > 0 ? `${progressPct}%` : '—';
 
   const weekStripEl = document.getElementById('cycle-week-strip');
   if (weekStripEl) {
@@ -3265,7 +3316,7 @@ function renderDoseSchedule() {
       const rowStyle  = isChecked ? 'text-decoration:line-through;opacity:0.6;' : '';
       const safeName  = c.name.replace(/'/g, "\\'");
       const safeUnit  = (c.unit || '').replace(/'/g, "\\'");
-      html += `<label class="dose-row${isChecked ? ' dose-done' : ''}"><input type="checkbox" class="dose-cb-styled" ${isChecked ? 'checked' : ''} onchange="this.closest('label').classList.toggle('dose-done',this.checked);this.checked?checkDose('${safeName}',${c.dose ?? 0},'${safeUnit}','${todayStr}'):uncheckDose('${safeName}','${todayStr}')"><span class="dose-name" style="flex:1;font-size:13px;">${escHtml(trunc(c.name))}</span><span style="color:var(--text-muted);font-family:var(--font-data);font-size:12px;white-space:nowrap;">${escHtml(String(c.dose ?? ''))}${escHtml(c.unit)}</span></label>`;
+      html += `<label class="dose-row${isChecked ? ' dose-done' : ''}"><input type="checkbox" class="dose-cb-styled" ${isChecked ? 'checked' : ''} onchange="const _l=this.closest('label');_l.classList.toggle('dose-done',this.checked);_l.classList.add('dose-pulse');setTimeout(()=>_l.classList.remove('dose-pulse'),300);this.checked?checkDose('${safeName}',${c.dose ?? 0},'${safeUnit}','${todayStr}'):uncheckDose('${safeName}','${todayStr}')"><span class="dose-name" style="flex:1;font-size:13px;">${escHtml(trunc(c.name))}</span><span style="color:var(--text-muted);font-family:var(--font-data);font-size:12px;white-space:nowrap;">${escHtml(String(c.dose ?? ''))}${escHtml(c.unit)}</span></label>`;
     }
   }
 
@@ -4912,8 +4963,12 @@ function hkRenderKpis(container, latest, all) {
   const avg = (arr, col) => { const v = arr.map(r => hkVal(r, col)).filter(x => x !== null); return v.length ? v.reduce((a,b)=>a+b,0)/v.length : null; };
 
   container.innerHTML = kpis.map(k => {
-    const val = hkVal(latest, k.col);
-    const disp = val !== null ? (k.unit === 'steps' ? val.toLocaleString() : val.toFixed(k.unit === '%' || k.unit === 'hr' ? 1 : 0)) : '—';
+    const val  = hkVal(latest, k.col);
+    const dec  = (k.unit === '%' || k.unit === 'hr') ? 1 : 0;
+    const disp = val !== null ? (k.unit === 'steps' ? val.toLocaleString() : val.toFixed(dec)) : '—';
+    const countAttr = val !== null
+      ? ` data-countup="${val}" data-dec="${dec}"${k.unit === 'steps' ? ' data-locale="1"' : ''}`
+      : '';
     const a7 = avg(recent7, k.col);
     const p7 = avg(prev7,   k.col);
     let delta = '';
@@ -4925,11 +4980,14 @@ function hkRenderKpis(container, latest, all) {
     }
     return `<div class="card" style="padding:12px 14px;">
       <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">${escHtml(k.label)}</div>
-      <div style="font-size:22px;font-family:var(--font-data);font-weight:600;color:${k.color};">${disp}</div>
+      <div style="font-size:22px;font-family:var(--font-data);font-weight:600;color:${k.color};"${countAttr}>${disp}</div>
       <div style="font-size:11px;color:var(--text-muted);">${k.unit}</div>
       ${delta}
     </div>`;
   }).join('');
+  container.querySelectorAll('[data-countup]').forEach(el => {
+    countUp(el, parseFloat(el.dataset.countup), parseInt(el.dataset.dec || '0'), 700, el.dataset.locale === '1');
+  });
 }
 
 function hkRenderCharts(container, rows) {
