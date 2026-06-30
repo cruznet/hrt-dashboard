@@ -2193,41 +2193,36 @@ body {
       Quick Log Entry
       <span class="modal-close" onclick="closeModal('log-modal')"><i class="ti ti-x"></i></span>
     </div>
-    <div style="font-size:13px;color:var(--text-muted);margin-bottom:14px;">For a full entry with all fields, use the <a href="#" onclick="closeModal('log-modal');nav('log');return false;" style="color:var(--primary-bright);">Log Entry page</a>.</div>
     <div class="form-row">
       <div class="form-group">
         <label class="form-label">Date</label>
         <input type="date" class="form-input" id="modal-date">
       </div>
       <div class="form-group">
-        <label class="form-label">Weight (lbs)</label>
-        <input type="number" class="form-input" id="modal-weight" placeholder="212.4" step="0.1">
+        <label class="form-label">Blood Pressure</label>
+        <input type="text" class="form-input" id="modal-bp" placeholder="134/82">
       </div>
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label class="form-label">BP</label>
-        <input type="text" class="form-input" id="modal-bp" placeholder="134/82">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Glucose</label>
+        <label class="form-label">Glucose (mg/dL)</label>
         <input type="number" class="form-input" id="modal-glucose" placeholder="94">
       </div>
+      <div class="form-group"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Mood — <span id="modal-mood-val" style="color:var(--primary-bright);font-family:var(--font-data);">7</span>/10</label>
+        <input type="range" min="1" max="10" value="7" class="form-input" id="modal-mood" style="padding:8px 0;">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Energy — <span id="modal-energy-val" style="color:var(--primary-bright);font-family:var(--font-data);">7</span>/10</label>
+        <input type="range" min="1" max="10" value="7" class="form-input" id="modal-energy" style="padding:8px 0;">
+      </div>
     </div>
     <div class="form-group">
-      <label class="form-label">Compound injected today</label>
-      <select class="form-select" id="modal-compound">
-        <option value="">None / rest day</option>
-        <option>Testosterone Cypionate</option>
-        <option>Testosterone Enanthate</option>
-        <option>Primobolan</option>
-        <option>Growth Hormone</option>
-        <option>Other</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Dose (mg/IU)</label>
-      <input type="number" class="form-input" id="modal-dose" placeholder="100">
+      <label class="form-label">Notes</label>
+      <textarea class="form-input" id="modal-notes" rows="2" placeholder="Side effects, observations…" style="resize:vertical;"></textarea>
     </div>
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:6px;">
       <button class="btn-secondary" onclick="closeModal('log-modal')">Cancel</button>
@@ -3539,6 +3534,8 @@ const _labDateEl = document.getElementById('lab-date');
 if (_labDateEl) _labDateEl.value = _today;
 document.getElementById('log-mood').addEventListener('input', function() { document.getElementById('log-mood-val').textContent = this.value; });
 document.getElementById('log-energy').addEventListener('input', function() { document.getElementById('log-energy-val').textContent = this.value; });
+document.getElementById('modal-mood').addEventListener('input', function() { document.getElementById('modal-mood-val').textContent = this.value; });
+document.getElementById('modal-energy').addEventListener('input', function() { document.getElementById('modal-energy-val').textContent = this.value; });
 
 function addCompoundRow() {
   const row = document.querySelector('.log-compound-row').cloneNode(true);
@@ -6254,47 +6251,48 @@ function resetLogForm() {
 }
 
 function submitQuickLog() {
-  const date     = document.getElementById('modal-date').value;
-  const weight   = document.getElementById('modal-weight').value;
-  const bp       = document.getElementById('modal-bp').value;
-  const glucose  = document.getElementById('modal-glucose').value;
-  const compound = document.getElementById('modal-compound').value;
-  const dose     = document.getElementById('modal-dose').value;
+  const date   = document.getElementById('modal-date').value;
+  const bp     = document.getElementById('modal-bp').value.trim();
+  const glucose = document.getElementById('modal-glucose').value;
+  const mood   = document.getElementById('modal-mood').value;
+  const energy = document.getElementById('modal-energy').value;
+  const notes  = document.getElementById('modal-notes').value.trim();
 
   if (!date) { closeModal('log-modal'); return; }
 
-  // Save vitals to localStorage (same store as Log Entry page)
-  if (weight || bp || glucose) {
-    const logs = lsGet('hrt_vitals_log', []);
-    const existing = logs.findIndex(l => l.date === date);
-    const entry = existing >= 0 ? { ...logs[existing] } : { date };
-    if (weight)  entry.weight  = weight;
-    if (bp)      entry.bp      = bp;
-    if (glucose) entry.glucose = glucose;
-    if (compound && dose) entry.notes = (entry.notes ? entry.notes + ' · ' : '') + `${compound} ${dose}mg`;
-    if (existing >= 0) logs[existing] = entry; else logs.unshift(entry);
-    logs.sort((a,b) => b.date.localeCompare(a.date));
-    localStorage.setItem('hrt_vitals_log', JSON.stringify(logs));
+  // Merge into vitals log (same store as Log Entry page)
+  const logs  = lsGet('hrt_vitals_log', []);
+  const idx   = logs.findIndex(l => l.date === date);
+  const entry = idx >= 0 ? { ...logs[idx] } : { date };
+  if (bp)      entry.bp      = bp;
+  if (glucose) entry.glucose = glucose;
+  entry.mood   = mood;
+  entry.energy = energy;
+  if (notes)   entry.notes   = notes;
+  if (idx >= 0) logs[idx] = entry; else logs.unshift(entry);
+  logs.sort((a, b) => b.date.localeCompare(a.date));
+  localStorage.setItem('hrt_vitals_log', JSON.stringify(logs));
 
-    // Update dashboard metric cards immediately
-    if (weight) updateMetricCard('m-weight', parseFloat(weight).toFixed(1), 'lbs', 'badge-muted');
-    if (bp) {
-      const sys = parseInt(bp.split('/')[0]);
-      updateMetricCard('m-bp', bp, sys > 140 ? 'High' : sys > 130 ? 'Elevated' : 'Normal', sys > 140 ? 'badge-red' : sys > 130 ? 'badge-amber' : 'badge-green');
-    }
-    if (glucose) {
-      const g = parseFloat(glucose);
-      updateMetricCard('m-glucose', g, g > 125 ? 'High' : g > 100 ? 'Pre-diabetic' : 'Normal', g > 125 ? 'badge-red' : g > 100 ? 'badge-amber' : 'badge-green');
-    }
+  // Refresh dashboard cards
+  if (bp) {
+    const sys = parseInt(bp.split('/')[0]);
+    updateMetricCard('m-bp', bp, sys > 140 ? 'High' : sys > 130 ? 'Elevated' : 'Normal', sys > 140 ? 'badge-red' : sys > 130 ? 'badge-amber' : 'badge-green');
   }
+  if (glucose) {
+    const g = parseFloat(glucose);
+    updateMetricCard('m-glucose', g, g > 125 ? 'High' : g > 100 ? 'Pre-diabetic' : 'Normal', g > 125 ? 'badge-red' : g > 100 ? 'badge-amber' : 'badge-green');
+  }
+  const e = parseInt(energy);
+  updateMetricCard('m-energy', e, e >= 8 ? 'High' : e >= 5 ? 'Moderate' : 'Low', e >= 8 ? 'badge-green' : e >= 5 ? 'badge-amber' : 'badge-red');
 
-  // Clear modal fields for next use
-  document.getElementById('modal-weight').value  = '';
-  document.getElementById('modal-bp').value      = '';
+  // Reset fields for next use
+  document.getElementById('modal-bp').value     = '';
   document.getElementById('modal-glucose').value = '';
-  document.getElementById('modal-compound').value = '';
-  document.getElementById('modal-dose').value    = '';
+  document.getElementById('modal-mood').value   = 7; document.getElementById('modal-mood-val').textContent   = '7';
+  document.getElementById('modal-energy').value = 7; document.getElementById('modal-energy-val').textContent = '7';
+  document.getElementById('modal-notes').value  = '';
 
+  showToast('Entry saved', 'success');
   closeModal('log-modal');
 }
 
