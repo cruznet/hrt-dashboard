@@ -1400,6 +1400,9 @@ body {
 
         <div id="bw-last-info" style="font-size:13px;color:var(--text-muted);margin-bottom:14px;"></div>
 
+        <!-- Intelligence summary card -->
+        <div id="bw-intelligence" style="margin-bottom:14px;"></div>
+
         <!-- Key KPI cards -->
         <div class="metrics-grid" id="bw-kpi-row" style="margin-bottom:14px;"></div>
 
@@ -4114,10 +4117,127 @@ function renderBloodworkPage() {
       ${countdownHtml}
     </div>`;
 
+  bwRenderIntelligence(latest, panels[1]);
   bwRenderKpiCards(latest, panels[1]);
   bwRenderPanelSelect(panels);
   bwRenderPanel();
   bwRenderHistory(panels);
+}
+
+// ── Phase 1.3: Bloodwork Intelligence ──
+
+function bwTrendColor(key, val, prevVal) {
+  if (prevVal == null || val == null) return 'var(--text-muted)';
+  const cur  = bwRangeStatus(key, val);
+  const prev = bwRangeStatus(key, prevVal);
+  if (cur !== 'ok' && prev === 'ok') return '#F87171';  // went out of range
+  if (cur === 'ok' && prev !== 'ok') return '#4ADE80';  // came back into range
+  if (cur !== 'ok') {
+    const m = BW_MARKERS[key];
+    const diff = val - prevVal;
+    const better = m.higherBetter ? diff > 0 : cur === 'high' ? diff < 0 : diff > 0;
+    return better ? '#F5C518' : '#F87171';
+  }
+  return 'var(--text-muted)';
+}
+
+function bwRangeBarHtml(key, value) {
+  const m = BW_MARKERS[key];
+  if (!m) return '';
+  const v = parseFloat(value);
+  if (isNaN(v)) return '';
+
+  const status = bwRangeStatus(key, value);
+  const hiCap  = m.hi >= 9000 ? Math.max(v * 1.3, m.lo * 2) : m.hi;
+  const loEff  = Math.max(0, m.lo);
+  const span   = hiCap - loEff;
+  if (span <= 0) return '';
+
+  const cushion   = span * 0.25;
+  const trackMin  = Math.max(0, loEff - cushion);
+  const trackMax  = hiCap + cushion;
+  const totalSpan = trackMax - trackMin;
+  if (totalSpan <= 0) return '';
+
+  const vClamped = Math.max(trackMin + totalSpan * 0.01, Math.min(trackMax - totalSpan * 0.01, v));
+  const vPct     = ((vClamped - trackMin) / totalSpan) * 100;
+  const loPct    = ((loEff   - trackMin) / totalSpan) * 100;
+  const hiPct    = ((hiCap   - trackMin) / totalSpan) * 100;
+
+  const cautionBand = span * 0.12;
+  const isCaution = status === 'ok' && (
+    (!m.higherBetter && (v <= loEff + cautionBand || (m.hi < 9000 && v >= m.hi - cautionBand))) ||
+    (m.higherBetter && v <= loEff + cautionBand)
+  );
+  const dotColor = status !== 'ok' ? '#F87171' : isCaution ? '#F5C518' : '#4ADE80';
+
+  return `<div style="position:relative;height:4px;background:rgba(255,255,255,0.06);border-radius:99px;margin:6px 0 2px;">
+    <div style="position:absolute;left:${loPct.toFixed(1)}%;width:${(hiPct-loPct).toFixed(1)}%;height:100%;background:rgba(74,222,128,0.18);border-radius:2px;"></div>
+    <div style="position:absolute;left:${vPct.toFixed(1)}%;top:50%;transform:translate(-50%,-50%);width:8px;height:8px;border-radius:50%;background:${dotColor};box-shadow:0 0 5px ${dotColor}90;z-index:1;"></div>
+  </div>
+  <div style="display:flex;justify-content:space-between;font-size:9.5px;color:var(--text-muted);padding:0 1px;margin-bottom:1px;">
+    <span>${loEff}</span>
+    <span style="color:rgba(74,222,128,0.45);font-size:9px;">in range</span>
+    <span>${m.hi < 9000 ? hiCap : '↑'}</span>
+  </div>`;
+}
+
+function bwRenderIntelligence(latest, prev) {
+  const el = document.getElementById('bw-intelligence');
+  if (!el) return;
+
+  const keys    = Object.keys(latest.markers).filter(k => latest.markers[k] != null && BW_MARKERS[k]);
+  const total   = keys.length;
+  if (!total) { el.innerHTML = ''; return; }
+
+  const okKeys   = keys.filter(k => bwRangeStatus(k, latest.markers[k]) === 'ok');
+  const highKeys = keys.filter(k => bwRangeStatus(k, latest.markers[k]) === 'high');
+  const lowKeys  = keys.filter(k => bwRangeStatus(k, latest.markers[k]) === 'low');
+  const flagKeys = [...highKeys, ...lowKeys];
+  const pct      = Math.round((okKeys.length / total) * 100);
+
+  const grade      = pct === 100 ? 'A' : pct >= 90 ? 'B' : pct >= 75 ? 'C' : 'D';
+  const gradeRgb   = { A:'74,222,128', B:'163,230,53', C:'245,197,24', D:'248,113,113' }[grade];
+  const gradeColor = `rgb(${gradeRgb})`;
+
+  let improvedCount = 0, worsenedCount = 0;
+  if (prev) {
+    keys.forEach(k => {
+      const cur = bwRangeStatus(k, latest.markers[k]);
+      const prv = bwRangeStatus(k, prev.markers?.[k]);
+      if (cur === 'ok' && prv !== 'ok') improvedCount++;
+      if (cur !== 'ok' && prv === 'ok') worsenedCount++;
+    });
+  }
+
+  const trendHtml = prev && (improvedCount || worsenedCount)
+    ? `<div style="font-size:11px;color:var(--text-muted);margin-top:3px;">${[
+        improvedCount ? `<span style="color:#4ADE80;">↑${improvedCount} improved</span>` : '',
+        worsenedCount ? `<span style="color:#F87171;">↓${worsenedCount} worsened</span>` : ''
+      ].filter(Boolean).join(' · ')}</div>`
+    : '';
+
+  const flagsHtml = flagKeys.length
+    ? flagKeys.slice(0, 5).map(k => {
+        const s = bwRangeStatus(k, latest.markers[k]);
+        return `<span style="font-size:11px;padding:2px 8px;border-radius:99px;background:${s==='high'?'rgba(248,113,113,0.12)':'rgba(96,165,250,0.12)'};color:${s==='high'?'#F87171':'#60A5FA'};white-space:nowrap;">${BW_MARKERS[k].label} <strong>${latest.markers[k]}</strong> ${s.toUpperCase()}</span>`;
+      }).join('') + (flagKeys.length > 5 ? `<span style="font-size:11px;color:var(--text-muted);padding:2px 4px;">+${flagKeys.length-5} more</span>` : '')
+    : `<span style="font-size:12px;color:#4ADE80;font-weight:500;">All ${total} markers in range</span>`;
+
+  el.innerHTML = `<div class="card" style="border-color:rgba(${gradeRgb},0.28);background:rgba(${gradeRgb},0.04);">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:${gradeColor};margin-bottom:4px;">Bloodwork Intelligence</div>
+        <div style="font-size:14px;font-weight:600;color:var(--text-primary);">${okKeys.length} <span style="font-weight:400;color:var(--text-secondary);">of ${total} markers in range</span></div>
+        ${trendHtml}
+        <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;">${flagsHtml}</div>
+      </div>
+      <div style="text-align:center;flex-shrink:0;">
+        <div style="font-size:44px;font-weight:800;font-family:var(--font-data);color:${gradeColor};line-height:1;">${grade}</div>
+        <div style="font-size:9px;font-weight:700;letter-spacing:0.1em;color:${gradeColor};opacity:0.75;text-transform:uppercase;margin-top:2px;">Grade</div>
+      </div>
+    </div>
+  </div>`;
 }
 
 function bwRenderKpiCards(latest, prev) {
@@ -4171,25 +4291,30 @@ function bwRenderPanel() {
 
     html += `<div class="bw-group-label">${group}</div>`;
     withData.forEach(key => {
-      const m      = BW_MARKERS[key];
-      const val    = panel.markers[key];
-      const status = bwRangeStatus(key, val);
+      const m       = BW_MARKERS[key];
+      const val     = panel.markers[key];
+      const status  = bwRangeStatus(key, val);
       const prevVal = prev?.markers[key];
-      const statusColor = status === 'ok' ? 'var(--green)' : status === 'none' ? 'var(--text-muted)' : 'var(--red)';
+      const valColor = status === 'ok' ? 'var(--text-primary)' : 'var(--red)';
       let delta = '';
       if (prevVal != null && val != null) {
-        const diff = parseFloat((val - prevVal).toFixed(2));
-        const sign = diff >= 0 ? '+' : '';
-        const dc = status === 'ok' ? 'var(--text-muted)' : diff > 0 ? 'var(--red)' : 'var(--green)';
-        delta = `<span style="font-size:11px;font-family:var(--font-data);color:${dc};margin-left:6px;">${sign}${diff}</span>`;
+        const diff  = parseFloat((val - prevVal).toFixed(2));
+        const sign  = diff >= 0 ? '+' : '';
+        const arrow = diff > 0 ? '↑' : diff < 0 ? '↓' : '';
+        const dc    = bwTrendColor(key, val, prevVal);
+        delta = `<span style="font-size:11px;font-family:var(--font-data);color:${dc};margin-left:4px;">${arrow}${Math.abs(diff)}</span>`;
       }
-      html += `<div class="bw-marker-row">
-        <span style="font-size:13px;color:var(--text-secondary);">${m.label}</span>
-        <span style="display:flex;align-items:center;gap:10px;">
-          <span style="font-size:13px;font-family:var(--font-data);color:var(--text-primary);">${val} <span style="font-size:11px;color:var(--text-muted);">${m.unit}</span></span>
-          ${delta}
-          <span style="font-size:11px;font-weight:700;color:${statusColor};min-width:16px;text-align:right;">${status === 'ok' ? '✓' : status === 'none' ? '' : status.toUpperCase()}</span>
-        </span>
+      html += `<div style="padding:9px 0;border-bottom:0.5px solid var(--border);">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:13px;color:var(--text-secondary);">${m.label}</span>
+          <div style="display:flex;align-items:center;gap:7px;">
+            <span style="font-size:14px;font-weight:600;font-family:var(--font-data);color:${valColor};">${val}</span>
+            <span style="font-size:11px;color:var(--text-muted);">${m.unit}</span>
+            ${delta}
+            ${bwBadge(status)}
+          </div>
+        </div>
+        ${bwRangeBarHtml(key, val)}
       </div>`;
     });
   });
