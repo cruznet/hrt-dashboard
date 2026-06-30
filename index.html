@@ -859,6 +859,54 @@ body {
 }
 .bnav-item.bnav-fab:active .bnav-fab-btn { transform: scale(0.88); box-shadow: 0 2px 8px rgba(245,197,24,0.3); }
 
+/* ── Onboarding redesign (Item 19) ── */
+#onboard-overlay { background: radial-gradient(ellipse at 50% -10%, rgba(245,197,24,0.05) 0%, var(--bg-primary) 55%) !important; }
+.ob-progress-row { display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:40px; }
+.ob-progress-seg { height:3px; border-radius:2px; width:28px; background:var(--border); transition:background 0.3s, width 0.3s; }
+.ob-progress-seg.active { background:var(--primary); width:44px; }
+.ob-step-title { font-size:24px; font-weight:700; color:var(--text-primary); margin-bottom:6px; line-height:1.2; }
+.ob-step-sub { font-size:14px; color:var(--text-muted); margin-bottom:32px; line-height:1.5; }
+.ob-step-icon-wrap { width:56px; height:56px; border-radius:16px; display:flex; align-items:center; justify-content:center; margin-bottom:20px; }
+.onboard-mode-btn {
+  display:flex; align-items:center; gap:16px; text-align:left;
+  padding:0 20px 0 24px; height:80px;
+  border-radius:16px; border:0.5px solid var(--border);
+  background:rgba(255,255,255,0.02); cursor:pointer; width:100%;
+  position:relative; overflow:hidden;
+  transition:transform 0.18s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.18s, border-color 0.18s, background 0.18s;
+}
+.onboard-mode-btn::before {
+  content:''; position:absolute; left:0; top:0; bottom:0;
+  width:4px; border-radius:0;
+}
+#ob-btn-trt::before { background:var(--primary); }
+#ob-btn-offseason::before { background:#4ADE80; }
+#ob-btn-prep::before { background:#C084FC; }
+.onboard-mode-btn:hover { transform:translateY(-2px); box-shadow:0 6px 24px rgba(0,0,0,0.35); }
+.onboard-mode-btn:active { transform:scale(0.97); transition-duration:60ms; }
+#ob-btn-trt:hover { border-color:rgba(245,197,24,0.3); background:rgba(245,197,24,0.04); }
+#ob-btn-offseason:hover { border-color:rgba(74,222,128,0.3); background:rgba(74,222,128,0.04); }
+#ob-btn-prep:hover { border-color:rgba(192,132,252,0.3); background:rgba(192,132,252,0.04); }
+.ob-mode-icon {
+  width:44px; height:44px; border-radius:12px; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center; font-size:20px;
+}
+#ob-btn-trt .ob-mode-icon { background:rgba(245,197,24,0.1); color:var(--primary); }
+#ob-btn-offseason .ob-mode-icon { background:rgba(74,222,128,0.1); color:#4ADE80; }
+#ob-btn-prep .ob-mode-icon { background:rgba(192,132,252,0.1); color:#C084FC; }
+.ob-mode-text { flex:1; min-width:0; }
+.ob-mode-title { font-size:15px; font-weight:600; color:var(--text-primary); margin-bottom:3px; }
+.ob-mode-desc { font-size:12px; color:var(--text-muted); line-height:1.45; }
+.ob-mode-arrow { color:var(--text-muted); opacity:0.4; flex-shrink:0; }
+.ob-avatar-preview {
+  width:72px; height:72px; border-radius:18px;
+  background:linear-gradient(135deg,rgba(245,197,24,0.12),rgba(245,197,24,0.04));
+  border:1.5px solid rgba(245,197,24,0.18);
+  display:flex; align-items:center; justify-content:center;
+  font-size:26px; font-weight:700; color:var(--primary);
+  font-family:var(--font-data); margin:0 auto 28px; transition:all 0.2s;
+}
+
 /* Mobile-specific layout overrides */
 @media (max-width: 768px) {
   /* Show bottom nav */
@@ -1009,35 +1057,57 @@ body {
 <div id="onboard-overlay" style="display:none;position:fixed;inset:0;z-index:9000;background:var(--bg-primary);overflow-y:auto;padding:0;">
   <div style="max-width:480px;margin:0 auto;padding:48px 24px 80px;">
     <!-- Logo -->
-    <div style="text-align:center;margin-bottom:40px;">
-      <div style="margin-bottom:6px;"><img src="/apple-touch-icon.png" alt="HRT Tracker" style="width:52px;height:52px;border-radius:14px;"></div>
+    <div style="text-align:center;margin-bottom:32px;">
+      <div style="margin-bottom:8px;"><img src="/apple-touch-icon.png" alt="HRT Tracker" style="width:52px;height:52px;border-radius:14px;"></div>
       <div style="font-size:11px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:var(--text-muted);">HRT Tracker</div>
+    </div>
+
+    <!-- Progress indicator -->
+    <div class="ob-progress-row" id="ob-progress-row">
+      <div class="ob-progress-seg active" id="ob-seg-1"></div>
+      <div class="ob-progress-seg" id="ob-seg-2"></div>
+      <div class="ob-progress-seg" id="ob-seg-3"></div>
     </div>
 
     <!-- Step 1 — Mode -->
     <div id="onboard-step-1">
-      <div style="font-size:22px;font-weight:700;color:var(--text-primary);margin-bottom:8px;">Where are you right now?</div>
-      <div style="font-size:14px;color:var(--text-muted);margin-bottom:32px;">This sets your dashboard focus. You can change it anytime in Settings.</div>
+      <div class="ob-step-title">Where are you right now?</div>
+      <div class="ob-step-sub">This sets your dashboard focus. You can change it anytime in Settings.</div>
       <div style="display:flex;flex-direction:column;gap:12px;">
-        <button onclick="onboardSelectMode('trt')" class="onboard-mode-btn" id="ob-btn-trt" style="text-align:left;padding:18px 20px;border-radius:14px;border:0.5px solid var(--border);background:rgba(255,255,255,0.03);cursor:pointer;transition:all 0.15s;">
-          <div style="font-size:15px;font-weight:600;color:var(--text-primary);margin-bottom:4px;"><i class="ti ti-shield-heart" style="color:var(--primary);margin-right:8px;"></i>TRT / Cruise</div>
-          <div style="font-size:12px;color:var(--text-muted);">Prescribed TRT or cruising between blasts — focused on health maintenance</div>
+        <button onclick="onboardSelectMode('trt')" class="onboard-mode-btn" id="ob-btn-trt">
+          <div class="ob-mode-icon"><i class="ti ti-shield-heart"></i></div>
+          <div class="ob-mode-text">
+            <div class="ob-mode-title">TRT / Cruise</div>
+            <div class="ob-mode-desc">Prescribed TRT or cruising between blasts — focused on health maintenance</div>
+          </div>
+          <svg class="ob-mode-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
         </button>
-        <button onclick="onboardSelectMode('offseason')" class="onboard-mode-btn" id="ob-btn-offseason" style="text-align:left;padding:18px 20px;border-radius:14px;border:0.5px solid var(--border);background:rgba(255,255,255,0.03);cursor:pointer;transition:all 0.15s;">
-          <div style="font-size:15px;font-weight:600;color:var(--text-primary);margin-bottom:4px;"><i class="ti ti-barbell" style="color:#4ADE80;margin-right:8px;"></i>Offseason</div>
-          <div style="font-size:12px;color:var(--text-muted);">Building phase, running a blast — no show on the calendar yet</div>
+        <button onclick="onboardSelectMode('offseason')" class="onboard-mode-btn" id="ob-btn-offseason">
+          <div class="ob-mode-icon"><i class="ti ti-barbell"></i></div>
+          <div class="ob-mode-text">
+            <div class="ob-mode-title">Offseason</div>
+            <div class="ob-mode-desc">Building phase, running a blast — no show on the calendar yet</div>
+          </div>
+          <svg class="ob-mode-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
         </button>
-        <button onclick="onboardSelectMode('performance')" class="onboard-mode-btn" id="ob-btn-prep" style="text-align:left;padding:18px 20px;border-radius:14px;border:0.5px solid var(--border);background:rgba(255,255,255,0.03);cursor:pointer;transition:all 0.15s;">
-          <div style="font-size:15px;font-weight:600;color:var(--text-primary);margin-bottom:4px;"><i class="ti ti-trophy" style="color:var(--primary);margin-right:8px;"></i>Prepping for a Show</div>
-          <div style="font-size:12px;color:var(--text-muted);">Competition prep — I have a show date coming up</div>
+        <button onclick="onboardSelectMode('performance')" class="onboard-mode-btn" id="ob-btn-prep">
+          <div class="ob-mode-icon"><i class="ti ti-trophy"></i></div>
+          <div class="ob-mode-text">
+            <div class="ob-mode-title">Prepping for a Show</div>
+            <div class="ob-mode-desc">Competition prep — I have a show date coming up</div>
+          </div>
+          <svg class="ob-mode-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
         </button>
       </div>
     </div>
 
     <!-- Step 2 — Show date (Prep only) -->
     <div id="onboard-step-2" style="display:none;">
-      <div style="font-size:22px;font-weight:700;color:var(--text-primary);margin-bottom:8px;">When's the show?</div>
-      <div style="font-size:14px;color:var(--text-muted);margin-bottom:32px;">We'll build your countdown and track your peak week.</div>
+      <div class="ob-step-icon-wrap" style="background:rgba(192,132,252,0.08);border:0.5px solid rgba(192,132,252,0.2);">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#C084FC" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      </div>
+      <div class="ob-step-title">When's the show?</div>
+      <div class="ob-step-sub">We'll build your countdown and track your peak week.</div>
       <div class="form-group" style="margin-bottom:16px;">
         <label class="form-label">Show Name</label>
         <input type="text" class="form-input" id="ob-show-name" placeholder="NPC Greater Gulf States 2026">
@@ -1075,17 +1145,18 @@ body {
       </div>
       <div style="display:flex;gap:12px;">
         <button class="btn-secondary" onclick="onboardStep(3)" style="flex:1;padding:14px;">Skip for now</button>
-        <button class="btn-primary" onclick="onboardSaveShow()" style="flex:2;padding:14px;">Save & Continue</button>
+        <button class="btn-primary" onclick="onboardSaveShow()" style="flex:2;padding:14px;">Save &amp; Continue</button>
       </div>
     </div>
 
     <!-- Step 3 — Name -->
     <div id="onboard-step-3" style="display:none;">
-      <div style="font-size:22px;font-weight:700;color:var(--text-primary);margin-bottom:8px;">What should we call you?</div>
-      <div style="font-size:14px;color:var(--text-muted);margin-bottom:32px;">Shows on your Coach Report and Athletes roster. You can update this anytime.</div>
+      <div id="ob-avatar-preview" class="ob-avatar-preview">?</div>
+      <div class="ob-step-title" style="text-align:center;">What should we call you?</div>
+      <div class="ob-step-sub" style="text-align:center;">Shows on your Coach Report and Athletes roster. You can update this anytime.</div>
       <div class="form-group" style="margin-bottom:32px;">
         <label class="form-label">Your Name</label>
-        <input type="text" class="form-input" id="ob-name" placeholder="First name or full name" autocomplete="name">
+        <input type="text" class="form-input" id="ob-name" placeholder="First name or full name" autocomplete="name" oninput="obUpdateAvatar(this.value)">
       </div>
       <div style="display:flex;gap:12px;">
         <button class="btn-secondary" onclick="onboardFinish()" style="flex:1;padding:14px;">Skip</button>
@@ -3319,7 +3390,15 @@ function onboardStep(n) {
   [1,2,3].forEach(i => {
     const el = document.getElementById(`onboard-step-${i}`);
     if (el) el.style.display = i === n ? 'block' : 'none';
+    const seg = document.getElementById(`ob-seg-${i}`);
+    if (seg) seg.classList.toggle('active', i <= n);
   });
+}
+function obUpdateAvatar(val) {
+  const el = document.getElementById('ob-avatar-preview');
+  if (!el) return;
+  const initials = val.trim().split(/\s+/).map(w => w[0]?.toUpperCase() || '').join('').slice(0,2);
+  el.textContent = initials || '?';
 }
 
 function onboardSelectMode(mode) {
