@@ -2691,25 +2691,38 @@ body {
         </div>
         <hr class="divider">
         <div class="card-title">Coaching</div>
-        <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px;">Share your data with a coach, or link an athlete you coach. Self-coached athletes can use coach notes without linking anyone.</div>
-        <!-- Share token (athlete side) -->
-        <div style="margin-bottom:16px;">
-          <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;">My Share Token</div>
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-            <input type="text" class="form-input" id="share-token-display" readonly placeholder="Not generated yet" style="flex:1;font-family:var(--font-data);font-size:12px;letter-spacing:0.05em;">
-            <button class="btn-secondary" onclick="copyShareToken()" id="share-token-copy-btn" style="padding:8px 12px;font-size:13px;" title="Copy"><i class="ti ti-copy"></i></button>
-            <button class="btn-primary" onclick="generateShareToken()" style="padding:8px 14px;font-size:13px;">Generate</button>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">Share your data with a coach, or link athletes you coach. Self-coached athletes can use coach notes without linking anyone.</div>
+
+        <!-- Share token invite card (athlete side) -->
+        <div style="background:linear-gradient(135deg,rgba(34,211,238,0.06),rgba(34,211,238,0.02));border:0.5px solid rgba(34,211,238,0.2);border-radius:14px;padding:16px 18px;margin-bottom:14px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            <span style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--teal);">My Share Token</span>
           </div>
-          <div id="share-token-hint" style="font-size:11px;color:var(--text-muted);margin-top:6px;">Give this token to your coach — they enter it below to link your account.</div>
+          <div style="background:rgba(0,0,0,0.3);border:0.5px solid rgba(34,211,238,0.15);border-radius:10px;padding:12px 14px;margin-bottom:12px;min-height:44px;display:flex;align-items:center;">
+            <input type="text" class="form-input" id="share-token-display" readonly placeholder="Click Generate to create your token"
+              style="background:transparent;border:none;padding:0;font-family:var(--font-data);font-size:13px;letter-spacing:0.08em;color:var(--teal);width:100%;outline:none;">
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn-secondary" onclick="copyShareToken()" id="share-token-copy-btn" style="padding:8px 14px;font-size:13px;flex:1;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="margin-right:5px;vertical-align:middle;"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy
+            </button>
+            <button class="btn-primary" onclick="generateShareToken()" style="padding:8px 16px;font-size:13px;flex:1;">Generate New</button>
+          </div>
+          <div id="share-token-hint" style="font-size:11px;color:var(--text-muted);margin-top:10px;line-height:1.5;">Give this token to your coach. They paste it in their "Link an Athlete" section to access your data.</div>
         </div>
+
         <!-- Link athlete (coach side) -->
-        <div>
-          <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;">Link an Athlete</div>
+        <div style="background:rgba(255,255,255,0.02);border:0.5px solid var(--border);border-radius:14px;padding:16px 18px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--primary-bright)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="21" y1="15" x2="21" y2="21"/><line x1="18" y1="18" x2="24" y2="18"/></svg>
+            <span style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--primary-bright);">Link an Athlete</span>
+          </div>
           <div style="display:flex;gap:8px;">
             <input type="text" class="form-input" id="coach-token-input" placeholder="Paste athlete's share token" style="flex:1;font-family:var(--font-data);font-size:12px;">
-            <button class="btn-primary" onclick="submitCoachToken()" style="padding:8px 14px;font-size:13px;">Link</button>
+            <button class="btn-primary" onclick="submitCoachToken()" style="padding:8px 16px;font-size:13px;">Link</button>
           </div>
-          <div id="coach-link-status" style="font-size:11px;margin-top:6px;color:var(--text-muted);"></div>
+          <div id="coach-link-status" style="font-size:11px;margin-top:8px;color:var(--text-muted);"></div>
         </div>
       </div>
     </section>
