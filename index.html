@@ -1048,13 +1048,6 @@ body {
 
       <!-- Metric cards -->
       <div class="metrics-grid" id="metrics-grid">
-        <div class="metric-card mc-amber">
-          <div class="metric-label">Weight</div>
-          <div class="metric-value" id="m-weight">—</div>
-          <div class="metric-unit">lbs</div>
-          <span class="metric-badge badge-muted" id="m-weight-badge">No data</span>
-          <div class="metric-delta" id="m-weight-delta"></div>
-        </div>
         <div class="metric-card mc-red">
           <div class="metric-label">Blood Pressure</div>
           <div class="metric-value" id="m-bp" style="font-size:18px;">—</div>
@@ -1082,13 +1075,6 @@ body {
           <div class="metric-unit">/10</div>
           <span class="metric-badge badge-muted" id="m-energy-badge">No data</span>
           <div class="metric-delta" id="m-energy-delta"></div>
-        </div>
-        <div class="metric-card mc-red">
-          <div class="metric-label">Body Fat</div>
-          <div class="metric-value" id="m-bf">—</div>
-          <div class="metric-unit">%</div>
-          <span class="metric-badge badge-muted" id="m-bf-badge">No data</span>
-          <div class="metric-delta" id="m-bf-delta"></div>
         </div>
         <div class="metric-card mc-teal">
           <div class="metric-label">HRV</div>
@@ -2731,16 +2717,9 @@ function renderVitalsToCards() {
   const protocol = lsGet('hrt_active_protocol_data', null);
   // logs are sorted newest-first
   if (!logs.length) {
-    ['m-weight','m-bp','m-glucose','m-mood','m-energy'].forEach(id =>
+    ['m-bp','m-glucose','m-mood','m-energy'].forEach(id =>
       updateMetricCard(id, '—', 'No data', 'badge-muted'));
-    // fall through — HealthKit and physique cards may still have data
-  }
-
-  // ── Weight (multi-source: vitals log > physique check-in > HealthKit) ──
-  const { latest: wLatest, prev: wPrev } = getBestWeight();
-  if (wLatest) {
-    updateMetricCard('m-weight', wLatest.value.toFixed(1), 'lbs', 'badge-muted');
-    if (wPrev) setDelta('m-weight-delta', wLatest.value, wPrev.value, 'lbs', false);
+    // fall through — HealthKit cards may still have data
   }
 
   // ── Blood Pressure (manual log preferred, HealthKit fallback) ──
@@ -2795,24 +2774,6 @@ function renderVitalsToCards() {
     const eBadge = e >= 8 ? ['High','badge-green'] : e >= 5 ? ['Normal','badge-amber'] : ['Low','badge-red'];
     updateMetricCard('m-energy', `${e}/10`, eBadge[0], eBadge[1]);
     if (prevE !== null) setDelta('m-energy-delta', e, prevE, '/10', false);
-  }
-
-  // ── Body Fat % (physique check-in preferred, HealthKit fallback) ──
-  const bfMeas = measLoad().filter(m => parseFloat(m.measurements?.bf) > 0)
-                           .sort((a, b) => b.date.localeCompare(a.date));
-  if (bfMeas.length) {
-    const bf = parseFloat(bfMeas[0].measurements.bf);
-    const prevBf = bfMeas.length > 1 ? parseFloat(bfMeas[1].measurements.bf) : null;
-    const bfBadge = bf < 18 ? ['Lean','badge-green'] : bf < 25 ? ['Normal','badge-amber'] : ['High','badge-red'];
-    updateMetricCard('m-bf', bf.toFixed(1), bfBadge[0], bfBadge[1]);
-    if (prevBf !== null) setDelta('m-bf-delta', bf, prevBf, '%', true);
-  } else {
-    const hkBf = hkLatest('Body Fat Percentage (%)');
-    if (hkBf) {
-      const bf = hkBf.value;
-      const bfBadge = bf < 18 ? ['Lean','badge-green'] : bf < 25 ? ['Normal','badge-amber'] : ['High','badge-red'];
-      updateMetricCard('m-bf', bf.toFixed(1), bfBadge[0], bfBadge[1]);
-    }
   }
 
   // ── HRV (HealthKit) ──
