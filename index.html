@@ -233,6 +233,39 @@ body {
   min-width: 0;
 }
 .metric-card:hover { background: var(--bg-card-hover); box-shadow: 0 0 0 0.5px var(--border-mid); }
+.mc-gold:hover   { box-shadow: 0 0 0 0.5px var(--border-mid), 0 4px 16px rgba(197,146,10,0.08); }
+.mc-teal:hover   { box-shadow: 0 0 0 0.5px var(--border-mid), 0 4px 16px rgba(34,211,238,0.08); }
+.mc-green:hover  { box-shadow: 0 0 0 0.5px var(--border-mid), 0 4px 16px rgba(34,197,94,0.08); }
+.mc-amber:hover  { box-shadow: 0 0 0 0.5px var(--border-mid), 0 4px 16px rgba(251,146,60,0.08); }
+.mc-red:hover    { box-shadow: 0 0 0 0.5px var(--border-mid), 0 4px 16px rgba(248,113,113,0.08); }
+.mc-purple:hover { box-shadow: 0 0 0 0.5px var(--border-mid), 0 4px 16px rgba(192,132,252,0.08); }
+
+/* Custom dose checkboxes */
+.dose-cb-styled {
+  -webkit-appearance: none; appearance: none;
+  width: 18px; height: 18px; border-radius: 5px; flex-shrink: 0;
+  border: 1.5px solid rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.04);
+  cursor: pointer; position: relative;
+  transition: background 0.15s, border-color 0.15s;
+  vertical-align: middle;
+}
+.dose-cb-styled:checked {
+  background: var(--primary-bright);
+  border-color: var(--primary-bright);
+}
+.dose-cb-styled:checked::after {
+  content: ''; position: absolute;
+  left: 5px; top: 2px;
+  width: 5px; height: 9px;
+  border: 2px solid #0D0D15;
+  border-top: none; border-left: none;
+  transform: rotate(42deg);
+}
+label.dose-row { display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 7px 2px; border-radius: 6px; transition: background 0.15s; user-select: none; }
+label.dose-row:hover { background: rgba(255,255,255,0.03); }
+label.dose-row.dose-done { opacity: 0.55; }
+label.dose-row.dose-done .dose-name { text-decoration: line-through; }
 .metric-label { font-size: 12px; color: var(--text-label); letter-spacing: 0; text-transform: none; margin-bottom: 5px; font-weight: 500; }
 .metric-value { font-size: 28px; font-family: var(--font-data); font-weight: 500; color: var(--text-primary); line-height: 1.1; letter-spacing: -0.5px; }
 .metric-unit  { font-size: 12px; margin-top: 4px; font-family: var(--font-data); font-weight: 500; }
@@ -3209,7 +3242,7 @@ function renderDoseSchedule() {
   const DAY_NAMES  = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const MON_NAMES  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const todayLabel = `${DAY_NAMES[today.getDay()]} ${MON_NAMES[today.getMonth()]} ${today.getDate()}`;
-  const trunc      = s => (s && s.length > 22) ? s.slice(0, 21) + '…' : (s || '');
+  const trunc      = s => (s && s.length > 28) ? s.slice(0, 27) + '…' : (s || '');
 
   const compounds = protocol.compounds.map(raw => {
     const c    = normalizeCompound(raw);
@@ -3230,7 +3263,7 @@ function renderDoseSchedule() {
       const rowStyle  = isChecked ? 'text-decoration:line-through;opacity:0.6;' : '';
       const safeName  = c.name.replace(/'/g, "\\'");
       const safeUnit  = (c.unit || '').replace(/'/g, "\\'");
-      html += `<label style="display:flex;align-items:center;gap:8px;cursor:pointer;${rowStyle}"><input type="checkbox" ${isChecked ? 'checked' : ''} style="accent-color:var(--primary-bright);width:16px;height:16px;flex-shrink:0;" onchange="this.checked?checkDose('${safeName}',${c.dose ?? 0},'${safeUnit}','${todayStr}'):uncheckDose('${safeName}','${todayStr}')"><span style="flex:1;">${escHtml(trunc(c.name))}</span><span style="color:var(--text-muted);white-space:nowrap;">${escHtml(String(c.dose ?? ''))}${escHtml(c.unit)}</span></label>`;
+      html += `<label class="dose-row${isChecked ? ' dose-done' : ''}"><input type="checkbox" class="dose-cb-styled" ${isChecked ? 'checked' : ''} onchange="this.closest('label').classList.toggle('dose-done',this.checked);this.checked?checkDose('${safeName}',${c.dose ?? 0},'${safeUnit}','${todayStr}'):uncheckDose('${safeName}','${todayStr}')"><span class="dose-name" style="flex:1;font-size:13px;">${escHtml(trunc(c.name))}</span><span style="color:var(--text-muted);font-family:var(--font-data);font-size:12px;white-space:nowrap;">${escHtml(String(c.dose ?? ''))}${escHtml(c.unit)}</span></label>`;
     }
   }
 
@@ -4883,10 +4916,10 @@ function hkRenderKpis(container, latest, all) {
     const p7 = avg(prev7,   k.col);
     let delta = '';
     if (a7 !== null && p7 !== null) {
-      const diff = a7 - p7;
-      const sign = diff > 0 ? '+' : '';
+      const diff  = a7 - p7;
+      const arrow = diff > 0 ? '↑' : diff < 0 ? '↓' : '→';
       const color = diff === 0 ? 'var(--text-muted)' : (diff > 0 ? 'var(--green)' : 'var(--red)');
-      delta = `<div style="font-size:11px;color:${color};margin-top:2px;">${sign}${diff.toFixed(1)} 7d avg</div>`;
+      delta = `<div style="font-size:11px;color:${color};margin-top:2px;">${arrow} ${Math.abs(diff).toFixed(1)} 7d avg</div>`;
     }
     return `<div class="card" style="padding:12px 14px;">
       <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">${escHtml(k.label)}</div>
