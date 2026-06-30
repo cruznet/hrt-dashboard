@@ -2712,8 +2712,11 @@ async function loadUserData() {
         localStorage.setItem('hrt_user_profile', JSON.stringify(settings.user_profile));
       if (settings.app_mode)
         setMode(settings.app_mode, false);
-      if (settings.hevy_api_key && !hevyKey())
+      if (settings.hevy_api_key && !hevyKey()) {
         localStorage.setItem(HEVY_KEY_LS, settings.hevy_api_key);
+        // If the user is already on the Workouts page, re-render and sync now that the key arrived
+        if (currentPage === 'workouts') { renderWorkoutsPage(); hevyAutoSync(); }
+      }
     }
 
     if (logsRes.data?.length) renderLastEntry(logsRes.data[0]);
@@ -6451,13 +6454,13 @@ function resetLogForm() {
   document.getElementById('log-notes').value = '';
 }
 
-function submitQuickLog() {
-  const date   = document.getElementById('modal-date').value;
-  const bp     = document.getElementById('modal-bp').value.trim();
+async function submitQuickLog() {
+  const date    = document.getElementById('modal-date').value;
+  const bp      = document.getElementById('modal-bp').value.trim();
   const glucose = document.getElementById('modal-glucose').value;
-  const mood   = document.getElementById('modal-mood').value;
-  const energy = document.getElementById('modal-energy').value;
-  const notes  = document.getElementById('modal-notes').value.trim();
+  const mood    = document.getElementById('modal-mood').value;
+  const energy  = document.getElementById('modal-energy').value;
+  const notes   = document.getElementById('modal-notes').value.trim();
 
   if (!date) { closeModal('log-modal'); return; }
 
@@ -6474,6 +6477,22 @@ function submitQuickLog() {
   logs.sort((a, b) => b.date.localeCompare(a.date));
   localStorage.setItem('hrt_vitals_log', JSON.stringify(logs));
 
+  // Push to Supabase so entry is visible on all devices
+  if (_supa && _supaUser) {
+    const metricsRow = {
+      user_id: _supaUser.id, date,
+      mood:   mood   ? parseInt(mood)   : null,
+      energy: energy ? parseInt(energy) : null,
+      notes:  notes  || null
+    };
+    const bpParts = bp ? bp.split('/') : [];
+    metricsRow.bp_systolic    = bpParts.length >= 1 && bpParts[0] ? parseInt(bpParts[0]) : null;
+    metricsRow.bp_diastolic   = bpParts.length === 2              ? parseInt(bpParts[1]) : null;
+    metricsRow.fasting_glucose = glucose ? parseFloat(glucose) : null;
+    const { error } = await _supa.from('daily_logs').upsert(metricsRow, { onConflict: 'user_id,date' });
+    if (error) console.error('[quickLog] daily_logs upsert failed:', error);
+  }
+
   // Refresh dashboard cards
   if (bp) {
     const sys = parseInt(bp.split('/')[0]);
@@ -6483,8 +6502,10 @@ function submitQuickLog() {
     const g = parseFloat(glucose);
     updateMetricCard('m-glucose', g, g > 125 ? 'High' : g > 100 ? 'Pre-diabetic' : 'Normal', g > 125 ? 'badge-red' : g > 100 ? 'badge-amber' : 'badge-green');
   }
+  const m = parseInt(mood);
+  updateMetricCard('m-mood',   m, m >= 8 ? 'Great' : m >= 5 ? 'Okay' : 'Low',  m >= 8 ? 'badge-green' : m >= 5 ? 'badge-amber' : 'badge-red');
   const e = parseInt(energy);
-  updateMetricCard('m-energy', e, e >= 8 ? 'High' : e >= 5 ? 'Moderate' : 'Low', e >= 8 ? 'badge-green' : e >= 5 ? 'badge-amber' : 'badge-red');
+  updateMetricCard('m-energy', e, e >= 8 ? 'High'  : e >= 5 ? 'Moderate' : 'Low', e >= 8 ? 'badge-green' : e >= 5 ? 'badge-amber' : 'badge-red');
 
   // Reset fields for next use
   document.getElementById('modal-bp').value     = '';
