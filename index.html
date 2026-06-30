@@ -2659,6 +2659,11 @@ function showAuthOverlay() { document.getElementById('auth-overlay').classList.a
 async function loadUserData() {
   if (!_supa || !_supaUser) return;
   updateUserUI(_supaUser);
+  // Restore Hevy key from Supabase user_metadata if not present in this context's localStorage
+  if (!hevyKey()) {
+    const savedKey = _supaUser.user_metadata?.hevy_api_key;
+    if (savedKey) localStorage.setItem(HEVY_KEY_LS, savedKey);
+  }
   const uid = _supaUser.id;
   try {
     const [logsRes, metricsRes, settingsRes, insulinRes] = await Promise.all([
@@ -5531,6 +5536,7 @@ function hevySaveKey() {
   const key = (document.getElementById('hevy-key-input')?.value || '').trim();
   if (!key) return;
   localStorage.setItem(HEVY_KEY_LS, key);
+  if (_supa && _supaUser) _supa.auth.updateUser({ data: { hevy_api_key: key } });
   document.getElementById('hevy-setup').style.display = 'none';
   hevySync();
 }
