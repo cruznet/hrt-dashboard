@@ -2849,6 +2849,20 @@ body {
           </div>
           <div id="coach-link-status" style="font-size:11px;margin-top:8px;color:var(--text-muted);"></div>
         </div>
+        <hr class="divider">
+        <div class="card-title">Your Data</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">Export a full copy of your data or permanently delete your account.</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
+          <button class="btn-secondary" onclick="exportAllData()" style="display:flex;align-items:center;gap:7px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export All Data
+          </button>
+          <button onclick="deleteAccount()" style="display:flex;align-items:center;gap:7px;padding:8px 16px;border-radius:8px;border:0.5px solid rgba(248,113,113,0.35);background:rgba(248,113,113,0.06);color:var(--red);font-size:13px;font-weight:500;cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='rgba(248,113,113,0.12)'" onmouseout="this.style.background='rgba(248,113,113,0.06)'">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+            Delete Account
+          </button>
+        </div>
+        <div style="font-size:11px;color:var(--text-muted);line-height:1.5;">Account deletion is permanent and cannot be undone. All your logs, protocols, bloodwork, and data will be removed immediately. <a href="/privacy.html" style="color:var(--primary-bright);text-decoration:none;" target="_blank" rel="noopener">Privacy Policy →</a></div>
       </div>
     </section>
 
@@ -3303,6 +3317,79 @@ async function supaSignOut() {
   _hkSupaData = null; // clear Supabase wellness cache on sign-out
   try { if (_supa) { const { error } = await _supa.auth.signOut(); if (error) console.error('[auth] signOut:', error); } }
   finally { showAuthOverlay(); }
+}
+
+async function exportAllData() {
+  if (!_supa || !_supaUser) { showToast('Not signed in', 'error'); return; }
+  const uid = _supaUser.id;
+
+  // Fetch server-side tables to complement the localStorage cache
+  let serverData = {};
+  try {
+    const [logsRes, metricsRes, checkinsRes] = await Promise.all([
+      _supa.from('administration_log').select('*').eq('user_id', uid),
+      _supa.from('daily_logs').select('*').eq('user_id', uid),
+      _supa.from('weekly_checkins').select('*').eq('user_id', uid),
+    ]);
+    serverData.administration_log = logsRes.data || [];
+    serverData.daily_logs         = metricsRes.data || [];
+    serverData.weekly_checkins    = checkinsRes.data || [];
+  } catch (e) {
+    console.warn('[export] Supabase fetch partial:', e);
+  }
+
+  const exportPayload = {
+    exported_at:            new Date().toISOString(),
+    user_id:                uid,
+    user_email:             _supaUser.email || null,
+    local_data: {
+      protocols:             lsGet('hrt_protocols', []),
+      active_protocol:       lsGet('hrt_active_protocol_data', null),
+      vitals_log:            lsGet('hrt_vitals_log', []),
+      doses_taken:           lsGet('hrt_doses_taken', []),
+      bloodwork:             lsGet('hrt_bloodwork', []),
+      physique_measurements: lsGet('hrt_measurements', []),
+      weekly_checkins:       lsGet('hrt_weekly_checkins', []),
+      user_profile:          lsGet('hrt_user_profile', {}),
+      app_mode:              localStorage.getItem('hrt_mode') || null,
+      show_date:             localStorage.getItem('hrt_show_date') || null,
+      show_name:             localStorage.getItem('hrt_show_name') || null,
+      show_federation:       localStorage.getItem('hrt_show_federation') || null,
+      show_division:         localStorage.getItem('hrt_show_division') || null,
+    },
+    server_data: serverData,
+  };
+
+  const blob = new Blob([JSON.stringify(exportPayload, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `hrt-tracker-export-${localDate()}.json`;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
+  showToast('Data exported', 'success');
+}
+
+async function deleteAccount() {
+  if (!_supa || !_supaUser || !_supaSession) { showToast('Not signed in', 'error'); return; }
+  if (!confirm('Permanently delete your account and all data?\n\nThis cannot be undone — all your logs, protocols, bloodwork, and settings will be removed immediately.')) return;
+  if (!confirm('Last chance: are you absolutely sure you want to delete your account?')) return;
+
+  const res = await fetch('/api/account', {
+    method: 'DELETE',
+    headers: { 'Authorization': `Bearer ${_supaSession.access_token}` },
+  });
+
+  if (res.ok || res.status === 204) {
+    // Clear all local app data
+    Object.keys(localStorage).filter(k => k.startsWith('hrt_')).forEach(k => localStorage.removeItem(k));
+    showAuthOverlay();
+    showToast('Account deleted', 'success');
+  } else {
+    const err = await res.json().catch(() => ({}));
+    showToast('Delete failed: ' + (err.error || `Server error ${res.status}`), 'error');
+  }
 }
 
 let _lastSyncTs = null;

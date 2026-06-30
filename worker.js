@@ -19,6 +19,12 @@ export default {
       return new Response('Method Not Allowed', { status: 405 });
     }
 
+    if (url.pathname === '/api/account') {
+      if (request.method === 'DELETE')  return handleDeleteAccount(request, env);
+      if (request.method === 'OPTIONS') return new Response(null, { status: 204 });
+      return new Response('Method Not Allowed', { status: 405 });
+    }
+
     return env.ASSETS.fetch(request);
   },
 };
@@ -71,6 +77,48 @@ async function handleTrack(request, env) {
   if (!res.ok) {
     const errText = await res.text();
     return json({ error: `Supabase error (${res.status}): ${errText}` }, 502);
+  }
+
+  return new Response(null, { status: 204 });
+}
+
+// ── Account deletion ─────────────────────────────────────────────────────────
+// DELETE /api/account — verifies the user's JWT, then deletes the Supabase user
+// via the admin API (service role). Supabase cascades the delete to user rows
+// in application tables via FK ON DELETE CASCADE / SET NULL policies.
+
+async function handleDeleteAccount(request, env) {
+  if (!env.SUPABASE_SERVICE_KEY) return json({ error: 'SUPABASE_SERVICE_KEY not configured' }, 500);
+
+  const token = (request.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  if (!token) return json({ error: 'Missing Authorization header' }, 401);
+
+  // Verify the token and resolve the user ID
+  const userRes = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+    headers: {
+      'apikey':        env.SUPABASE_SERVICE_KEY,
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  if (!userRes.ok) return json({ error: 'Invalid or expired token' }, 401);
+
+  const user = await userRes.json();
+  const userId = user?.id;
+  if (!userId || typeof userId !== 'string') return json({ error: 'Could not identify user' }, 400);
+
+  // Delete via admin API — cascades to application table rows
+  const deleteRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${userId}`, {
+    method: 'DELETE',
+    headers: {
+      'apikey':        env.SUPABASE_SERVICE_KEY,
+      'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+    },
+  });
+
+  if (!deleteRes.ok) {
+    const errText = await deleteRes.text();
+    return json({ error: `Supabase delete failed (${deleteRes.status}): ${errText}` }, 502);
   }
 
   return new Response(null, { status: 204 });

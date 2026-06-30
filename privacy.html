@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0D0D15">
+<link rel="icon" href="/apple-touch-icon.png" type="image/png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<title>Privacy Policy — HRT Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:     #0D0D15;
+  --bg-2:   #111119;
+  --card:   rgba(255,255,255,0.03);
+  --border: rgba(255,255,255,0.08);
+  --gold:   #F5C518;
+  --text:   #E8E8ED;
+  --text-2: rgba(232,232,237,0.6);
+  --text-3: rgba(232,232,237,0.35);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.7;
+}
+
+nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(13,13,21,0.9);
+  backdrop-filter: blur(20px);
+  border-bottom: 0.5px solid var(--border);
+  padding: 0 24px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+.nav-brand img { width: 28px; height: 28px; border-radius: 7px; }
+.nav-brand-name { font-size: 15px; font-weight: 600; color: var(--text); }
+.nav-back {
+  font-size: 13px;
+  color: var(--text-2);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.15s;
+}
+.nav-back:hover { color: var(--text); }
+.nav-back svg { flex-shrink: 0; }
+
+.hero {
+  padding: 72px 24px 48px;
+  text-align: center;
+  border-bottom: 0.5px solid var(--border);
+}
+.hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--gold);
+  margin-bottom: 16px;
+}
+.hero h1 {
+  font-size: clamp(28px, 5vw, 40px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+.hero-date {
+  font-size: 13px;
+  color: var(--text-3);
+}
+
+.content {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 56px 24px 80px;
+}
+
+.section {
+  margin-bottom: 48px;
+}
+.section h2 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 0.5px solid var(--border);
+}
+.section p {
+  font-size: 15px;
+  color: var(--text-2);
+  margin-bottom: 14px;
+}
+.section p:last-child { margin-bottom: 0; }
+
+ul.data-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 14px 0;
+}
+ul.data-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--text-2);
+}
+ul.data-list li::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: var(--gold);
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 8px;
+}
+
+.callout {
+  background: rgba(245,197,24,0.05);
+  border: 0.5px solid rgba(245,197,24,0.2);
+  border-radius: 12px;
+  padding: 18px 20px;
+  font-size: 14px;
+  color: var(--text-2);
+  margin: 20px 0;
+  line-height: 1.65;
+}
+.callout strong { color: var(--text); font-weight: 600; }
+
+.contact-card {
+  background: var(--card);
+  border: 0.5px solid var(--border);
+  border-radius: 14px;
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.contact-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(245,197,24,0.08);
+  border: 0.5px solid rgba(245,197,24,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.contact-text p { font-size: 13px; color: var(--text-3); margin: 0 0 2px; }
+.contact-text a { font-size: 14px; color: var(--gold); text-decoration: none; font-weight: 500; }
+.contact-text a:hover { text-decoration: underline; }
+
+footer {
+  border-top: 0.5px solid var(--border);
+  padding: 24px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+footer a { color: var(--text-3); text-decoration: none; }
+footer a:hover { color: var(--text-2); }
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-brand" href="/">
+    <img src="/apple-touch-icon.png" alt="HRT Tracker">
+    <span class="nav-brand-name">HRT Tracker</span>
+  </a>
+  <a class="nav-back" href="/">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    Back
+  </a>
+</nav>
+
+<div class="hero">
+  <div class="hero-eyebrow">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    Legal
+  </div>
+  <h1>Privacy Policy</h1>
+  <div class="hero-date">Effective June 30, 2026 &mdash; CruzNet LLC</div>
+</div>
+
+<div class="content">
+
+  <div class="callout">
+    <strong>The short version:</strong> Your health data is yours. We store it to power your dashboard. We never sell it, never share it with advertisers, and we don't run any ad tracking. You can export or delete everything at any time from the app's Settings page.
+  </div>
+
+  <div class="section">
+    <h2>Who we are</h2>
+    <p>HRT Tracker is operated by <strong>CruzNet LLC</strong>, a US company. Questions or concerns: <a href="mailto:support@cruznetllc.com" style="color:var(--gold);text-decoration:none;">support@cruznetllc.com</a>.</p>
+  </div>
+
+  <div class="section">
+    <h2>What we collect and why</h2>
+    <p>We collect only what the app needs to work:</p>
+    <ul class="data-list">
+      <li><strong>Account identity</strong> — your name and email address, provided via Google Sign-In. Used to authenticate you and display your account name.</li>
+      <li><strong>Health &amp; protocol data</strong> — doses, compounds, frequencies, bloodwork markers, vitals (BP, weight, glucose, mood), physique measurements, weekly check-ins, and competition dates. Stored in your private account to power the dashboard. Never shared.</li>
+      <li><strong>Usage events</strong> — anonymous funnel events (page views, sign-in, first log) tied to a browser-local ID. Used to understand how people discover and adopt the app so we can improve it. No personal information is attached until you sign in, and even then the data is only used in aggregate by us internally.</li>
+      <li><strong>Third-party workout data</strong> — if you enter a Hevy API key, workout data is fetched directly from the Hevy API in your browser. We do not store your Hevy API key server-side.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2>How data is stored</h2>
+    <p>Your data is stored in two places:</p>
+    <ul class="data-list">
+      <li><strong>Your device (localStorage)</strong> — protocols, vitals, dose logs, and bloodwork are cached locally so the app works offline and loads instantly.</li>
+      <li><strong>Supabase (cloud database)</strong> — a PostgreSQL database hosted in the US on Supabase's infrastructure. Your data is isolated by user ID with row-level security policies — no other user can read your rows.</li>
+    </ul>
+    <p>All traffic between your browser, our Cloudflare Worker, and Supabase is encrypted in transit (HTTPS/TLS).</p>
+  </div>
+
+  <div class="section">
+    <h2>Who we share data with</h2>
+    <p>We do not sell, rent, or trade your personal or health data to any third party. The only infrastructure providers who process your data are:</p>
+    <ul class="data-list">
+      <li><strong>Supabase</strong> — database &amp; authentication hosting</li>
+      <li><strong>Cloudflare</strong> — CDN, Workers runtime, and edge delivery</li>
+      <li><strong>Google</strong> — OAuth sign-in (name &amp; email only, no health data)</li>
+    </ul>
+    <p>If you use the optional coaching feature (share token), you choose which coach can see your data. You control this and can revoke it at any time.</p>
+  </div>
+
+  <div class="section">
+    <h2>Your rights and controls</h2>
+    <ul class="data-list">
+      <li><strong>Export</strong> — download a full JSON copy of all your data at any time from <em>Settings → Your Data → Export All Data</em>.</li>
+      <li><strong>Delete</strong> — permanently delete your account and all associated data from <em>Settings → Your Data → Delete Account</em>. Deletion is immediate and irreversible.</li>
+      <li><strong>Correction</strong> — update or overwrite any log entry directly within the app.</li>
+      <li><strong>Portability</strong> — the exported JSON is structured and human-readable; you own it.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2>Cookies &amp; local storage</h2>
+    <p>We do not use advertising cookies. We use <strong>localStorage</strong> (not cookies) to cache your app data locally and store a randomly generated anonymous ID for funnel analytics. No cross-site tracking.</p>
+  </div>
+
+  <div class="section">
+    <h2>Children</h2>
+    <p>HRT Tracker is intended for adults 18 and older. We do not knowingly collect data from minors.</p>
+  </div>
+
+  <div class="section">
+    <h2>Changes to this policy</h2>
+    <p>If we make material changes, we'll update the "Effective" date at the top of this page and, if your email is on file, notify you. Continued use of the app after changes constitutes acceptance.</p>
+  </div>
+
+  <div class="section">
+    <h2>Contact</h2>
+    <div class="contact-card">
+      <div class="contact-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F5C518" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+      </div>
+      <div class="contact-text">
+        <p>Privacy questions &amp; data requests</p>
+        <a href="mailto:support@cruznetllc.com">support@cruznetllc.com</a>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <span>&copy; 2026 CruzNet LLC. All rights reserved.</span>
+  <a href="/">Home</a>
+  <a href="/index.html">Open App</a>
+</footer>
+
+</body>
+</html>
