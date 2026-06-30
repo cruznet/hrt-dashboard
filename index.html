@@ -1003,11 +1003,6 @@ body {
       <span class="nav-icon"><i class="ti ti-layout-dashboard"></i></span>
       <span class="nav-text">Dashboard</span>
     </div>
-    <div class="nav-item" onclick="nav('log')">
-      <span class="nav-icon"><i class="ti ti-pencil-plus"></i></span>
-      <span class="nav-text">Log Entry</span>
-    </div>
-
     <div class="nav-label" style="margin-top:6px;">Protocols</div>
     <div class="nav-item" onclick="nav('protocols')">
       <span class="nav-icon"><i class="ti ti-pill"></i></span>
@@ -1247,7 +1242,7 @@ body {
               <div style="border:1.5px dashed rgba(255,255,255,0.1);border-radius:10px;padding:18px 22px;display:flex;flex-direction:column;align-items:center;gap:7px;text-align:center;">
                 <i class="ti ti-mood-smile" style="font-size:22px;color:var(--text-muted);opacity:0.4;"></i>
                 <div style="font-size:13px;color:var(--text-muted);">No mood data yet</div>
-                <button onclick="nav('log')" style="padding:4px 14px;border-radius:6px;background:rgba(245,197,24,0.1);border:0.5px solid rgba(245,197,24,0.25);color:var(--primary-bright);font-size:12px;cursor:pointer;">+ Log Entry</button>
+                <button onclick="openModal('log-modal')" style="padding:4px 14px;border-radius:6px;background:rgba(245,197,24,0.1);border:0.5px solid rgba(245,197,24,0.25);color:var(--primary-bright);font-size:12px;cursor:pointer;">+ Log Entry</button>
               </div>
             </div>
           </div>
@@ -1260,7 +1255,7 @@ body {
               <div style="border:1.5px dashed rgba(255,255,255,0.1);border-radius:10px;padding:18px 22px;display:flex;flex-direction:column;align-items:center;gap:7px;text-align:center;">
                 <i class="ti ti-bolt" style="font-size:22px;color:var(--text-muted);opacity:0.4;"></i>
                 <div style="font-size:13px;color:var(--text-muted);">No energy data yet</div>
-                <button onclick="nav('log')" style="padding:4px 14px;border-radius:6px;background:rgba(245,197,24,0.1);border:0.5px solid rgba(245,197,24,0.25);color:var(--primary-bright);font-size:12px;cursor:pointer;">+ Log Entry</button>
+                <button onclick="openModal('log-modal')" style="padding:4px 14px;border-radius:6px;background:rgba(245,197,24,0.1);border:0.5px solid rgba(245,197,24,0.25);color:var(--primary-bright);font-size:12px;cursor:pointer;">+ Log Entry</button>
               </div>
             </div>
           </div>
@@ -3169,7 +3164,7 @@ function renderLastVitalsEntry() {
   if (!el) return;
   const logs = lsGet('hrt_vitals_log', []);
   if (!logs.length) {
-    el.innerHTML = '<span style="color:var(--text-muted);">No entries yet. <a href="#" onclick="nav(\'log\');return false;" style="color:var(--primary-bright);">Log Entry →</a></span>';
+    el.innerHTML = '<span style="color:var(--text-muted);">No entries yet. <a href="#" onclick="openModal(\'log-modal\');return false;" style="color:var(--primary-bright);">Log Entry →</a></span>';
     return;
   }
   const last = logs[0]; // sorted newest first
