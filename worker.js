@@ -42,6 +42,10 @@ const TRACK_EVENT_ALLOWLIST = new Set([
   'auth_complete',
   'onboarding_complete',
   'first_log',
+  'feedback',
+  'pwa_install_prompt_shown',
+  'pwa_install_outcome',
+  'pwa_installed',
 ]);
 
 async function handleTrack(request, env) {

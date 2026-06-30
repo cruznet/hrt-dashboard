@@ -355,6 +355,77 @@ label.dose-row.dose-done .dose-name { text-decoration: line-through; }
 
 /* ── Toast notifications ── */
 #toast-container { position:fixed; bottom:24px; right:24px; z-index:9999; display:flex; flex-direction:column; gap:8px; pointer-events:none; width:300px; }
+
+/* ── PWA Install Banner ── */
+#install-banner {
+  display: none;
+  position: fixed;
+  left: 16px; right: 16px;
+  bottom: calc(72px + env(safe-area-inset-bottom, 0px) + 10px);
+  z-index: 96;
+  background: var(--bg-card);
+  border: 0.5px solid rgba(245,197,24,0.25);
+  border-radius: 16px;
+  padding: 14px 16px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  animation: installSlideUp 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  max-width: 420px;
+}
+#install-banner.visible { display: flex; align-items: flex-start; gap: 12px; }
+@keyframes installSlideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.install-banner-icon {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: rgba(245,197,24,0.1); border: 0.5px solid rgba(245,197,24,0.25);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.install-banner-body { flex: 1; min-width: 0; }
+.install-banner-title { font-size: 13px; font-weight: 700; color: var(--text-primary); margin-bottom: 3px; }
+.install-banner-sub { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+.install-banner-sub strong { color: var(--text-label); font-weight: 600; }
+.install-banner-actions { display: flex; gap: 8px; margin-top: 10px; }
+.install-banner-btn {
+  font-size: 12px; font-weight: 600; padding: 6px 14px; border-radius: 8px;
+  border: none; cursor: pointer; transition: opacity 0.15s;
+}
+.install-banner-btn-primary { background: var(--primary-bright); color: #000; }
+.install-banner-btn-ghost { background: rgba(255,255,255,0.06); color: var(--text-muted); border: 0.5px solid var(--border); }
+.install-banner-btn:hover { opacity: 0.82; }
+.install-banner-close {
+  background: none; border: none; cursor: pointer; padding: 2px;
+  color: var(--text-muted); flex-shrink: 0; line-height: 1;
+  font-size: 18px; transition: color 0.15s;
+}
+.install-banner-close:hover { color: var(--text-primary); }
+@media (min-width: 768px) {
+  #install-banner { left: 24px; right: auto; bottom: 24px; max-width: 360px; }
+}
+
+/* ── Feedback FAB ── */
+#feedback-fab {
+  display: none;
+  position: fixed;
+  right: 16px;
+  bottom: calc(72px + env(safe-area-inset-bottom, 0px) + 10px);
+  z-index: 96;
+  width: 42px; height: 42px;
+  border-radius: 50%;
+  background: var(--bg-card);
+  border: 0.5px solid var(--border);
+  cursor: pointer;
+  align-items: center; justify-content: center;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  transition: border-color 0.15s, transform 0.15s;
+  color: var(--text-muted);
+}
+#feedback-fab.visible { display: flex; }
+#feedback-fab:hover { border-color: rgba(245,197,24,0.4); color: var(--primary-bright); transform: scale(1.06); }
+#feedback-fab:active { transform: scale(0.94); }
+@media (min-width: 768px) {
+  #feedback-fab { right: 24px; bottom: 80px; }
+}
 .toast { display:flex; align-items:flex-start; gap:10px; padding:12px 14px; border-radius:10px; background:#1C1C28; border:0.5px solid rgba(255,255,255,0.12); color:var(--text-secondary); font-size:13px; line-height:1.4; box-shadow:0 4px 24px rgba(0,0,0,0.45); pointer-events:auto; cursor:pointer; animation:toastIn 0.2s ease; }
 .toast.toast-exit { animation:toastOut 0.18s ease forwards; }
 .toast-icon { font-size:15px; flex-shrink:0; margin-top:1px; }
@@ -3516,6 +3587,10 @@ function showApp() {
   setTimeout(() => {
     if (!localStorage.getItem('hrt_onboarded')) showOnboarding();
   }, 2000);
+  // Show install banner on 2nd+ visit (give new users one session before prompting)
+  const visits = parseInt(localStorage.getItem('hrt_visit_count') || '0') + 1;
+  localStorage.setItem('hrt_visit_count', String(visits));
+  if (visits >= 2) setTimeout(initInstallBanner, 8000);
 }
 
 // ── Onboarding ────────────────────────────────────────────────────────────────
@@ -10938,6 +11013,179 @@ window.addEventListener('DOMContentLoaded', () => {
   if (_pSex) _pSex.value = _p.sex;
   if (_pFocus) _pFocus.value = _p.focus;
 });
+
+// ── PWA Install Banner ─────────────────────────────────────────────────────
+
+let _deferredInstallPrompt = null;
+
+// Capture Android/Chrome install prompt before the browser auto-dismisses it
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  _deferredInstallPrompt = e;
+});
+
+function initInstallBanner() {
+  if (localStorage.getItem('hrt_install_dismissed')) return;
+
+  const isStandalone = window.navigator.standalone === true ||
+                       window.matchMedia('(display-mode: standalone)').matches;
+  if (isStandalone) return;
+
+  const ua = navigator.userAgent;
+  const isIos = /iphone|ipad|ipod/i.test(ua);
+  const isIosSafari = isIos && /safari/i.test(ua) && !/crios|fxios|opios/i.test(ua);
+  const hasAndroidPrompt = !!_deferredInstallPrompt;
+
+  if (!isIosSafari && !hasAndroidPrompt) return;
+
+  const sub  = document.getElementById('install-banner-sub');
+  const acts = document.getElementById('install-banner-actions');
+
+  if (isIosSafari) {
+    sub.innerHTML = `Tap <strong>Share</strong> <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:middle;"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg> then <strong>"Add to Home Screen"</strong> to install the app and unlock offline access.`;
+    acts.innerHTML = `<button class="install-banner-btn install-banner-btn-ghost" onclick="dismissInstallBanner()">Got it</button>`;
+  } else {
+    sub.textContent = 'Install the app for faster access, offline support, and a native feel on your device.';
+    acts.innerHTML = `<button class="install-banner-btn install-banner-btn-primary" onclick="doInstall()">Install App</button><button class="install-banner-btn install-banner-btn-ghost" onclick="dismissInstallBanner()">Not now</button>`;
+  }
+
+  document.getElementById('install-banner').classList.add('visible');
+  track('pwa_install_prompt_shown', { platform: isIosSafari ? 'ios' : 'android' });
+}
+
+function dismissInstallBanner() {
+  localStorage.setItem('hrt_install_dismissed', '1');
+  const el = document.getElementById('install-banner');
+  if (el) el.classList.remove('visible');
+}
+
+async function doInstall() {
+  if (!_deferredInstallPrompt) return;
+  _deferredInstallPrompt.prompt();
+  const { outcome } = await _deferredInstallPrompt.userChoice;
+  track('pwa_install_outcome', { outcome });
+  _deferredInstallPrompt = null;
+  dismissInstallBanner();
+  if (outcome === 'accepted') showToast('App installed!', 'success');
+}
+
+window.addEventListener('appinstalled', () => {
+  dismissInstallBanner();
+  track('pwa_installed', {});
+});
+
+// ── Feedback Widget ─────────────────────────────────────────────────────────
+
+function openFeedbackModal() {
+  document.getElementById('feedback-message').value = '';
+  document.getElementById('feedback-type').value = 'bug';
+  const status = document.getElementById('feedback-status');
+  if (status) { status.style.display = 'none'; status.textContent = ''; }
+  const btn = document.getElementById('feedback-submit-btn');
+  if (btn) btn.disabled = false;
+  openModal('feedback-modal');
+}
+
+async function submitFeedback() {
+  const type    = document.getElementById('feedback-type').value;
+  const message = (document.getElementById('feedback-message').value || '').trim();
+  const status  = document.getElementById('feedback-status');
+  const btn     = document.getElementById('feedback-submit-btn');
+
+  if (!message) {
+    status.textContent = 'Please write a message before sending.';
+    status.style.color = 'var(--red)';
+    status.style.display = 'block';
+    return;
+  }
+  if (message.length > 2000) {
+    status.textContent = 'Please keep feedback under 2000 characters.';
+    status.style.color = 'var(--red)';
+    status.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+
+  try {
+    let anonId = localStorage.getItem('hrt_anon_id');
+    if (!anonId) { anonId = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}`; localStorage.setItem('hrt_anon_id', anonId); }
+    const payload = JSON.stringify({ event_name: 'feedback', anon_id: anonId, user_id: _supaUser?.id || null, properties: { type, message } });
+    const res = await fetch('/api/track', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: payload });
+
+    if (res.ok || res.status === 204) {
+      closeModal('feedback-modal');
+      showToast('Feedback sent — thank you!', 'success');
+    } else {
+      throw new Error(`HTTP ${res.status}`);
+    }
+  } catch (e) {
+    status.textContent = 'Failed to send — please email support@cruznetllc.com';
+    status.style.color = 'var(--red)';
+    status.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Send Feedback';
+  }
+}
 </script>
+
+<!-- ── PWA Install Banner ── -->
+<div id="install-banner" role="banner" aria-label="Install app">
+  <div class="install-banner-icon">
+    <img src="/apple-touch-icon.png" alt="" style="width:22px;height:22px;border-radius:5px;">
+  </div>
+  <div class="install-banner-body">
+    <div class="install-banner-title">Add to Home Screen</div>
+    <div class="install-banner-sub" id="install-banner-sub">
+      <!-- filled by JS for iOS vs Android -->
+    </div>
+    <div class="install-banner-actions" id="install-banner-actions">
+      <!-- filled by JS -->
+    </div>
+  </div>
+  <button class="install-banner-close" onclick="dismissInstallBanner()" aria-label="Dismiss">&times;</button>
+</div>
+
+<!-- ── Feedback FAB ── -->
+<button id="feedback-fab" class="visible" onclick="openFeedbackModal()" aria-label="Send feedback" title="Send feedback">
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+</button>
+
+<!-- ── Feedback Modal ── -->
+<div class="modal-overlay" id="feedback-modal">
+  <div class="modal" style="max-width:400px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:32px;height:32px;border-radius:9px;background:rgba(245,197,24,0.1);border:0.5px solid rgba(245,197,24,0.25);display:flex;align-items:center;justify-content:center;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--primary-bright)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        </div>
+        <div>
+          <div style="font-size:15px;font-weight:600;color:var(--text-primary);">Send Feedback</div>
+          <div style="font-size:11px;color:var(--text-muted);">Bug reports &amp; feature ideas go directly to the team</div>
+        </div>
+      </div>
+      <span class="modal-close" onclick="closeModal('feedback-modal')">&#x2715;</span>
+    </div>
+    <div class="form-group" style="margin-bottom:14px;">
+      <label class="form-label">Type</label>
+      <select class="form-input" id="feedback-type">
+        <option value="bug">🐛 Bug Report</option>
+        <option value="feature">💡 Feature Request</option>
+        <option value="general">💬 General Feedback</option>
+      </select>
+    </div>
+    <div class="form-group" style="margin-bottom:18px;">
+      <label class="form-label">Message</label>
+      <textarea class="form-input" id="feedback-message" rows="5" placeholder="Describe what happened, what you expected, or what you'd like to see..." style="resize:vertical;min-height:110px;"></textarea>
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn-secondary" onclick="closeModal('feedback-modal')" style="flex:1;">Cancel</button>
+      <button class="btn-primary" onclick="submitFeedback()" style="flex:2;" id="feedback-submit-btn">Send Feedback</button>
+    </div>
+    <div id="feedback-status" style="font-size:12px;margin-top:10px;display:none;"></div>
+  </div>
+</div>
+
 </body>
 </html>
