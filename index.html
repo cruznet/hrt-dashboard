@@ -1540,6 +1540,18 @@ body {
         </div>
       </div>
 
+      <!-- Upcoming Doses widget -->
+      <div class="card" id="upcoming-doses-card" style="margin-bottom:14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--primary-bright)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <div class="card-title" style="margin-bottom:0;">Upcoming Doses</div>
+          </div>
+          <a href="#" onclick="nav('dose-schedule');return false;" style="font-size:11px;color:var(--primary-bright);text-decoration:none;">Full schedule →</a>
+        </div>
+        <div id="upcoming-list"></div>
+      </div>
+
       <!-- TRENDS section -->
       <div class="dash-section-label">Trends</div>
 
@@ -4017,7 +4029,7 @@ function nav(page) {
   if (page === 'wellness') renderWellnessPage();
   if (page === 'calculator') setTimeout(() => { calcBuildCompoundSelect(); pepUpdate(); }, 100);
   if (page === 'settings') setTimeout(populateShowForm, 50);
-  if (page === 'dashboard') { renderReadinessCard(); renderStreakCard(); renderComplianceHeatmap(); renderShowCountdown(); renderModeContextCard(); renderDashboardCheckinCard(); renderVitalsToCards(); renderBwDashStrip(); renderPhysiqueDashStrip(); setTimeout(() => { if (_supa && _supaUser) renderRealCharts(); else renderDemoCharts(); }, 100); setTimeout(checkLabReminder, 1200); }
+  if (page === 'dashboard') { renderReadinessCard(); renderStreakCard(); renderComplianceHeatmap(); renderShowCountdown(); renderModeContextCard(); renderDashboardCheckinCard(); renderVitalsToCards(); renderBwDashStrip(); renderPhysiqueDashStrip(); renderUpcoming(); setTimeout(() => { if (_supa && _supaUser) renderRealCharts(); else renderDemoCharts(); }, 100); setTimeout(checkLabReminder, 1200); }
   // Load active protocol on dashboard
   if (page === 'dashboard') {
     const activeData = localStorage.getItem('hrt_active_protocol_data');
@@ -9940,13 +9952,12 @@ function renderUpcoming() {
                     background:var(--bg-deep);color:var(--text-secondary);cursor:pointer;">
              ✓ ${i.label}</button>`;
     }).join(' ');
-    rows.push(`<div style="display:flex;flex-direction:column;gap:4px;">
-      <div style="display:flex;align-items:center;gap:8px;">
-        <div style="width:6px;height:6px;border-radius:50%;background:${items[0].color};flex-shrink:0;"></div>
-        <span style="color:var(--text-secondary);font-size:12px;">Daily</span>
-        ${allTaken ? '<span style="font-size:10px;color:var(--green);margin-left:auto;">All done today ✓</span>' : ''}
+    rows.push(`<div style="padding:10px 12px;background:rgba(255,255,255,0.03);border:0.5px solid var(--border);border-radius:10px;margin-bottom:2px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);background:rgba(255,255,255,0.06);padding:2px 7px;border-radius:5px;">Daily</span>
+        ${allTaken ? '<span style="font-size:11px;color:var(--green);margin-left:auto;font-weight:600;">All done ✓</span>' : ''}
       </div>
-      <div style="display:flex;flex-wrap:wrap;gap:4px;padding-left:14px;">${takenBtns}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;">${takenBtns}</div>
     </div>`);
   }
 
@@ -9961,24 +9972,25 @@ function renderUpcoming() {
       const takenBtns = items.map(i => {
         const done = isTakenToday(i.label);
         return done
-          ? `<span style="font-size:10px;color:var(--green);font-family:var(--font-data);">✓ ${i.label}</span>`
+          ? `<span style="font-size:11px;color:var(--green);font-family:var(--font-data);font-weight:600;">✓ ${escHtml(i.label)}</span>`
           : `<button onclick="markDoseTaken('${i.label.replace(/'/g,"\\'")}', '${dateForRow}')"
-               style="font-size:10px;padding:2px 7px;border-radius:12px;border:1px solid var(--border);
-                      background:var(--bg-deep);color:var(--text-secondary);cursor:pointer;">
-               ✓ ${i.label}</button>`;
+               style="font-size:11px;padding:4px 10px;border-radius:8px;border:0.5px solid var(--border-mid);
+                      background:rgba(245,197,24,0.08);color:var(--primary-bright);cursor:pointer;font-weight:500;">
+               ✓ ${escHtml(i.label)}</button>`;
       }).join(' ');
-      rows.push(`<div style="display:flex;flex-direction:column;gap:4px;">
-        <div style="display:flex;align-items:center;gap:8px;">
-          <div style="width:6px;height:6px;border-radius:50%;background:${dot};flex-shrink:0;"></div>
-          <span style="color:var(--text-primary);font-size:12px;font-weight:500;">Today</span>
+      rows.push(`<div style="padding:10px 12px;background:rgba(245,197,24,0.05);border:0.5px solid rgba(245,197,24,0.15);border-radius:10px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+          <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--primary-bright);background:rgba(245,197,24,0.12);padding:2px 7px;border-radius:5px;">Today</span>
         </div>
-        <div style="display:flex;flex-wrap:wrap;gap:4px;padding-left:14px;">${takenBtns}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;">${takenBtns}</div>
       </div>`);
     } else {
-      rows.push(`<div style="display:flex;align-items:center;gap:8px;">
-        <div style="width:6px;height:6px;border-radius:50%;background:${dot};flex-shrink:0;opacity:0.5;"></div>
-        <span style="color:var(--text-muted);font-size:12px;">${dayLabel(offset)}</span>
-        <span style="color:var(--text-secondary);margin-left:auto;font-family:var(--font-data);font-size:11px;">${items.map(i=>i.label).join(' · ')}</span>
+      rows.push(`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:0.5px solid rgba(255,255,255,0.04);">
+        <div style="width:8px;height:8px;border-radius:50%;background:${dot};flex-shrink:0;opacity:0.4;"></div>
+        <span style="color:var(--text-secondary);font-size:12px;font-weight:500;min-width:80px;">${dayLabel(offset)}</span>
+        <div style="display:flex;flex-wrap:wrap;gap:5px;margin-left:auto;">
+          ${items.map(i => `<span style="font-size:11px;font-family:var(--font-data);color:${i.color};background:${i.color}15;padding:2px 7px;border-radius:5px;">${escHtml(i.label)}</span>`).join('')}
+        </div>
       </div>`);
     }
   });
@@ -10003,13 +10015,13 @@ function renderUpcoming() {
       if (!wasTaken) {
         const d = pastDate;
         const dayName = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()];
-        missedRows.push(`<div style="display:flex;align-items:center;gap:8px;opacity:0.8;">
-          <div style="width:6px;height:6px;border-radius:50%;background:var(--amber);flex-shrink:0;"></div>
-          <span style="font-size:11px;color:var(--amber);">Missed? ${dayName} ${pastStr}</span>
-          <span style="font-family:var(--font-data);font-size:11px;color:var(--text-muted);margin-left:auto;">${label}</span>
+        missedRows.push(`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span style="font-size:11px;color:var(--amber);font-weight:500;">${dayName} ${pastStr}</span>
+          <span style="font-family:var(--font-data);font-size:11px;color:var(--text-muted);margin-left:auto;">${escHtml(label)}</span>
           <button onclick="markDoseTaken('${label.replace(/'/g,"\\'")}', '${pastStr}')"
-            style="font-size:10px;padding:2px 6px;border-radius:10px;border:1px solid var(--amber);
-                   background:transparent;color:var(--amber);cursor:pointer;">Log late</button>
+            style="font-size:10px;padding:3px 8px;border-radius:7px;border:0.5px solid var(--amber);
+                   background:rgba(251,146,60,0.08);color:var(--amber);cursor:pointer;">Log late</button>
         </div>`);
       }
     });
