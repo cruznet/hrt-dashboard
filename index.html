@@ -2572,7 +2572,10 @@ async function syncAll() {
       case 'wellness':   renderWellnessPage();    break;
       case 'bloodwork':  renderBloodworkPage();   break;
       case 'physique':   renderPhysiquePage();    break;
-      case 'workouts':   hevyAutoSync();          break;
+      case 'workouts':
+        if (!hevyKey()) { showToast('Enter your Hevy API key to load workouts', 'info'); hevyShowSettings(); }
+        else hevyAutoSync();
+        break;
       case 'compliance': renderCompliancePage();  break;
     }
   } catch (e) {
@@ -5533,11 +5536,14 @@ function hevyShowSettings() {
   if (inp) { inp.value = hevyKey(); inp.focus(); }
 }
 
-function hevySaveKey() {
+async function hevySaveKey() {
   const key = (document.getElementById('hevy-key-input')?.value || '').trim();
   if (!key) return;
   localStorage.setItem(HEVY_KEY_LS, key);
-  if (_supa && _supaUser) _supa.auth.updateUser({ data: { hevy_api_key: key } });
+  if (_supa && _supaUser) {
+    const { error } = await _supa.auth.updateUser({ data: { hevy_api_key: key } });
+    if (error) console.error('[hevy] failed to persist key to Supabase:', error);
+  }
   document.getElementById('hevy-setup').style.display = 'none';
   hevySync();
 }
@@ -5688,12 +5694,12 @@ function renderWorkoutsPage() {
   hevyRenderTabs();
 
   if (!key && !workouts.length) {
-    content.innerHTML = `<div style="text-align:center;padding:64px 0;">
+    content.innerHTML = `<div style="text-align:center;padding:40px 0 20px;">
       <i class="ti ti-barbell" style="font-size:44px;color:var(--text-muted);opacity:0.25;"></i>
-      <div style="font-size:15px;color:var(--text-secondary);margin:14px 0 6px;font-weight:500;">No workouts loaded</div>
-      <div style="font-size:13px;color:var(--text-muted);margin-bottom:22px;">Connect your Hevy account to pull your training history</div>
-      <button class="btn-primary" onclick="hevyShowSettings()">Connect Hevy</button>
+      <div style="font-size:15px;color:var(--text-secondary);margin:14px 0 6px;font-weight:500;">Connect Hevy to see workouts</div>
+      <div style="font-size:13px;color:var(--text-muted);">Requires Hevy Pro · get your key from hevy.com/settings → Developer</div>
     </div>`;
+    hevyShowSettings();
     return;
   }
 
