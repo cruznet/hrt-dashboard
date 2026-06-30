@@ -511,26 +511,40 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
 .auth-brand-name { font-size: 22px; font-weight: 600; color: var(--text-primary); }
 .auth-brand-sub  { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
 .auth-headline {
-  font-size: 36px; font-weight: 600; color: var(--text-primary);
-  line-height: 1.2; margin-bottom: 14px; max-width: 420px;
+  font-size: clamp(30px, 3.5vw, 44px); font-weight: 600;
+  line-height: 1.12; margin-bottom: 16px; max-width: 420px;
+  letter-spacing: -0.03em;
+  background: linear-gradient(180deg, #fff 0%, rgba(255,255,255,0.65) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
-.auth-headline span { color: var(--primary-bright); }
+.auth-headline em {
+  font-style: normal;
+  -webkit-text-fill-color: var(--primary-bright);
+}
 .auth-tagline {
-  font-size: 15px; color: var(--text-muted); margin-bottom: 44px;
-  line-height: 1.6; max-width: 380px;
+  font-size: 14.5px; color: var(--text-muted); margin-bottom: 40px;
+  line-height: 1.65; max-width: 380px;
 }
-.auth-features { display: flex; flex-direction: column; gap: 16px; }
+.auth-features { display: flex; flex-direction: column; gap: 14px; margin-bottom: 40px; }
 .auth-feature {
   display: flex; align-items: flex-start; gap: 12px;
 }
 .auth-feature-icon {
-  width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0;
-  background: var(--bg-card); border: 0.5px solid var(--border);
+  width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0;
+  background: rgba(245,197,24,0.08); border: 0.5px solid rgba(245,197,24,0.2);
   display: flex; align-items: center; justify-content: center;
-  font-size: 15px; color: var(--primary-bright); margin-top: 1px;
+  margin-top: 1px;
 }
-.auth-feature-text { font-size: 13px; color: var(--text-label); line-height: 1.5; }
-.auth-feature-text strong { color: var(--text-secondary); font-weight: 500; display: block; }
+.auth-feature-icon svg { width: 15px; height: 15px; color: var(--primary-bright); }
+.auth-feature-text { font-size: 13px; color: var(--text-label); line-height: 1.55; }
+.auth-feature-text strong { color: var(--text-secondary); font-weight: 500; display: block; margin-bottom: 1px; }
+.auth-stats {
+  display: flex; gap: 24px; padding-top: 24px;
+  border-top: 0.5px solid rgba(255,255,255,0.07);
+}
+.auth-stat-num { font-size: 20px; font-weight: 700; color: var(--primary-bright); font-family: var(--font-data); line-height: 1; }
+.auth-stat-label { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
 .auth-panel-right {
   width: 420px; flex-shrink: 0; background: var(--bg-base);
   display: flex; align-items: center; justify-content: center; padding: 48px 40px;
@@ -538,9 +552,23 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
 .auth-card {
   width: 100%; text-align: center;
 }
-.auth-card-icon { font-size: 36px; color: var(--primary-bright); margin-bottom: 12px; }
-.auth-card-title { font-size: 22px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; }
-.auth-card-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 36px; line-height: 1.5; }
+.auth-card-icon { font-size: 36px; color: var(--primary-bright); margin-bottom: 12px; display: none; }
+.auth-card-title { font-size: 22px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; letter-spacing: -0.3px; }
+.auth-card-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 28px; line-height: 1.5; }
+.auth-card-logo { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 24px; }
+.auth-card-logo img { width: 36px; height: 36px; border-radius: 9px; }
+.auth-card-logo-name { font-size: 16px; font-weight: 600; color: var(--text-primary); }
+.auth-card-badge {
+  display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
+  text-transform: uppercase; padding: 3px 10px; border-radius: 99px; margin-bottom: 20px;
+  background: rgba(245,197,24,0.1); color: var(--primary-bright);
+  border: 0.5px solid rgba(245,197,24,0.25);
+}
+.auth-learn-more {
+  margin-top: 20px; font-size: 12px; color: var(--text-muted); text-align: center;
+}
+.auth-learn-more a { color: var(--primary-bright); text-decoration: none; }
+.auth-learn-more a:hover { text-decoration: underline; }
 .auth-btn {
   width: 100%; background: var(--bg-card);
   color: var(--text-primary);
@@ -984,37 +1012,61 @@ body {
           <div class="auth-brand-sub">v2.0 · Private &amp; Secure</div>
         </div>
       </div>
-      <div class="auth-headline">Your protocol.<br><span>Your data.</span></div>
-      <div class="auth-tagline">Track TRT, HRT, and performance protocols with bloodwork, vitals, and cycle analytics — all in one place.</div>
+      <div class="auth-headline">Your Protocol.<br>Your Data.<br><em>Your Edge.</em></div>
+      <div class="auth-tagline">The only tracking platform built for competitive bodybuilders, TRT athletes, and performance-focused individuals.</div>
       <div class="auth-features">
         <div class="auth-feature">
-          <div class="auth-feature-icon"><i class="ti ti-pill"></i></div>
+          <div class="auth-feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+          </div>
           <div class="auth-feature-text">
             <strong>Protocol Management</strong>
-            Build and track compounds, doses, and frequencies with full cycle history.
+            Track compounds, doses, frequencies, and compliance streaks with full cycle history.
           </div>
         </div>
         <div class="auth-feature">
-          <div class="auth-feature-icon"><i class="ti ti-chart-line"></i></div>
+          <div class="auth-feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg>
+          </div>
           <div class="auth-feature-text">
-            <strong>Vitals &amp; Bloodwork</strong>
-            Log weight, body fat, mood, energy, and lab values over time.
+            <strong>Bloodwork &amp; Vitals</strong>
+            Trend every lab marker over time with sparklines, grades, and reference ranges.
           </div>
         </div>
         <div class="auth-feature">
-          <div class="auth-feature-icon"><i class="ti ti-devices"></i></div>
+          <div class="auth-feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          </div>
           <div class="auth-feature-text">
-            <strong>Multi-Device Sync</strong>
-            Sign in on any device and your data follows you automatically.
+            <strong>Daily Readiness Score</strong>
+            HRV + sleep + compliance in one actionable number every morning.
           </div>
         </div>
+        <div class="auth-feature">
+          <div class="auth-feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
+          <div class="auth-feature-text">
+            <strong>Coach Layer</strong>
+            Connect your coach via secure token. Self-coaching works too.
+          </div>
+        </div>
+      </div>
+      <div class="auth-stats">
+        <div><div class="auth-stat-num">50+</div><div class="auth-stat-label">Metrics tracked daily</div></div>
+        <div><div class="auth-stat-num">3</div><div class="auth-stat-label">Training modes</div></div>
+        <div><div class="auth-stat-num">100%</div><div class="auth-stat-label">Private &amp; secure</div></div>
       </div>
     </div>
 
     <!-- Right sign-in panel -->
     <div class="auth-panel-right">
       <div class="auth-card">
-        <div class="auth-card-icon"><i class="ti ti-lock"></i></div>
+        <div class="auth-card-logo">
+          <img src="/apple-touch-icon.png" alt="HRT Tracker">
+          <span class="auth-card-logo-name">HRT Tracker</span>
+        </div>
+        <div class="auth-card-badge">Free Beta — Early Access</div>
         <div class="auth-card-title" id="auth-card-title">Welcome back</div>
         <div class="auth-card-sub">Sign in to access your protocols and health data.</div>
 
@@ -1074,6 +1126,7 @@ body {
           <i class="ti ti-brand-apple" style="color:var(--primary-bright);margin-right:4px;"></i>
           <strong style="color:var(--text-secondary);">Home screen app?</strong> This app has its own separate session from Safari. Sign in here to load your data.
         </div>
+        <div class="auth-learn-more">New here? <a href="/landing.html">Learn about HRT Tracker →</a></div>
       </div>
     </div>
 
