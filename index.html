@@ -1116,6 +1116,9 @@ body {
       <!-- Show countdown banner -->
       <div id="show-countdown" style="margin-bottom:14px;"></div>
 
+      <!-- Weekly check-in nudge -->
+      <div id="checkin-dash-card" style="margin-bottom:14px;"></div>
+
       <!-- Metric cards -->
       <div class="metrics-grid" id="metrics-grid">
         <div class="metric-card mc-red">
@@ -1495,6 +1498,19 @@ body {
         <div class="card">
           <div class="card-title">Check-in History</div>
           <div id="ph-history-list"></div>
+        </div>
+      </div>
+
+      <!-- Weekly Check-In section — always visible -->
+      <div style="margin-top:14px;">
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <div class="card-title" style="margin-bottom:0;">Weekly Check-Ins</div>
+            <button class="btn-primary" onclick="openCheckinModal()" style="padding:6px 14px;font-size:13px;">+ Log</button>
+          </div>
+          <div id="ci-history-list">
+            <div style="text-align:center;padding:24px 0;font-size:13px;color:var(--text-muted);">No weekly check-ins yet. Log your first one to track condition and compliance across your prep.</div>
+          </div>
         </div>
       </div>
     </section>
@@ -2286,6 +2302,72 @@ body {
   </main>
 </div>
 
+<!-- ── Weekly Check-In Modal ── -->
+<div class="modal-overlay" id="ci-modal">
+  <div class="modal" style="max-height:88vh;overflow-y:auto;">
+    <div class="modal-title">
+      Weekly Check-In
+      <span class="modal-close" onclick="closeModal('ci-modal')"><i class="ti ti-x"></i></span>
+    </div>
+
+    <!-- Date + weeks out -->
+    <div class="form-row" style="margin-bottom:18px;">
+      <div class="form-group">
+        <label class="form-label">Date</label>
+        <input type="date" class="form-input" id="ci-date" oninput="ciUpdateWeeksOut()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Weeks Out</label>
+        <div id="ci-weeks-out" style="font-size:24px;font-weight:800;font-family:var(--font-data);color:var(--primary-bright);padding:6px 0;line-height:1;">—</div>
+      </div>
+    </div>
+
+    <!-- Condition scores -->
+    <div style="margin-bottom:18px;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px;padding-bottom:6px;border-bottom:0.5px solid var(--border);">Condition</div>
+      <div id="ci-fullness-row"    style="margin-bottom:10px;"></div>
+      <div id="ci-dryness-row"     style="margin-bottom:10px;"></div>
+      <div id="ci-vascularity-row" style="margin-bottom:0;"></div>
+    </div>
+
+    <!-- Compliance -->
+    <div class="form-row" style="margin-bottom:18px;">
+      <div class="form-group">
+        <label class="form-label">Diet Adherence</label>
+        <select class="form-input" id="ci-diet">
+          <option value="">— Select —</option>
+          <option value="100">100% — Perfect</option>
+          <option value="90">90% — 1 slip</option>
+          <option value="80">80% — 2 slips</option>
+          <option value="70">70% — 3 slips</option>
+          <option value="60">60% — Several off meals</option>
+          <option value="50">50% or below</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Cardio Sessions</label>
+        <input type="number" min="0" max="21" class="form-input" id="ci-cardio" placeholder="0">
+      </div>
+    </div>
+
+    <!-- Wellbeing -->
+    <div style="margin-bottom:18px;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px;padding-bottom:6px;border-bottom:0.5px solid var(--border);">Wellbeing (Weekly Average)</div>
+      <div id="ci-energy-row" style="margin-bottom:10px;"></div>
+      <div id="ci-sleep-row"  style="margin-bottom:10px;"></div>
+      <div id="ci-mood-row"   style="margin-bottom:0;"></div>
+    </div>
+
+    <!-- Notes -->
+    <div class="form-group" style="margin-bottom:20px;">
+      <label class="form-label">Notes</label>
+      <textarea class="form-input" id="ci-notes" rows="3" style="resize:vertical;" placeholder="Conditioning updates, coach notes, anything notable this week…"></textarea>
+    </div>
+
+    <button class="btn-primary" style="width:100%;padding:12px;" onclick="submitWeeklyCheckin()">Save Check-In</button>
+  </div>
+</div>
+
 <!-- ── Log Modal (quick access) ── -->
 <div class="modal-overlay" id="log-modal">
   <div class="modal">
@@ -2713,16 +2795,24 @@ async function loadUserData() {
   updateUserUI(_supaUser);
   const uid = _supaUser.id;
   try {
-    const [logsRes, metricsRes, settingsRes, insulinRes] = await Promise.all([
+    const [logsRes, metricsRes, settingsRes, insulinRes, checkinsRes] = await Promise.all([
       _supa.from('administration_log').select('*').eq('user_id', uid).order('date', { ascending: false }).limit(50),
       _supa.from('daily_logs').select('*').eq('user_id', uid).order('date', { ascending: false }).limit(90),
       _supa.from('user_settings').select('*').eq('user_id', uid).maybeSingle(),
-      _supa.from('insulin_log').select('*').eq('user_id', uid).order('date', { ascending: false }).order('created_at', { ascending: false }).limit(90)
+      _supa.from('insulin_log').select('*').eq('user_id', uid).order('date', { ascending: false }).order('created_at', { ascending: false }).limit(90),
+      _supa.from('weekly_checkins').select('*').eq('user_id', uid).order('check_in_date', { ascending: false }).limit(52)
     ]);
-    if (logsRes.error)    console.error('[loadUserData] logs query failed:', logsRes.error);
-    if (metricsRes.error) console.error('[loadUserData] metrics query failed:', metricsRes.error);
+    if (logsRes.error)     console.error('[loadUserData] logs query failed:', logsRes.error);
+    if (metricsRes.error)  console.error('[loadUserData] metrics query failed:', metricsRes.error);
     if (settingsRes.error) console.error('[loadUserData] settings query failed:', settingsRes.error);
-    if (insulinRes.error) console.error('[loadUserData] insulin query failed:', insulinRes.error);
+    if (insulinRes.error)  console.error('[loadUserData] insulin query failed:', insulinRes.error);
+    if (checkinsRes.error) console.error('[loadUserData] checkins query failed:', checkinsRes.error);
+
+    if (checkinsRes.data?.length) {
+      localStorage.setItem('hrt_weekly_checkins', JSON.stringify(checkinsRes.data));
+      if (currentPage === 'physique')  renderWeeklyCheckinSection();
+      if (currentPage === 'dashboard') renderDashboardCheckinCard();
+    }
 
     if (insulinRes.data?.length) {
       const insulinLog = insulinRes.data.map(r => ({
@@ -3288,14 +3378,14 @@ function nav(page) {
   if (page === 'protocols') renderProtocolsPage();
   if (page === 'vitals') renderVitalsPage();
   if (page === 'bloodwork') renderBloodworkPage();
-  if (page === 'physique') { renderPhysiquePage(); hevyMeasAutoSync(); }
+  if (page === 'physique') { renderPhysiquePage(); renderWeeklyCheckinSection(); hevyMeasAutoSync(); }
   if (page === 'workouts') { renderWorkoutsPage(); hevyAutoSync(); }
   if (page === 'report') renderCoachReport(); // async — shows loading state then renders
   if (page === 'compliance') renderCompliancePage();
   if (page === 'wellness') renderWellnessPage();
   if (page === 'calculator') setTimeout(() => { calcBuildCompoundSelect(); pepUpdate(); }, 100);
   if (page === 'settings') setTimeout(populateShowForm, 50);
-  if (page === 'dashboard') { renderShowCountdown(); renderVitalsToCards(); renderBwDashStrip(); renderPhysiqueDashStrip(); setTimeout(() => { if (_supa && _supaUser) renderRealCharts(); else renderDemoCharts(); }, 100); setTimeout(checkLabReminder, 1200); }
+  if (page === 'dashboard') { renderShowCountdown(); renderDashboardCheckinCard(); renderVitalsToCards(); renderBwDashStrip(); renderPhysiqueDashStrip(); setTimeout(() => { if (_supa && _supaUser) renderRealCharts(); else renderDemoCharts(); }, 100); setTimeout(checkLabReminder, 1200); }
   // Load active protocol on dashboard
   if (page === 'dashboard') {
     const activeData = localStorage.getItem('hrt_active_protocol_data');
@@ -4619,6 +4709,230 @@ function measRenderHistory(list) {
       </button>
     </div>`;
   }).join('');
+}
+
+// ── Weekly Check-In Module ──
+const _ci = { fullness: null, dryness: null, vascularity: null, energy: null, sleep: null, mood: null };
+
+function ciScoreHtml(fieldId, label, color, current) {
+  const btns = Array.from({ length: 10 }, (_, i) => {
+    const v = i + 1;
+    const sel = v === current;
+    return `<button type="button" onclick="ciSetScore('${fieldId}',${v})" style="flex:1;padding:7px 2px;border-radius:4px;border:1.5px solid ${sel ? color : 'var(--border)'};background:${sel ? color + '30' : 'transparent'};color:${sel ? color : 'var(--text-muted)'};font-size:12px;font-weight:${sel ? '700' : '500'};cursor:pointer;transition:all 0.12s;">${v}</button>`;
+  }).join('');
+  return `<div>
+    <div style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:5px;">${label} <span style="color:${current ? color : 'var(--text-muted)'};">${current ? current + '/10' : '—'}</span></div>
+    <div style="display:flex;gap:3px;">${btns}</div>
+  </div>`;
+}
+
+function ciSetScore(field, val) {
+  _ci[field] = _ci[field] === val ? null : val; // toggle off
+  const colors = { fullness:'#38BDF8', dryness:'#F5C518', vascularity:'#F87171', energy:'#4ADE80', sleep:'#A78BFA', mood:'#FB923C' };
+  const labels = { fullness:'Fullness', dryness:'Dryness', vascularity:'Vascularity', energy:'Energy', sleep:'Sleep', mood:'Mood' };
+  const el = document.getElementById(`ci-${field}-row`);
+  if (el) el.innerHTML = ciScoreHtml(field, labels[field], colors[field], _ci[field]);
+}
+
+function ciUpdateWeeksOut() {
+  const dateVal = document.getElementById('ci-date')?.value;
+  const showDate = localStorage.getItem('hrt_show_date');
+  const el = document.getElementById('ci-weeks-out');
+  if (!el) return;
+  if (dateVal && showDate) {
+    const show = new Date(showDate + 'T00:00:00');
+    const d    = new Date(dateVal + 'T00:00:00');
+    const days = Math.round((show - d) / 86400000);
+    el.textContent = days > 0 ? Math.ceil(days / 7) + ' wks' : days === 0 ? 'Show Day' : 'Post';
+  } else {
+    el.textContent = '—';
+  }
+}
+
+function openCheckinModal(existingDate) {
+  Object.keys(_ci).forEach(k => _ci[k] = null);
+
+  // Pre-fill with existing check-in for that date if any
+  const dateStr = existingDate || localDate();
+  const all = lsGet('hrt_weekly_checkins', []);
+  const existing = all.find(c => c.check_in_date === dateStr);
+  if (existing) {
+    ['fullness','dryness','vascularity','energy_score','sleep_score','mood_score'].forEach(k => {
+      const field = k.replace('_score','');
+      if (existing[k] != null) _ci[field] = existing[k];
+    });
+  }
+
+  const dateEl = document.getElementById('ci-date');
+  if (dateEl) dateEl.value = dateStr;
+
+  const dEl = document.getElementById('ci-diet');
+  if (dEl) dEl.value = existing?.diet_adherence ?? '';
+  const cEl = document.getElementById('ci-cardio');
+  if (cEl) cEl.value = existing?.cardio_sessions ?? '';
+  const nEl = document.getElementById('ci-notes');
+  if (nEl) nEl.value = existing?.notes ?? '';
+
+  const cfg = [
+    ['fullness',    'Fullness',    '#38BDF8'],
+    ['dryness',     'Dryness',     '#F5C518'],
+    ['vascularity', 'Vascularity', '#F87171'],
+    ['energy',      'Energy',      '#4ADE80'],
+    ['sleep',       'Sleep',       '#A78BFA'],
+    ['mood',        'Mood',        '#FB923C'],
+  ];
+  cfg.forEach(([field, label, color]) => {
+    const el = document.getElementById(`ci-${field}-row`);
+    if (el) el.innerHTML = ciScoreHtml(field, label, color, _ci[field]);
+  });
+
+  ciUpdateWeeksOut();
+  openModal('ci-modal');
+}
+
+async function submitWeeklyCheckin() {
+  const dateVal = document.getElementById('ci-date')?.value;
+  if (!dateVal) { showToast('Please set the check-in date', 'info'); return; }
+
+  const showDate = localStorage.getItem('hrt_show_date');
+  let weeksOut = null;
+  if (showDate) {
+    const days = Math.round((new Date(showDate + 'T00:00:00') - new Date(dateVal + 'T00:00:00')) / 86400000);
+    weeksOut = days > 0 ? Math.ceil(days / 7) : null;
+  }
+
+  const row = {
+    check_in_date:  dateVal,
+    weeks_out:      weeksOut,
+    fullness:       _ci.fullness,
+    dryness:        _ci.dryness,
+    vascularity:    _ci.vascularity,
+    diet_adherence: document.getElementById('ci-diet')?.value ? parseInt(document.getElementById('ci-diet').value) : null,
+    cardio_sessions:document.getElementById('ci-cardio')?.value !== '' ? parseInt(document.getElementById('ci-cardio').value) : null,
+    energy_score:   _ci.energy,
+    sleep_score:    _ci.sleep,
+    mood_score:     _ci.mood,
+    notes:          document.getElementById('ci-notes')?.value.trim() || null,
+  };
+
+  // Persist locally first (optimistic)
+  const all = lsGet('hrt_weekly_checkins', []);
+  const idx = all.findIndex(c => c.check_in_date === dateVal);
+  if (idx >= 0) all[idx] = { ...all[idx], ...row };
+  else all.unshift(row);
+  all.sort((a,b) => b.check_in_date.localeCompare(a.check_in_date));
+  localStorage.setItem('hrt_weekly_checkins', JSON.stringify(all));
+
+  // Write to Supabase
+  if (_supa && _supaUser) {
+    const { error } = await _supa.from('weekly_checkins').upsert(
+      { user_id: _supaUser.id, ...row, updated_at: new Date().toISOString() },
+      { onConflict: 'user_id,check_in_date' }
+    );
+    if (error) console.error('[checkin] upsert failed:', error);
+  }
+
+  closeModal('ci-modal');
+  showToast('Check-in saved', 'success');
+  renderWeeklyCheckinSection();
+  renderDashboardCheckinCard();
+}
+
+function renderWeeklyCheckinSection() {
+  const el = document.getElementById('ci-history-list');
+  if (!el) return;
+  const all = lsGet('hrt_weekly_checkins', []);
+  if (!all.length) {
+    el.innerHTML = '<div style="text-align:center;padding:24px 0;font-size:13px;color:var(--text-muted);">No weekly check-ins yet. Log your first one to track condition and compliance across your prep.</div>';
+    return;
+  }
+  const scoreClr = v => v == null ? 'var(--text-muted)' : v >= 8 ? 'var(--green)' : v >= 5 ? '#F5C518' : 'var(--red)';
+  const scoreBadge = (v) => v == null ? '<span style="color:var(--text-muted);">—</span>' : `<span style="font-weight:700;color:${scoreClr(v)};">${v}</span>`;
+  el.innerHTML = all.slice(0, 20).map(c => {
+    const wk = c.weeks_out != null ? `<span style="font-size:10px;color:var(--primary);font-weight:700;margin-left:6px;">W${c.weeks_out}</span>` : '';
+    const condRow = [
+      c.fullness != null    ? `Full ${scoreBadge(c.fullness)}`    : '',
+      c.dryness != null     ? `Dry ${scoreBadge(c.dryness)}`      : '',
+      c.vascularity != null ? `Vasc ${scoreBadge(c.vascularity)}` : '',
+    ].filter(Boolean).join('<span style="color:var(--border);margin:0 4px;">·</span>');
+    const compRow = [
+      c.diet_adherence != null   ? `Diet <span style="font-weight:600;">${c.diet_adherence}%</span>`   : '',
+      c.cardio_sessions != null  ? `Cardio <span style="font-weight:600;">${c.cardio_sessions}</span>` : '',
+    ].filter(Boolean).join('<span style="color:var(--border);margin:0 4px;">·</span>');
+    const wellRow = [
+      c.energy_score != null ? `Energy ${scoreBadge(c.energy_score)}` : '',
+      c.sleep_score  != null ? `Sleep ${scoreBadge(c.sleep_score)}`   : '',
+      c.mood_score   != null ? `Mood ${scoreBadge(c.mood_score)}`     : '',
+    ].filter(Boolean).join('<span style="color:var(--border);margin:0 4px;">·</span>');
+    return `<div onclick="openCheckinModal('${c.check_in_date}')" style="padding:12px 0;border-bottom:0.5px solid var(--border);cursor:pointer;" class="hover-row">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+        <div style="font-size:13px;font-weight:600;color:var(--text-primary);">${c.check_in_date}${wk}</div>
+        <div style="font-size:11px;color:var(--text-muted);">tap to edit</div>
+      </div>
+      ${condRow  ? `<div style="font-size:12px;color:var(--text-secondary);margin-bottom:3px;">${condRow}</div>`  : ''}
+      ${compRow  ? `<div style="font-size:12px;color:var(--text-secondary);margin-bottom:3px;">${compRow}</div>`  : ''}
+      ${wellRow  ? `<div style="font-size:12px;color:var(--text-secondary);margin-bottom:3px;">${wellRow}</div>`  : ''}
+      ${c.notes  ? `<div style="font-size:12px;color:var(--text-muted);font-style:italic;margin-top:4px;">${escHtml(c.notes)}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function renderDashboardCheckinCard() {
+  const el = document.getElementById('checkin-dash-card');
+  if (!el) return;
+  const all = lsGet('hrt_weekly_checkins', []);
+  const latest = all[0] || null;
+  const today  = new Date(); today.setHours(0,0,0,0);
+
+  if (!latest) {
+    el.innerHTML = `<div class="card" style="border-color:rgba(168,139,250,0.3);">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#A78BFA;margin-bottom:3px;">Weekly Check-In</div>
+          <div style="font-size:13px;color:var(--text-secondary);">Log your first weekly check-in to track prep condition</div>
+        </div>
+        <button class="btn-primary" onclick="openCheckinModal()" style="padding:8px 14px;font-size:13px;white-space:nowrap;margin-left:12px;">Log Now</button>
+      </div>
+    </div>`;
+    return;
+  }
+
+  const lastDate  = new Date(latest.check_in_date + 'T00:00:00');
+  const daysAgo   = Math.round((today - lastDate) / 86400000);
+  const isDue     = daysAgo >= 7;
+  const wkLabel   = latest.weeks_out != null ? ` · W${latest.weeks_out}` : '';
+  const scoreClr  = v => v == null ? 'var(--text-muted)' : v >= 8 ? 'var(--green)' : v >= 5 ? '#F5C518' : 'var(--red)';
+
+  const scores = [
+    latest.fullness    != null ? `Full <b style="color:${scoreClr(latest.fullness)};">${latest.fullness}</b>`       : null,
+    latest.dryness     != null ? `Dry <b style="color:${scoreClr(latest.dryness)};">${latest.dryness}</b>`          : null,
+    latest.vascularity != null ? `Vasc <b style="color:${scoreClr(latest.vascularity)};">${latest.vascularity}</b>` : null,
+    latest.diet_adherence != null ? `Diet <b>${latest.diet_adherence}%</b>`                                          : null,
+  ].filter(Boolean).join(' <span style="color:var(--border);">·</span> ');
+
+  if (isDue) {
+    el.innerHTML = `<div class="card" style="border-color:rgba(251,146,60,0.4);background:rgba(251,146,60,0.04);">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+        <div>
+          <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#FB923C;margin-bottom:3px;">Check-In Due</div>
+          <div style="font-size:13px;color:var(--text-secondary);">Last: ${latest.check_in_date}${wkLabel} · ${daysAgo}d ago</div>
+          ${scores ? `<div style="font-size:12px;color:var(--text-muted);margin-top:3px;">${scores}</div>` : ''}
+        </div>
+        <button class="btn-primary" onclick="openCheckinModal()" style="padding:8px 14px;font-size:13px;white-space:nowrap;">Log This Week</button>
+      </div>
+    </div>`;
+  } else {
+    el.innerHTML = `<div class="card" style="cursor:pointer;" onclick="nav('physique')">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#A78BFA;margin-bottom:3px;">Last Check-In${wkLabel}</div>
+          <div style="font-size:13px;font-weight:500;color:var(--text-primary);">${latest.check_in_date} <span style="font-weight:400;color:var(--text-muted);">(${daysAgo === 0 ? 'today' : daysAgo + 'd ago'})</span></div>
+          ${scores ? `<div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">${scores}</div>` : ''}
+        </div>
+        <i class="ti ti-chevron-right" style="color:var(--text-muted);font-size:16px;flex-shrink:0;"></i>
+      </div>
+    </div>`;
+  }
 }
 
 function renderPhysiqueDashStrip() {
