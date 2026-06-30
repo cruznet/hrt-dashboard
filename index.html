@@ -9197,33 +9197,50 @@ async function renderAthletesPage() {
 function athleteCard(name, latestCheckin, latestBw, show, isSelf) {
   const scoreClr = v => v == null ? 'var(--text-muted)' : v >= 8 ? 'var(--green)' : v >= 5 ? '#F5C518' : 'var(--red)';
 
-  // Weeks out
-  let weeksOutStr = '';
-  if (show?.date) {
-    const days = Math.round((new Date(show.date + 'T00:00:00') - new Date()) / 86400000);
-    if (days > 0) weeksOutStr = `<span style="font-size:11px;font-weight:700;color:var(--primary);margin-left:8px;">${Math.ceil(days/7)} wks out</span>`;
-    else if (days >= -6) weeksOutStr = `<span style="font-size:11px;font-weight:700;color:var(--green);margin-left:8px;">Post-Show</span>`;
+  // Avatar initials + color
+  const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  const avatarBg = isSelf ? 'rgba(245,197,24,0.2)' : 'rgba(34,211,238,0.15)';
+  const avatarClr = isSelf ? 'var(--primary-bright)' : 'var(--teal)';
+
+  // Check-in recency indicator
+  let statusDot = '<div style="width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.15);"></div>';
+  if (latestCheckin?.check_in_date) {
+    const daysSinceCi = Math.floor((Date.now() - Date.parse(latestCheckin.check_in_date)) / 86400000);
+    const dotClr = daysSinceCi <= 7 ? 'var(--green)' : daysSinceCi <= 14 ? 'var(--amber)' : 'var(--red)';
+    statusDot = `<div title="${daysSinceCi}d ago" style="width:8px;height:8px;border-radius:50%;background:${dotClr};box-shadow:0 0 6px ${dotClr};"></div>`;
   }
 
-  // Check-in summary
-  let ciBlock = '<span style="font-size:12px;color:var(--text-muted);">No check-ins yet</span>';
+  // Weeks out
+  let weeksOutBadge = '';
+  if (show?.date) {
+    const days = Math.round((new Date(show.date + 'T00:00:00') - new Date()) / 86400000);
+    if (days > 0) weeksOutBadge = `<span style="font-size:10px;font-weight:700;color:var(--primary);background:rgba(245,197,24,0.12);padding:2px 7px;border-radius:5px;">${Math.ceil(days/7)} wks out</span>`;
+    else if (days >= -6) weeksOutBadge = `<span style="font-size:10px;font-weight:700;color:var(--green);background:rgba(34,197,94,0.12);padding:2px 7px;border-radius:5px;">Post-Show</span>`;
+  }
+
+  // Score row
+  let scoreRow = '<span style="font-size:12px;color:var(--text-muted);">No check-in data</span>';
+  let dateRow = '';
+  let coachNoteHtml = '';
   if (latestCheckin) {
     const ci = latestCheckin;
     const avgCond = [ci.fullness, ci.dryness, ci.vascularity].filter(v => v != null);
     const avgWell = [ci.energy_score, ci.sleep_score, ci.mood_score].filter(v => v != null);
     const condAvg = avgCond.length ? (avgCond.reduce((a,b)=>a+b,0)/avgCond.length).toFixed(1) : null;
     const wellAvg = avgWell.length ? (avgWell.reduce((a,b)=>a+b,0)/avgWell.length).toFixed(1) : null;
-    ciBlock = `<div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">${ci.check_in_date}</div>
-      <div style="display:flex;gap:12px;flex-wrap:wrap;">
-        ${condAvg != null ? `<span style="font-size:12px;">Cond <strong style="color:${scoreClr(condAvg)};">${condAvg}</strong></span>` : ''}
-        ${wellAvg != null ? `<span style="font-size:12px;">Well <strong style="color:${scoreClr(wellAvg)};">${wellAvg}</strong></span>` : ''}
-        ${ci.diet_adherence != null ? `<span style="font-size:12px;">Diet <strong>${ci.diet_adherence}%</strong></span>` : ''}
-      </div>
-      ${ci.coach_note ? `<div style="font-size:11px;color:var(--primary);margin-top:4px;font-style:italic;"><i class="ti ti-messages" style="font-size:10px;"></i> ${escHtml(ci.coach_note)}</div>` : ''}`;
+    const pill = (label, val) => val != null
+      ? `<div style="text-align:center;"><div style="font-size:16px;font-weight:700;font-family:var(--font-data);color:${scoreClr(val)};line-height:1;">${val}</div><div style="font-size:10px;color:var(--text-muted);margin-top:2px;text-transform:uppercase;letter-spacing:0.06em;">${label}</div></div>`
+      : '';
+    scoreRow = `<div style="display:flex;gap:20px;align-items:center;flex-wrap:wrap;">
+      ${pill('Cond', condAvg)} ${pill('Well', wellAvg)}
+      ${ci.diet_adherence != null ? pill('Diet', ci.diet_adherence + '%') : ''}
+    </div>`;
+    dateRow = `<div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">${ci.check_in_date}</div>`;
+    if (ci.coach_note) coachNoteHtml = `<div style="margin-top:8px;padding:6px 10px;background:rgba(245,197,24,0.06);border-left:2px solid var(--primary);border-radius:0 6px 6px 0;font-size:12px;color:var(--text-secondary);font-style:italic;">${escHtml(ci.coach_note)}</div>`;
   }
 
-  // Bloodwork grade
-  let bwGrade = '';
+  // Bloodwork grade badge
+  let bwBadgeHtml = '';
   if (latestBw?.markers) {
     const markers = latestBw.markers;
     const keys = Object.keys(markers).filter(k => BW_MARKERS[k] && markers[k] != null);
@@ -9232,22 +9249,34 @@ function athleteCard(name, latestCheckin, latestBw, show, isSelf) {
     if (pct != null) {
       const grade = pct === 100 ? 'A' : pct >= 90 ? 'B' : pct >= 75 ? 'C' : 'D';
       const gc = grade === 'A' ? 'var(--green)' : grade === 'B' ? '#4ADE80' : grade === 'C' ? '#F5C518' : 'var(--red)';
-      bwGrade = `<span style="font-size:18px;font-weight:800;color:${gc};font-family:var(--font-data);">${grade}</span>`;
+      bwBadgeHtml = `<div style="text-align:center;padding:0 14px;border-left:0.5px solid var(--border);">
+        <div style="font-size:24px;font-weight:800;color:${gc};font-family:var(--font-data);line-height:1;">${grade}</div>
+        <div style="font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-top:3px;">Labs</div>
+      </div>`;
     }
   }
 
-  return `<div class="card" style="margin-bottom:12px;${isSelf ? 'border-color:rgba(245,197,24,0.2);' : ''}">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
-      <div>
-        <div style="font-size:14px;font-weight:700;color:var(--text-primary);">${escHtml(name)}${isSelf ? ' <span style="font-size:10px;color:var(--text-muted);font-weight:400;">(you)</span>' : ''}${weeksOutStr}</div>
-        ${show?.name ? `<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${escHtml(show.name)}</div>` : ''}
+  return `<div class="card" style="margin-bottom:10px;${isSelf ? 'border-color:rgba(245,197,24,0.18);background:rgba(245,197,24,0.02);' : ''}">
+    <div style="display:flex;align-items:center;gap:14px;">
+      <!-- Avatar -->
+      <div style="width:44px;height:44px;border-radius:12px;background:${avatarBg};display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:${avatarClr};flex-shrink:0;letter-spacing:0.03em;">${initials}</div>
+      <!-- Info -->
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:3px;">
+          ${statusDot}
+          <span style="font-size:14px;font-weight:700;color:var(--text-primary);">${escHtml(name)}</span>
+          ${isSelf ? '<span style="font-size:10px;color:var(--text-muted);">(you)</span>' : ''}
+          ${weeksOutBadge}
+        </div>
+        ${show?.name ? `<div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">${escHtml(show.name)}</div>` : ''}
+        ${dateRow}
+        ${scoreRow}
+        ${coachNoteHtml}
       </div>
-      ${bwGrade}
+      <!-- BW grade -->
+      ${bwBadgeHtml}
     </div>
-    <div style="padding-top:8px;border-top:0.5px solid var(--border);">
-      ${ciBlock}
-    </div>
-    ${isSelf ? `<div style="margin-top:10px;"><button class="btn-secondary" onclick="openCheckinModal()" style="font-size:12px;padding:5px 12px;"><i class="ti ti-plus"></i> Log Check-In</button></div>` : ''}
+    ${isSelf ? `<div style="margin-top:12px;padding-top:10px;border-top:0.5px solid var(--border);"><button class="btn-secondary" onclick="openCheckinModal()" style="font-size:12px;padding:5px 12px;">+ Log Check-In</button></div>` : ''}
   </div>`;
 }
 
