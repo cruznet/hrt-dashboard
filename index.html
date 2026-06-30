@@ -1975,12 +1975,13 @@ body {
       </div>
 
       <!-- Empty state -->
-      <div id="ph-empty" style="text-align:center;padding:48px 16px;">
-        <div style="font-size:48px;margin-bottom:16px;">📐</div>
-        <div style="font-size:17px;font-weight:700;color:var(--text-primary);margin-bottom:8px;">Track your physique over time</div>
-        <div style="font-size:13px;color:var(--text-muted);margin-bottom:6px;max-width:300px;margin-left:auto;margin-right:auto;">Log weight, body fat, and measurements to see exactly how your body responds to each phase of your protocol.</div>
-        <div style="font-size:12px;color:var(--text-muted);margin-bottom:24px;opacity:0.7;">Weekly measurements give the clearest trend data.</div>
-        <button class="btn-primary" onclick="measShowForm()" style="padding:12px 28px;font-size:14px;">+ Log First Measurement</button>
+      <div id="ph-empty" class="empty-state">
+        <div class="empty-state-icon" style="background:rgba(34,211,238,0.08);border-color:rgba(34,211,238,0.15);">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#22D3EE" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12"/></svg>
+        </div>
+        <div class="empty-state-title">Track your physique over time</div>
+        <div class="empty-state-body">Log weight, body fat, and measurements to see exactly how your body responds to each phase of your protocol. Weekly measurements give the clearest trend data.</div>
+        <button class="btn-primary" onclick="measShowForm()" style="padding:11px 28px;font-size:14px;">+ Log First Measurement</button>
       </div>
 
       <!-- Content -->
@@ -5824,10 +5825,12 @@ function renderWeeklyCheckinSection() {
   if (!el) return;
   const all = lsGet('hrt_weekly_checkins', []);
   if (!all.length) {
-    el.innerHTML = `<div style="text-align:center;padding:32px 16px;">
-      <div style="font-size:36px;margin-bottom:12px;">📋</div>
-      <div style="font-size:15px;font-weight:600;color:var(--text-primary);margin-bottom:6px;">Log your first weekly check-in</div>
-      <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px;">Track condition, compliance, and wellbeing each week — your coach (or future self) will thank you.</div>
+    el.innerHTML = `<div class="empty-state" style="padding:32px 20px;">
+      <div class="empty-state-icon" style="width:52px;height:52px;background:rgba(245,197,24,0.08);border-color:rgba(245,197,24,0.15);">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#F5C518" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      </div>
+      <div class="empty-state-title" style="font-size:15px;">Log your first weekly check-in</div>
+      <div class="empty-state-body" style="font-size:12px;margin-bottom:18px;">Track condition, compliance, and wellbeing each week — your coach (or future self) will thank you.</div>
       <button class="btn-primary" onclick="openCheckinModal()" style="padding:10px 22px;">+ Log Check-In</button>
     </div>`;
     return;
@@ -8425,8 +8428,13 @@ function renderProtocolsPage() {
   const active = localStorage.getItem('hrt_active_protocol');
 
   if (!saved.length) {
-    container.innerHTML = `<div class="card" style="color:var(--text-muted);font-size:13px;text-align:center;padding:30px;">
-      No protocols saved. <a href="#" onclick="nav('builder');return false;" style="color:var(--primary-bright);">Build one →</a>
+    container.innerHTML = `<div class="card empty-state" style="padding:40px 20px;">
+      <div class="empty-state-icon" style="width:56px;height:56px;background:rgba(245,197,24,0.08);border-color:rgba(245,197,24,0.15);">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#F5C518" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 3h3M12 3v7L7 18a2.5 2.5 0 0 0 2.2 3.7h5.6A2.5 2.5 0 0 0 17 18l-5-8"/><path d="M8.5 15h7"/></svg>
+      </div>
+      <div class="empty-state-title" style="font-size:15px;">No protocols saved yet</div>
+      <div class="empty-state-body" style="font-size:13px;">Build a protocol to schedule compounds, doses, and frequencies — then track every shot against the plan.</div>
+      <button class="btn-primary" onclick="nav('builder');" style="padding:11px 28px;font-size:14px;">+ Build a Protocol</button>
     </div>`;
     return;
   }
@@ -9334,9 +9342,12 @@ async function renderAthletesPage() {
     }
   } else {
     // No linked athletes yet
-    html += `<div style="margin-top:20px;padding:20px;text-align:center;background:rgba(255,255,255,0.02);border:0.5px dashed var(--border);border-radius:12px;">
-      <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px;">No athletes linked yet</div>
-      <div style="font-size:12px;color:var(--text-muted);opacity:0.7;">Ask an athlete to generate a share token in their Settings, then paste it in the Link Athlete section.</div>
+    html += `<div class="empty-state" style="margin-top:20px;padding:36px 20px;">
+      <div class="empty-state-icon" style="width:52px;height:52px;background:rgba(34,211,238,0.08);border-color:rgba(34,211,238,0.15);">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#22D3EE" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      </div>
+      <div class="empty-state-title" style="font-size:15px;">No athletes linked yet</div>
+      <div class="empty-state-body" style="font-size:12px;">Ask an athlete to generate a share token in their Settings, then paste it in the Link Athlete section below.</div>
     </div>`;
     el.innerHTML = html;
   }
@@ -10059,7 +10070,7 @@ function renderUpcoming() {
 
   const raw = localStorage.getItem('hrt_active_protocol_data');
   if (!raw) {
-    el.innerHTML = '<span style="color:var(--text-muted);">Set an active protocol to see upcoming doses.</span>';
+    el.innerHTML = '<span style="color:var(--text-muted);">Set an active protocol to see upcoming doses. <a href="#" onclick="nav(\'builder\');return false;" style="color:var(--primary-bright);">Build one →</a></span>';
     return;
   }
 
@@ -10067,7 +10078,7 @@ function renderUpcoming() {
   try { protocol = JSON.parse(raw); } catch(e) { console.error('[renderAdherenceBadge] corrupt protocol data:', e); return; }
   const compounds = (protocol.compounds || []).map(normalizeCompound);
   if (!compounds.length) {
-    el.innerHTML = '<span style="color:var(--text-muted);">Active protocol has no compounds.</span>';
+    el.innerHTML = '<span style="color:var(--text-muted);">Active protocol has no compounds. <a href="#" onclick="nav(\'builder\');return false;" style="color:var(--primary-bright);">Edit protocol →</a></span>';
     return;
   }
 
