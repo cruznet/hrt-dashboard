@@ -437,7 +437,7 @@ label.dose-row.dose-done .dose-name { text-decoration: line-through; }
 @keyframes toastOut { from { opacity:1; transform:none; } to { opacity:0; transform:translateX(12px); } }
 
 /* ── Range pills (Wellness, Compliance) ── */
-.range-pill { padding:4px 11px;border-radius:6px;font-size:12px;border:0.5px solid var(--border);background:transparent;color:var(--text-muted);cursor:pointer;transition:all 0.15s;font-family:var(--font-ui); }
+.range-pill { padding:4px 11px;border-radius:6px;font-size:12px;border:0.5px solid var(--border);background:transparent;color:var(--text-label);cursor:pointer;transition:all 0.15s;font-family:var(--font-ui); }
 .range-pill:hover { color:var(--text-secondary);border-color:var(--border-mid); }
 .range-pill-active { background:rgba(245,197,24,0.1);border-color:rgba(245,197,24,0.3)!important;color:var(--primary-bright)!important; }
 
@@ -7111,12 +7111,12 @@ function hkRenderKpis(container, latest, all) {
       const diff  = a7 - p7;
       const arrow = diff > 0 ? '↑' : diff < 0 ? '↓' : '→';
       const color = diff === 0 ? 'var(--text-muted)' : (diff > 0 ? 'var(--green)' : 'var(--red)');
-      delta = `<div style="font-size:11px;color:${color};margin-top:2px;">${arrow} ${Math.abs(diff).toFixed(1)} 7d avg</div>`;
+      delta = `<div style="font-size:12px;font-weight:500;color:${color};margin-top:4px;">${arrow} ${Math.abs(diff).toFixed(1)} 7d avg</div>`;
     }
     return `<div class="card" style="padding:12px 14px;">
-      <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">${escHtml(k.label)}</div>
+      <div style="font-size:12px;color:var(--text-label);text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:6px;">${escHtml(k.label)}</div>
       <div style="font-size:22px;font-family:var(--font-data);font-weight:600;color:${k.color};"${countAttr}>${disp}</div>
-      <div style="font-size:11px;color:var(--text-muted);">${k.unit}</div>
+      <div style="font-size:12px;color:var(--text-label);margin-top:1px;">${k.unit}</div>
       ${delta}
     </div>`;
   }).join('');
@@ -7191,9 +7191,9 @@ function hkRenderCharts(container, rows) {
   ];
 
   container.innerHTML = charts.map(c =>
-    `<div class="card" style="margin-bottom:12px;padding:14px 16px;">
-      <div style="font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:10px;">${escHtml(c.title)}</div>
-      <div style="position:relative;height:160px;"><canvas id="${c.id}"></canvas></div>
+    `<div class="card" style="margin-bottom:12px;padding:16px 18px;">
+      <div style="font-size:14px;font-weight:700;color:var(--text-primary);margin-bottom:12px;letter-spacing:-0.01em;">${escHtml(c.title)}</div>
+      <div style="position:relative;height:180px;"><canvas id="${c.id}"></canvas></div>
     </div>`
   ).join('');
 
@@ -7201,14 +7201,14 @@ function hkRenderCharts(container, rows) {
     responsive: true, maintainAspectRatio: false,
     plugins: { legend: { display: false } },
     scales: {
-      x: { ticks: { color: 'var(--text-muted)', font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { color: 'rgba(255,255,255,0.04)' } },
-      y: { ticks: { color: 'var(--text-muted)', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.06)' } },
+      x: { ticks: { color: '#A0A0AC', font: { size: 11 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { color: 'rgba(255,255,255,0.04)' } },
+      y: { ticks: { color: '#A0A0AC', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.06)' } },
     },
   };
 
   charts.forEach(c => {
     const opts = c.opts ? { ...baseOpts, scales: { ...baseOpts.scales, ...c.opts.scales } } : baseOpts;
-    if (c.datasets.length > 1) opts.plugins = { ...opts.plugins, legend: { display: true, labels: { color: 'var(--text-muted)', font: { size: 11 }, boxWidth: 10 } } };
+    if (c.datasets.length > 1) opts.plugins = { ...opts.plugins, legend: { display: true, labels: { color: '#C4C4CC', font: { size: 12, weight: '500' }, boxWidth: 12, padding: 14 } } };
     makeChart(c.id, c.type, labels, c.datasets, opts);
   });
 }
