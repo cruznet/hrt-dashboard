@@ -2663,11 +2663,6 @@ function showAuthOverlay() { document.getElementById('auth-overlay').classList.a
 async function loadUserData() {
   if (!_supa || !_supaUser) return;
   updateUserUI(_supaUser);
-  // Restore Hevy key from Supabase user_metadata if not present in this context's localStorage
-  if (!hevyKey()) {
-    const savedKey = _supaUser.user_metadata?.hevy_api_key;
-    if (savedKey) localStorage.setItem(HEVY_KEY_LS, savedKey);
-  }
   const uid = _supaUser.id;
   try {
     const [logsRes, metricsRes, settingsRes, insulinRes] = await Promise.all([
@@ -2715,6 +2710,10 @@ async function loadUserData() {
         localStorage.setItem('hrt_measurements', JSON.stringify(settings.physique_measurements));
       if (settings.user_profile)
         localStorage.setItem('hrt_user_profile', JSON.stringify(settings.user_profile));
+      if (settings.app_mode)
+        setMode(settings.app_mode, false);
+      if (settings.hevy_api_key && !hevyKey())
+        localStorage.setItem(HEVY_KEY_LS, settings.hevy_api_key);
     }
 
     if (logsRes.data?.length) renderLastEntry(logsRes.data[0]);
@@ -2785,6 +2784,8 @@ async function syncProtocolsToSupabase() {
     bloodwork_panels:      lsGet('hrt_bloodwork', []),
     physique_measurements: lsGet('hrt_measurements', []),
     user_profile:          lsGet('hrt_user_profile', null),
+    app_mode:              localStorage.getItem('hrt_mode') || 'trt',
+    hevy_api_key:          localStorage.getItem(HEVY_KEY_LS) || null,
     updated_at:            new Date().toISOString()
   }, { onConflict: 'user_id' });
   if (error) console.warn('[syncProtocols]', error.message);
@@ -5536,14 +5537,11 @@ function hevyShowSettings() {
   if (inp) { inp.value = hevyKey(); inp.focus(); }
 }
 
-async function hevySaveKey() {
+function hevySaveKey() {
   const key = (document.getElementById('hevy-key-input')?.value || '').trim();
   if (!key) return;
   localStorage.setItem(HEVY_KEY_LS, key);
-  if (_supa && _supaUser) {
-    const { error } = await _supa.auth.updateUser({ data: { hevy_api_key: key } });
-    if (error) console.error('[hevy] failed to persist key to Supabase:', error);
-  }
+  syncProtocolsToSupabase();
   document.getElementById('hevy-setup').style.display = 'none';
   hevySync();
 }
@@ -7449,11 +7447,12 @@ function showChart(chartId) {
 }
 
 // ── Mode ──
-function setMode(mode) {
+function setMode(mode, save = true) {
   localStorage.setItem('hrt_mode', mode);
   document.getElementById('mode-trt').className  = mode === 'trt'         ? 'btn-primary' : 'btn-secondary';
   document.getElementById('mode-perf').className = mode === 'performance' ? 'btn-primary' : 'btn-secondary';
   updateTopbarBadge();
+  if (save) syncProtocolsToSupabase();
 }
 
 function updateTopbarBadge() {
@@ -8352,7 +8351,7 @@ function pepUpdate() {
 window.addEventListener('DOMContentLoaded', () => {
   initSupa();
   const savedMode = localStorage.getItem('hrt_mode') || 'trt';
-  setMode(savedMode);
+  setMode(savedMode, false);
   nav(localStorage.getItem('hrt_active_page') || 'dashboard');
   renderCompoundsTable();
   // Charts start in empty state — populated only when real data is available
