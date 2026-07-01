@@ -7244,12 +7244,14 @@ function hkVal(row, col) {
 
 function hkRenderKpis(container, latest, all) {
   const kpis = [
-    { label: 'HRV',         col: 'Heart Rate Variability (ms)', unit: 'ms',    color: 'var(--teal)',          note: 'Heart Rate Variability' },
-    { label: 'Resting HR',  col: 'Resting Heart Rate (bpm)',    unit: 'bpm',   color: 'var(--primary-bright)', note: 'Resting Heart Rate' },
-    { label: 'Weight',      col: 'Weight (lbs)',                unit: 'lbs',   color: 'var(--text-primary)',  note: '' },
-    { label: 'Body Fat',    col: 'Body Fat Percentage (%)',     unit: '%',     color: 'var(--amber)',         note: '' },
-    { label: 'Sleep',       col: 'Sleep Analysis [Total] (hr)', unit: 'hr',    color: 'var(--purple)',        note: 'Total sleep' },
-    { label: 'Steps',       col: 'Step Count (steps)',          unit: 'steps', color: 'var(--green)',         note: '' },
+    { label: 'HRV',            col: 'Heart Rate Variability (ms)',       unit: 'ms',    color: 'var(--teal)',           },
+    { label: 'Resting HR',     col: 'Resting Heart Rate (bpm)',          unit: 'bpm',   color: 'var(--primary-bright)', },
+    { label: 'Blood Pressure', col: 'Blood Pressure [Systolic] (mmHg)',
+                               col2: 'Blood Pressure [Diastolic] (mmHg)', unit: 'mmHg', color: '#F87171',              },
+    { label: 'Weight',         col: 'Weight (lbs)',                      unit: 'lbs',   color: 'var(--text-primary)',   },
+    { label: 'Body Fat',       col: 'Body Fat Percentage (%)',           unit: '%',     color: 'var(--amber)',          },
+    { label: 'Sleep',          col: 'Sleep Analysis [Total] (hr)',       unit: 'hr',    color: 'var(--purple)',         },
+    { label: 'Steps',          col: 'Step Count (steps)',                unit: 'steps', color: 'var(--green)',          },
   ];
 
   // compute 7-day averages for delta
@@ -7259,6 +7261,27 @@ function hkRenderKpis(container, latest, all) {
 
   container.innerHTML = kpis.map(k => {
     const val  = hkVal(latest, k.col);
+    const val2 = k.col2 ? hkVal(latest, k.col2) : null;
+
+    // Blood Pressure renders as "120/80" with no countup animation
+    if (k.col2) {
+      const disp = (val !== null && val2 !== null) ? `${Math.round(val)}/${Math.round(val2)}` : '—';
+      const sys7 = avg(recent7, k.col); const sys7p = avg(prev7, k.col);
+      let delta = '';
+      if (sys7 !== null && sys7p !== null) {
+        const diff = sys7 - sys7p;
+        const arrow = diff > 0 ? '↑' : diff < 0 ? '↓' : '→';
+        const color = diff === 0 ? 'var(--text-muted)' : (diff > 0 ? 'var(--red)' : 'var(--green)'); // higher BP is bad
+        delta = `<div style="font-size:12px;font-weight:500;color:${color};margin-top:4px;">${arrow} ${Math.abs(diff).toFixed(0)} sys 7d avg</div>`;
+      }
+      return `<div class="card" style="padding:12px 14px;">
+        <div style="font-size:12px;color:var(--text-label);text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:6px;">${escHtml(k.label)}</div>
+        <div style="font-size:22px;font-family:var(--font-data);font-weight:600;color:${k.color};">${disp}</div>
+        <div style="font-size:12px;color:var(--text-label);margin-top:1px;">${k.unit}</div>
+        ${delta}
+      </div>`;
+    }
+
     const dec  = (k.unit === '%' || k.unit === 'hr') ? 1 : 0;
     const disp = val !== null ? (k.unit === 'steps' ? val.toLocaleString() : val.toFixed(dec)) : '—';
     const countAttr = val !== null
@@ -7348,9 +7371,33 @@ function hkRenderCharts(container, rows) {
         backgroundColor: 'rgba(34,197,94,0.65)', spanGaps: true,
       }],
     },
+    {
+      id: 'hk-chart-bp', title: 'Blood Pressure',
+      type: 'line',
+      datasets: [
+        {
+          label: 'Systolic (mmHg)',
+          data: rows.map(r => hkVal(r, 'Blood Pressure [Systolic] (mmHg)')),
+          borderColor: '#F87171', backgroundColor: 'rgba(248,113,113,0.06)',
+          borderWidth: 2, pointRadius: 2, fill: false, spanGaps: true,
+        },
+        {
+          label: 'Diastolic (mmHg)',
+          data: rows.map(r => hkVal(r, 'Blood Pressure [Diastolic] (mmHg)')),
+          borderColor: '#FB923C', backgroundColor: 'rgba(251,146,60,0.06)',
+          borderWidth: 2, pointRadius: 2, fill: false, spanGaps: true,
+        },
+      ],
+      opts: { plugins: { legend: { display: true, labels: { color: '#C4C4CC', font: { size: 12, weight: '500' }, boxWidth: 12, padding: 14 } } } },
+    },
   ];
 
-  container.innerHTML = charts.map(c =>
+  // Skip charts where every dataset is entirely null (e.g. BP when no monitor is paired)
+  const activeCharts = charts.filter(c =>
+    c.datasets.some(d => d.data.some(v => v !== null))
+  );
+
+  container.innerHTML = activeCharts.map(c =>
     `<div class="card" style="margin-bottom:12px;padding:16px 18px;">
       <div style="font-size:14px;font-weight:700;color:var(--text-primary);margin-bottom:12px;letter-spacing:-0.01em;">${escHtml(c.title)}</div>
       <div style="position:relative;height:180px;"><canvas id="${c.id}"></canvas></div>
@@ -7366,9 +7413,10 @@ function hkRenderCharts(container, rows) {
     },
   };
 
-  charts.forEach(c => {
-    const opts = c.opts ? { ...baseOpts, scales: { ...baseOpts.scales, ...c.opts.scales } } : baseOpts;
-    if (c.datasets.length > 1) opts.plugins = { ...opts.plugins, legend: { display: true, labels: { color: '#C4C4CC', font: { size: 12, weight: '500' }, boxWidth: 12, padding: 14 } } };
+  activeCharts.forEach(c => {
+    const opts = c.opts
+      ? { ...baseOpts, scales: { ...baseOpts.scales, ...(c.opts.scales || {}) }, plugins: { ...baseOpts.plugins, ...(c.opts.plugins || {}) } }
+      : baseOpts;
     makeChart(c.id, c.type, labels, c.datasets, opts);
   });
 }
