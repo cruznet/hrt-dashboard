@@ -2268,7 +2268,20 @@ body {
 
     <!-- ── PROTOCOLS PAGE ── -->
     <section class="page" id="page-protocols">
-      <div class="section-heading">My Protocols</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px;padding-bottom:12px;border-bottom:0.5px solid var(--border);">
+        <div style="font-size:15px;font-weight:600;color:var(--text-primary);">My Protocols</div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn-secondary" onclick="pbDownloadTemplate()" style="font-size:13px;padding:7px 14px;display:flex;align-items:center;gap:6px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Template
+          </button>
+          <button class="btn-secondary" onclick="document.getElementById('protocol-csv-input').click()" style="font-size:13px;padding:7px 14px;display:flex;align-items:center;gap:6px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Import CSV
+          </button>
+          <input type="file" id="protocol-csv-input" accept=".csv,text/csv" style="display:none;" onchange="pbImportCSV(this.files[0]);this.value='';">
+        </div>
+      </div>
       <div id="protocols-list"></div>
 
       <!-- Close-out modal: shown when switching away from an active protocol -->
@@ -8852,6 +8865,142 @@ function pbRender() {
 }
 
 // ── My Protocols page ──
+function pbDownloadTemplate() {
+  const rows = [
+    'protocol_name,phase,start_date,total_weeks,status,exp,notes,compound,unit,freq,start_week,end_week,dose',
+    'Summer Bulk 2025,bulk,2025-03-01,16,completed,intermediate,First blast — great results,Testosterone Enanthate,mg,Weekly,1,16,500',
+    'Summer Bulk 2025,bulk,2025-03-01,16,completed,intermediate,First blast — great results,Nandrolone Decanoate (Deca),mg,Weekly,1,14,300',
+    'TRT Cruise 2024,cruise,2024-06-01,24,completed,intermediate,,Testosterone Cypionate,mg,Weekly,1,24,200',
+    'PCT 2025,rebound,2025-07-01,6,completed,intermediate,,Nolvadex (Tamoxifen),mg,Daily,1,2,40',
+    'PCT 2025,rebound,2025-07-01,6,completed,intermediate,,Nolvadex (Tamoxifen),mg,Daily,3,6,20',
+  ];
+  const notes = [
+    '# Valid values:',
+    '#   phase       : cruise | bulk | cut | rebound',
+    '#   status      : planning | active | completed | abandoned',
+    '#   exp         : beginner | intermediate | advanced',
+    '#   freq        : Daily | EOD | E3D | E3.5D | Twice Weekly | Weekly | Biweekly | Monthly',
+    '#   unit        : mg | iu | mcg',
+    '# One row per compound per dose phase.',
+    '# For mid-cycle dose changes use multiple rows with the same compound name and different start/end weeks.',
+    '# Lines starting with # are ignored on import.',
+    '',
+  ].join('\n');
+  const csv = notes + rows.join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'protocol-import-template.csv';
+  a.click();
+}
+
+function _parseCSVLine(line) {
+  const result = [];
+  let cur = '', inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (inQ && line[i + 1] === '"') { cur += '"'; i++; }
+      else inQ = !inQ;
+    } else if (ch === ',' && !inQ) {
+      result.push(cur); cur = '';
+    } else {
+      cur += ch;
+    }
+  }
+  result.push(cur);
+  return result;
+}
+
+function pbImportCSV(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const lines = e.target.result.split('\n')
+        .map(l => l.trimEnd())
+        .filter(l => l && !l.trimStart().startsWith('#'));
+
+      if (!lines.length) { showToast('CSV appears empty', 'error'); return; }
+
+      const headers = _parseCSVLine(lines[0]).map(h => h.trim());
+      const required = ['protocol_name','compound','dose','freq','unit'];
+      const missing = required.filter(r => !headers.includes(r));
+      if (missing.length) { showToast(`CSV missing columns: ${missing.join(', ')}`, 'error'); return; }
+
+      const dataRows = lines.slice(1).map(l => {
+        const vals = _parseCSVLine(l);
+        const row = {};
+        headers.forEach((h, i) => row[h] = (vals[i] || '').trim());
+        return row;
+      }).filter(r => r.protocol_name && r.compound);
+
+      if (!dataRows.length) { showToast('No valid rows found in CSV', 'error'); return; }
+
+      // Group rows → protocols
+      const protoMap = new Map();
+      for (const row of dataRows) {
+        const key = `${row.protocol_name}||${row.start_date || ''}`;
+        if (!protoMap.has(key)) {
+          protoMap.set(key, {
+            name:              row.protocol_name,
+            phase:             row.phase             || 'cruise',
+            cycleLengthWeeks:  parseInt(row.total_weeks) || 12,
+            startDate:         row.start_date        || '',
+            status:            row.status            || 'completed',
+            exp:               row.exp               || 'intermediate',
+            notes:             row.notes             || '',
+            saved_at:          new Date().toISOString() + Math.random().toString(16).slice(2),
+            modificationLog:   [],
+            _cmap:             new Map(),
+          });
+        }
+        const proto = protoMap.get(key);
+        const cKey  = row.compound;
+        if (!proto._cmap.has(cKey)) {
+          proto._cmap.set(cKey, { name: row.compound, unit: row.unit || 'mg', freq: row.freq || 'Weekly', phases: [] });
+        }
+        proto._cmap.get(cKey).phases.push({
+          startWeek: parseInt(row.start_week) || 1,
+          endWeek:   parseInt(row.end_week)   || (parseInt(row.total_weeks) || 12),
+          dose:      parseFloat(row.dose)     || 0,
+        });
+      }
+
+      // Finalise protocol objects
+      const imported = [];
+      for (const [, proto] of protoMap) {
+        proto.compounds = [...proto._cmap.values()];
+        delete proto._cmap;
+        imported.push(proto);
+      }
+
+      // Check for name+date duplicates against existing protocols
+      const existing = lsGet('hrt_protocols', []);
+      const existingKeys = new Set(existing.map(p => `${p.name}||${p.startDate || ''}`));
+      const fresh   = imported.filter(p => !existingKeys.has(`${p.name}||${p.startDate || ''}`));
+      const skipped = imported.length - fresh.length;
+
+      if (!fresh.length) {
+        showToast(`All protocols already exist (${skipped} skipped)`, 'info');
+        return;
+      }
+
+      localStorage.setItem('hrt_protocols', JSON.stringify([...existing, ...fresh]));
+      syncProtocolsToSupabase();
+      renderProtocolsPage();
+
+      const msg = skipped
+        ? `${fresh.length} protocol${fresh.length !== 1 ? 's' : ''} imported, ${skipped} skipped (duplicate)`
+        : `${fresh.length} protocol${fresh.length !== 1 ? 's' : ''} imported`;
+      showToast(msg, 'success');
+    } catch(err) {
+      showToast(`Import failed: ${err.message}`, 'error');
+    }
+  };
+  reader.readAsText(file);
+}
+
 function renderProtocolsPage() {
   const container = document.getElementById('protocols-list');
   const saved = lsGet('hrt_protocols', []).map(normalizeProtocol);
