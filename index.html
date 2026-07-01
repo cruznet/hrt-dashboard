@@ -27,20 +27,20 @@
 <style>
 /* ── Design Tokens: High-Visibility Dark (outdoor-readable, macrofactor × testosterone.tools) ── */
 :root {
-  /* Backgrounds: slightly warmer dark so cards show in OLED glare */
-  --bg-deep:       #08080E;
-  --bg-base:       #0D0D15;
-  --bg-card:       #14141E;
-  --bg-card-hover: #1C1C28;
-  --bg-sidebar:    #0A0A12;
+  /* Backgrounds: Midnight Slate (Supabase/Vercel aesthetic) */
+  --bg-deep:       #0A0E1A;
+  --bg-base:       #0F172A;
+  --bg-card:       #1E293B;
+  --bg-card-hover: #263548;
+  --bg-sidebar:    #0B1120;
   --sidebar-w:     212px;
   --sidebar-w-col: 54px;
 
-  /* Gold — brighter, closer to testosterone.tools #F5C518 */
-  --primary:       #C9920A;
-  --primary-bright:#F5C518;
-  --primary-dim:   rgba(245,197,24,0.09);
-  --primary-border:rgba(245,197,24,0.26);
+  /* Cyan — Midnight Slate primary */
+  --primary:       #0E7490;
+  --primary-bright:#22D3EE;
+  --primary-dim:   rgba(34,211,238,0.09);
+  --primary-border:rgba(34,211,238,0.22);
 
   /* Accent palette — kept vivid for chart/badge readability in sunlight */
   --teal:          #22D3EE;
@@ -71,23 +71,23 @@
 
   --font-data: 'JetBrains Mono', monospace;
   --font-ui:   'DM Sans', system-ui, sans-serif;  /* open apertures, optimized for small UI text */
-  --radius:    8px;
-  --radius-lg: 12px;
+  --radius:    10px;
+  --radius-lg: 14px;
   --transition: 150ms ease;
 }
 
 /* ── Light Mode ── override only tokens that change; structural tokens stay the same ── */
 [data-theme="light"] {
-  --bg-deep:        #EEECEA;
-  --bg-base:        #F7F5F2;
+  --bg-deep:        #CBD5E1;
+  --bg-base:        #F1F5F9;
   --bg-card:        #FFFFFF;
-  --bg-card-hover:  #F4F3F0;
-  --bg-sidebar:     #E8E6E2;
+  --bg-card-hover:  #F8FAFC;
+  --bg-sidebar:     #E2E8F0;
 
-  --primary:        #7B5507;
-  --primary-bright: #9A6A09;
-  --primary-dim:    rgba(123,85,7,0.08);
-  --primary-border: rgba(123,85,7,0.24);
+  --primary:        #0E7490;
+  --primary-bright: #0891B2;
+  --primary-dim:    rgba(8,145,178,0.08);
+  --primary-border: rgba(8,145,178,0.24);
 
   --teal:           #0891B2;
   --teal-dim:       rgba(8,145,178,0.10);
@@ -156,7 +156,7 @@
 [data-theme="light"] .topbar-btn-ghost       { background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.10); color: var(--text-secondary); }
 [data-theme="light"] .topbar-btn-ghost:hover { background: rgba(0,0,0,0.09); }
 [data-theme="light"] .range-pill             { border-color: rgba(0,0,0,0.14); color: var(--text-muted); }
-[data-theme="light"] .range-pill-active      { background: rgba(123,85,7,0.10); border-color: rgba(123,85,7,0.30) !important; color: var(--primary) !important; }
+[data-theme="light"] .range-pill-active      { background: rgba(8,145,178,0.10); border-color: rgba(8,145,178,0.30) !important; color: var(--primary) !important; }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -209,26 +209,25 @@ body {
 .logo-text { font-size: 13px; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; letter-spacing: -0.1px; }
 .logo-sub  { font-size: 9.5px; color: var(--text-muted); white-space: nowrap; letter-spacing: 0.3px; }
 
-.nav-section { padding: 8px 0; flex: 1; overflow-y: auto; }
+.nav-section { padding: 6px 0; flex: 1; overflow-y: auto; }
 .nav-label {
-  font-size: 9.5px; letter-spacing: 1.2px; color: var(--text-muted);
-  padding: 8px 14px 3px; text-transform: uppercase; white-space: nowrap; overflow: hidden;
-  font-weight: 700;
+  font-size: 9px; letter-spacing: 0.10em; color: var(--text-muted);
+  padding: 14px 16px 4px; text-transform: uppercase; white-space: nowrap; overflow: hidden;
+  font-weight: 700; opacity: 0.55;
 }
 .nav-item {
   display: flex; align-items: center; gap: 10px;
-  padding: 8px 14px; cursor: pointer;
+  padding: 8px 12px 8px 14px; cursor: pointer; margin: 1px 8px;
   color: var(--text-label); font-size: 13px;
-  border-left: 3px solid transparent;
+  border-radius: 8px; border-left: 2px solid transparent;
   transition: all var(--transition);
   white-space: nowrap; overflow: hidden;
   user-select: none; font-weight: 500;
 }
-.nav-item:hover { color: var(--text-secondary); background: rgba(255,255,255,0.04); border-left-color: rgba(255,255,255,0.12); }
+.nav-item:hover { color: var(--text-secondary); background: rgba(255,255,255,0.05); }
 .nav-item.active {
-  color: var(--primary-bright); background: rgba(245,197,24,0.06);
+  color: var(--primary-bright); background: rgba(34,211,238,0.08);
   border-left-color: var(--primary-bright); font-weight: 600;
-  box-shadow: inset 0 0 12px rgba(245,197,24,0.04);
 }
 .nav-icon { font-size: 15px; flex-shrink: 0; width: 20px; text-align: center; }
 .nav-text { overflow: hidden; white-space: nowrap; }
@@ -353,10 +352,10 @@ body {
 }
 .chart-empty-btn {
   padding: 4px 14px; border-radius: 6px; font-size: 12px; cursor: pointer;
-  background: rgba(245,197,24,0.08); border: 0.5px solid rgba(245,197,24,0.2);
+  background: rgba(34,211,238,0.08); border: 0.5px solid rgba(34,211,238,0.2);
   color: var(--primary-bright); transition: background var(--transition);
 }
-.chart-empty-btn:hover { background: rgba(245,197,24,0.15); }
+.chart-empty-btn:hover { background: rgba(34,211,238,0.15); }
 
 /* ── Metric cards ── */
 .metrics-grid {
@@ -383,15 +382,16 @@ body {
   background: linear-gradient(90deg, rgba(255,255,255,0.06), transparent);
 }
 .metric-icon {
-  width: 26px; height: 26px; border-radius: 7px;
+  width: 36px; height: 36px; border-radius: 10px;
   display: flex; align-items: center; justify-content: center;
-  margin-bottom: 10px; flex-shrink: 0;
+  margin-bottom: 10px; flex-shrink: 0; align-self: flex-start;
 }
-.metric-icon svg { width: 13px; height: 13px; }
-.mc-red    .metric-icon { background: rgba(248,113,113,0.12); }
-.mc-purple .metric-icon { background: rgba(192,132,252,0.12); }
-.mc-teal   .metric-icon { background: rgba(34,211,238,0.12); }
-.mc-amber  .metric-icon { background: rgba(251,146,60,0.12); }
+.metric-icon svg { width: 16px; height: 16px; }
+.mc-red    .metric-icon { background: rgba(248,113,113,0.14); }
+.mc-purple .metric-icon { background: rgba(192,132,252,0.14); }
+.mc-teal   .metric-icon { background: rgba(34,211,238,0.13); }
+.mc-amber  .metric-icon { background: rgba(251,146,60,0.13); }
+.mc-green  .metric-icon { background: rgba(34,197,94,0.13); }
 .metric-card {
   background: var(--bg-card);
   border: 0.5px solid var(--border);
@@ -404,13 +404,12 @@ body {
   display: flex;
   flex-direction: column;
 }
-.metric-card:hover { background: var(--bg-card-hover); box-shadow: 0 0 0 0.5px var(--border-mid); }
-.mc-gold:hover   { box-shadow: 0 0 0 0.5px var(--border-mid), 0 4px 16px rgba(197,146,10,0.08); }
-.mc-teal:hover   { box-shadow: 0 0 0 0.5px var(--border-mid), 0 4px 16px rgba(34,211,238,0.08); }
-.mc-green:hover  { box-shadow: 0 0 0 0.5px var(--border-mid), 0 4px 16px rgba(34,197,94,0.08); }
-.mc-amber:hover  { box-shadow: 0 0 0 0.5px var(--border-mid), 0 4px 16px rgba(251,146,60,0.08); }
-.mc-red:hover    { box-shadow: 0 0 0 0.5px var(--border-mid), 0 4px 16px rgba(248,113,113,0.08); }
-.mc-purple:hover { box-shadow: 0 0 0 0.5px var(--border-mid), 0 4px 16px rgba(192,132,252,0.08); }
+.metric-card:hover { background: var(--bg-card-hover); box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
+.mc-teal:hover   { box-shadow: 0 4px 20px rgba(34,211,238,0.10); }
+.mc-green:hover  { box-shadow: 0 4px 20px rgba(34,197,94,0.10); }
+.mc-amber:hover  { box-shadow: 0 4px 20px rgba(251,146,60,0.10); }
+.mc-red:hover    { box-shadow: 0 4px 20px rgba(248,113,113,0.10); }
+.mc-purple:hover { box-shadow: 0 4px 20px rgba(192,132,252,0.10); }
 
 /* Custom dose checkboxes */
 .dose-cb-styled {
@@ -457,7 +456,7 @@ label.dose-row.dose-done .dose-name { text-decoration: line-through; }
   bottom: calc(72px + env(safe-area-inset-bottom, 0px) + 10px);
   z-index: 96;
   background: var(--bg-card);
-  border: 0.5px solid rgba(245,197,24,0.25);
+  border: 0.5px solid rgba(34,211,238,0.25);
   border-radius: 16px;
   padding: 14px 16px;
   box-shadow: 0 8px 32px rgba(0,0,0,0.5);
@@ -471,7 +470,7 @@ label.dose-row.dose-done .dose-name { text-decoration: line-through; }
 }
 .install-banner-icon {
   width: 36px; height: 36px; border-radius: 10px;
-  background: rgba(245,197,24,0.1); border: 0.5px solid rgba(245,197,24,0.25);
+  background: rgba(34,211,238,0.1); border: 0.5px solid rgba(34,211,238,0.25);
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
 .install-banner-body { flex: 1; min-width: 0; }
@@ -514,7 +513,7 @@ label.dose-row.dose-done .dose-name { text-decoration: line-through; }
   color: var(--text-muted);
 }
 #feedback-fab.visible { display: flex; }
-#feedback-fab:hover { border-color: rgba(245,197,24,0.4); color: var(--primary-bright); transform: scale(1.06); }
+#feedback-fab:hover { border-color: rgba(34,211,238,0.4); color: var(--primary-bright); transform: scale(1.06); }
 #feedback-fab:active { transform: scale(0.94); }
 @media (min-width: 768px) {
   #feedback-fab { right: 24px; bottom: 80px; }
@@ -532,7 +531,7 @@ label.dose-row.dose-done .dose-name { text-decoration: line-through; }
 /* ── Range pills (Wellness, Compliance) ── */
 .range-pill { padding:4px 11px;border-radius:6px;font-size:12px;border:0.5px solid var(--border);background:transparent;color:var(--text-label);cursor:pointer;transition:all 0.15s;font-family:var(--font-ui); }
 .range-pill:hover { color:var(--text-secondary);border-color:var(--border-mid); }
-.range-pill-active { background:rgba(245,197,24,0.1);border-color:rgba(245,197,24,0.3)!important;color:var(--primary-bright)!important; }
+.range-pill-active { background:rgba(34,211,238,0.1);border-color:rgba(34,211,238,0.3)!important;color:var(--primary-bright)!important; }
 
 /* ── Shimmer skeleton ── */
 @keyframes shimmer { 0% { background-position:-200% 0; } 100% { background-position:200% 0; } }
@@ -550,7 +549,8 @@ label.dose-row.dose-done .dose-name { text-decoration: line-through; }
 }
 
 /* Color variants for metric top borders & units */
-.mc-gold   { border-top-color: var(--primary); } .mc-gold   .metric-unit { color: var(--primary-bright); }
+.mc-gold   { border-top-color: var(--primary-bright); } .mc-gold   .metric-unit { color: var(--primary-bright); }
+.mc-gold   .metric-icon { background: rgba(34,211,238,0.13); }
 .mc-teal   { border-top-color: var(--teal);   } .mc-teal   .metric-unit { color: var(--teal); }
 .mc-green  { border-top-color: var(--green);  } .mc-green  .metric-unit { color: var(--green); }
 .mc-amber  { border-top-color: var(--amber);  } .mc-amber  .metric-unit { color: var(--amber); }
@@ -771,7 +771,7 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
 }
 .auth-feature-icon {
   width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0;
-  background: rgba(245,197,24,0.08); border: 0.5px solid rgba(245,197,24,0.2);
+  background: rgba(34,211,238,0.08); border: 0.5px solid rgba(34,211,238,0.2);
   display: flex; align-items: center; justify-content: center;
   margin-top: 1px;
 }
@@ -800,8 +800,8 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
 .auth-card-badge {
   display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
   text-transform: uppercase; padding: 3px 10px; border-radius: 99px; margin-bottom: 20px;
-  background: rgba(245,197,24,0.1); color: var(--primary-bright);
-  border: 0.5px solid rgba(245,197,24,0.25);
+  background: rgba(34,211,238,0.1); color: var(--primary-bright);
+  border: 0.5px solid rgba(34,211,238,0.25);
 }
 .auth-learn-more {
   margin-top: 20px; font-size: 12px; color: var(--text-muted); text-align: center;
@@ -999,7 +999,7 @@ body {
   display: flex; align-items: center; justify-content: center;
   transition: background 200ms ease, transform 200ms cubic-bezier(0.34,1.56,0.64,1);
 }
-.bnav-item.active .bnav-icon-wrap { background: rgba(245,197,24,0.12); }
+.bnav-item.active .bnav-icon-wrap { background: rgba(34,211,238,0.12); }
 .bnav-item i {
   font-size: 22px; line-height: 1;
   transition: transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1), color 150ms ease;
@@ -1017,14 +1017,14 @@ body {
   width: 48px; height: 48px; border-radius: 14px;
   background: linear-gradient(135deg, var(--primary-bright), #E8B000);
   display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 4px 16px rgba(245,197,24,0.4), 0 0 0 0.5px rgba(245,197,24,0.3);
+  box-shadow: 0 4px 16px rgba(34,211,238,0.4), 0 0 0 0.5px rgba(34,211,238,0.3);
   margin-top: -8px; flex-shrink: 0;
   transition: transform 200ms cubic-bezier(0.34,1.56,0.64,1), box-shadow 200ms ease;
 }
-.bnav-item.bnav-fab:active .bnav-fab-btn { transform: scale(0.88); box-shadow: 0 2px 8px rgba(245,197,24,0.3); }
+.bnav-item.bnav-fab:active .bnav-fab-btn { transform: scale(0.88); box-shadow: 0 2px 8px rgba(34,211,238,0.3); }
 
 /* ── Onboarding redesign (Item 19) ── */
-#onboard-overlay { background: radial-gradient(ellipse at 50% -10%, rgba(245,197,24,0.05) 0%, var(--bg-primary) 55%) !important; }
+#onboard-overlay { background: radial-gradient(ellipse at 50% -10%, rgba(34,211,238,0.05) 0%, var(--bg-primary) 55%) !important; }
 .ob-progress-row { display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:40px; }
 .ob-progress-seg { height:3px; border-radius:2px; width:28px; background:var(--border); transition:background 0.3s, width 0.3s; }
 .ob-progress-seg.active { background:var(--primary); width:44px; }
@@ -1048,14 +1048,14 @@ body {
 #ob-btn-prep::before { background:#C084FC; }
 .onboard-mode-btn:hover { transform:translateY(-2px); box-shadow:0 6px 24px rgba(0,0,0,0.35); }
 .onboard-mode-btn:active { transform:scale(0.97); transition-duration:60ms; }
-#ob-btn-trt:hover { border-color:rgba(245,197,24,0.3); background:rgba(245,197,24,0.04); }
+#ob-btn-trt:hover { border-color:rgba(34,211,238,0.3); background:rgba(34,211,238,0.04); }
 #ob-btn-offseason:hover { border-color:rgba(74,222,128,0.3); background:rgba(74,222,128,0.04); }
 #ob-btn-prep:hover { border-color:rgba(192,132,252,0.3); background:rgba(192,132,252,0.04); }
 .ob-mode-icon {
   width:44px; height:44px; border-radius:12px; flex-shrink:0;
   display:flex; align-items:center; justify-content:center; font-size:20px;
 }
-#ob-btn-trt .ob-mode-icon { background:rgba(245,197,24,0.1); color:var(--primary); }
+#ob-btn-trt .ob-mode-icon { background:rgba(34,211,238,0.1); color:var(--primary); }
 #ob-btn-offseason .ob-mode-icon { background:rgba(74,222,128,0.1); color:#4ADE80; }
 #ob-btn-prep .ob-mode-icon { background:rgba(192,132,252,0.1); color:#C084FC; }
 .ob-mode-text { flex:1; min-width:0; }
@@ -1064,8 +1064,8 @@ body {
 .ob-mode-arrow { color:var(--text-muted); opacity:0.4; flex-shrink:0; }
 .ob-avatar-preview {
   width:72px; height:72px; border-radius:18px;
-  background:linear-gradient(135deg,rgba(245,197,24,0.12),rgba(245,197,24,0.04));
-  border:1.5px solid rgba(245,197,24,0.18);
+  background:linear-gradient(135deg,rgba(34,211,238,0.12),rgba(34,211,238,0.04));
+  border:1.5px solid rgba(34,211,238,0.18);
   display:flex; align-items:center; justify-content:center;
   font-size:26px; font-weight:700; color:var(--primary);
   font-family:var(--font-data); margin:0 auto 28px; transition:all 0.2s;
@@ -1075,7 +1075,7 @@ body {
 @keyframes ciRevealIn { from { opacity:0; transform:scale(0.92) translateY(8px); } to { opacity:1; transform:scale(1) translateY(0); } }
 @keyframes ciCheckPulse { 0% { box-shadow:0 0 0 0 rgba(74,222,128,0.4); } 70% { box-shadow:0 0 0 14px rgba(74,222,128,0); } 100% { box-shadow:0 0 0 0 rgba(74,222,128,0); } }
 #ci-reveal-card {
-  background:linear-gradient(180deg, rgba(245,197,24,0.05) 0%, var(--bg-card) 22%) !important;
+  background:linear-gradient(180deg, rgba(34,211,238,0.05) 0%, var(--bg-card) 22%) !important;
   position:relative; overflow:hidden;
   animation:ciRevealIn 0.32s cubic-bezier(0.34,1.56,0.64,1);
   box-shadow:0 24px 60px rgba(0,0,0,0.5);
@@ -1093,7 +1093,7 @@ body {
 }
 .ci-reveal-weeks-pill {
   display:inline-block; padding:4px 12px; border-radius:20px;
-  background:rgba(245,197,24,0.1); border:0.5px solid rgba(245,197,24,0.25);
+  background:rgba(34,211,238,0.1); border:0.5px solid rgba(34,211,238,0.25);
   font-size:11px; font-weight:700; color:var(--primary); letter-spacing:0.06em;
   text-transform:uppercase; margin-bottom:14px;
 }
@@ -1479,7 +1479,7 @@ body {
           <i class="ti ti-shield-check" style="color:var(--green);"></i>
           Your data is private and encrypted. Only you can access it.
         </div>
-        <div id="auth-pwa-note" style="display:none;margin-top:14px;padding:10px 12px;border-radius:8px;background:rgba(245,197,24,0.07);border:0.5px solid rgba(245,197,24,0.2);font-size:12px;color:var(--text-muted);line-height:1.55;text-align:left;">
+        <div id="auth-pwa-note" style="display:none;margin-top:14px;padding:10px 12px;border-radius:8px;background:rgba(34,211,238,0.07);border:0.5px solid rgba(34,211,238,0.2);font-size:12px;color:var(--text-muted);line-height:1.55;text-align:left;">
           <i class="ti ti-brand-apple" style="color:var(--primary-bright);margin-right:4px;"></i>
           <strong style="color:var(--text-secondary);">Home screen app?</strong> This app has its own separate session from Safari. Sign in here to load your data.
         </div>
@@ -1824,8 +1824,8 @@ body {
         <div style="display:flex;align-items:center;gap:6px;margin-top:10px;">
           <span style="font-size:10px;color:var(--text-muted);">Less</span>
           <div style="width:10px;height:10px;border-radius:2px;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.1);"></div>
-          <div style="width:10px;height:10px;border-radius:2px;background:rgba(245,197,24,0.25);"></div>
-          <div style="width:10px;height:10px;border-radius:2px;background:rgba(245,197,24,0.6);"></div>
+          <div style="width:10px;height:10px;border-radius:2px;background:rgba(34,211,238,0.25);"></div>
+          <div style="width:10px;height:10px;border-radius:2px;background:rgba(34,211,238,0.6);"></div>
           <div style="width:10px;height:10px;border-radius:2px;background:var(--green);"></div>
           <span style="font-size:10px;color:var(--text-muted);">More</span>
           <span style="font-size:10px;color:var(--text-muted);margin-left:8px;">— No doses scheduled</span>
@@ -3038,7 +3038,7 @@ body {
 
 <!-- ── Check-In Reveal Card ── -->
 <div id="ci-reveal-overlay" style="display:none;position:fixed;inset:0;z-index:8000;background:rgba(0,0,0,0.85);display:none;align-items:center;justify-content:center;padding:24px;" onclick="document.getElementById('ci-reveal-overlay').style.display='none';">
-  <div id="ci-reveal-card" style="border:0.5px solid rgba(245,197,24,0.3);border-radius:20px;padding:28px 24px;max-width:360px;width:100%;text-align:center;" onclick="event.stopPropagation();">
+  <div id="ci-reveal-card" style="border:0.5px solid rgba(34,211,238,0.3);border-radius:20px;padding:28px 24px;max-width:360px;width:100%;text-align:center;" onclick="event.stopPropagation();">
     <div id="ci-reveal-content"></div>
     <button class="btn-primary" onclick="document.getElementById('ci-reveal-overlay').style.display='none'" style="margin-top:20px;width:100%;padding:12px;">Done</button>
   </div>
@@ -3051,7 +3051,7 @@ body {
     <!-- Modal Header -->
     <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 20px 14px;border-bottom:0.5px solid var(--border);position:sticky;top:0;background:var(--bg-card);backdrop-filter:blur(12px);z-index:2;border-radius:18px 18px 0 0;">
       <div style="display:flex;align-items:center;gap:10px;">
-        <div style="width:32px;height:32px;border-radius:9px;background:rgba(245,197,24,0.1);border:0.5px solid rgba(245,197,24,0.25);display:flex;align-items:center;justify-content:center;">
+        <div style="width:32px;height:32px;border-radius:9px;background:rgba(34,211,238,0.1);border:0.5px solid rgba(34,211,238,0.25);display:flex;align-items:center;justify-content:center;">
           <i class="ti ti-clipboard-check" style="font-size:15px;color:var(--primary-bright);"></i>
         </div>
         <div>
@@ -3131,11 +3131,11 @@ body {
         <label class="form-label">Athlete Notes</label>
         <textarea class="form-input" id="ci-notes" rows="2" style="resize:vertical;" placeholder="Conditioning updates, how you're feeling this week…"></textarea>
       </div>
-      <div style="background:rgba(245,197,24,0.04);border:0.5px solid rgba(245,197,24,0.2);border-radius:12px;padding:12px;margin-bottom:20px;">
+      <div style="background:rgba(34,211,238,0.04);border:0.5px solid rgba(34,211,238,0.2);border-radius:12px;padding:12px;margin-bottom:20px;">
         <label class="form-label" style="color:var(--primary-bright);margin-bottom:8px;display:block;">
           <i class="ti ti-shield-check" style="font-size:12px;margin-right:4px;"></i>Coach Note
         </label>
-        <textarea class="form-input" id="ci-coach-note" rows="2" style="resize:vertical;background:rgba(245,197,24,0.04);border-color:rgba(245,197,24,0.2);" placeholder="Coaching feedback, protocol adjustments, directives…"></textarea>
+        <textarea class="form-input" id="ci-coach-note" rows="2" style="resize:vertical;background:rgba(34,211,238,0.04);border-color:rgba(34,211,238,0.2);" placeholder="Coaching feedback, protocol adjustments, directives…"></textarea>
       </div>
 
       <button class="btn-primary" style="width:100%;padding:13px;font-size:14px;font-weight:600;border-radius:12px;" onclick="submitWeeklyCheckin()">
@@ -4659,11 +4659,11 @@ function buildWeekStrip(currentWeek, totalWeeks) {
     const past    = w < currentWeek;
     const current = w === currentWeek;
     const pct     = past ? 1 : current ? 0.85 : 0;
-    const bg = past    ? `rgba(245,197,24,${pct})`
+    const bg = past    ? `rgba(34,211,238,${pct})`
              : current ? 'var(--primary-bright)'
              : (isLightMode() ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.07)');
     const border = current ? 'none' : past ? 'none' : `0.5px solid ${isLightMode()?'rgba(0,0,0,0.10)':'rgba(255,255,255,0.15)'}`;
-    const glow   = current ? 'box-shadow:0 0 8px rgba(245,197,24,0.5);' : '';
+    const glow   = current ? 'box-shadow:0 0 8px rgba(34,211,238,0.5);' : '';
     const label  = (labelAt.has(w) || current)
       ? `<div style="font-size:8px;color:${current ? 'var(--primary-bright)' : 'var(--text-muted)'};text-align:center;margin-top:3px;font-family:var(--font-data);">${w}</div>`
       : '';
@@ -4688,7 +4688,7 @@ function renderSetupPromptCard() {
   if (localStorage.getItem('hrt_active_protocol')) { el.innerHTML = ''; return; }
   el.innerHTML = `
     <div class="card" style="border-top:2px solid var(--primary-bright);padding:20px 20px 18px;position:relative;overflow:hidden;">
-      <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 0% 0%,rgba(245,197,24,0.05) 0%,transparent 65%);pointer-events:none;"></div>
+      <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 0% 0%,rgba(34,211,238,0.05) 0%,transparent 65%);pointer-events:none;"></div>
       <div style="margin-bottom:10px;">
         <span style="font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--primary-bright);background:var(--primary-dim);padding:3px 8px;border-radius:4px;border:0.5px solid var(--primary-border);">Start Here</span>
       </div>
@@ -4874,7 +4874,7 @@ function renderDoseSchedule() {
   const streak = calcDoseStreak();
   const streakEl = document.getElementById('dose-streak-badge');
   if (streakEl) streakEl.innerHTML = streak > 0
-    ? `<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-family:var(--font-data);font-weight:600;color:var(--primary-bright);background:rgba(245,197,24,0.1);border:0.5px solid rgba(245,197,24,0.25);padding:3px 9px;border-radius:20px;"><i class="ti ti-flame" style="font-size:12px;"></i> ${streak}d streak</span>`
+    ? `<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-family:var(--font-data);font-weight:600;color:var(--primary-bright);background:rgba(34,211,238,0.1);border:0.5px solid rgba(34,211,238,0.25);padding:3px 9px;border-radius:20px;"><i class="ti ti-flame" style="font-size:12px;"></i> ${streak}d streak</span>`
     : '';
   const protocol = lsGet('hrt_active_protocol_data', null);
   if (!protocol || !(protocol.compounds || []).length) {
@@ -5355,7 +5355,7 @@ function bwRenderIntelligence(latest, prev) {
   const pct      = Math.round((okKeys.length / total) * 100);
 
   const grade      = pct === 100 ? 'A' : pct >= 90 ? 'B' : pct >= 75 ? 'C' : 'D';
-  const gradeRgb   = { A:'74,222,128', B:'163,230,53', C:'245,197,24', D:'248,113,113' }[grade];
+  const gradeRgb   = { A:'74,222,128', B:'163,230,53', C:'34,211,238', D:'248,113,113' }[grade];
   const gradeColor = `rgb(${gradeRgb})`;
 
   let improvedCount = 0, worsenedCount = 0;
@@ -5620,7 +5620,7 @@ function bwRenderHistory(panels) {
             ${outOfRange ? `<span style="font-size:11px;color:var(--red);font-weight:600;">· ${outOfRange} flagged</span>` : ''}
           </div>
         </div>
-        <button onclick="bwToggleCompare(${i})" title="Compare panel" style="flex-shrink:0;padding:3px 8px;border-radius:5px;border:0.5px solid ${isComparing ? 'rgba(245,197,24,0.4)' : 'var(--border)'};background:${isComparing ? 'rgba(245,197,24,0.1)' : 'transparent'};color:${isComparing ? 'var(--primary-bright)' : 'var(--text-muted)'};font-size:11px;cursor:pointer;margin-top:2px;">⇄</button>
+        <button onclick="bwToggleCompare(${i})" title="Compare panel" style="flex-shrink:0;padding:3px 8px;border-radius:5px;border:0.5px solid ${isComparing ? 'rgba(34,211,238,0.4)' : 'var(--border)'};background:${isComparing ? 'rgba(34,211,238,0.1)' : 'transparent'};color:${isComparing ? 'var(--primary-bright)' : 'var(--text-muted)'};font-size:11px;cursor:pointer;margin-top:2px;">⇄</button>
       </div>
     </div>`;
   }).join('');
@@ -6185,7 +6185,7 @@ function renderWeeklyCheckinSection() {
   const all = lsGet('hrt_weekly_checkins', []);
   if (!all.length) {
     el.innerHTML = `<div class="empty-state" style="padding:32px 20px;">
-      <div class="empty-state-icon" style="width:52px;height:52px;background:rgba(245,197,24,0.08);border-color:rgba(245,197,24,0.15);">
+      <div class="empty-state-icon" style="width:52px;height:52px;background:rgba(34,211,238,0.08);border-color:rgba(34,211,238,0.15);">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#F5C518" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
       </div>
       <div class="empty-state-title" style="font-size:15px;">Log your first weekly check-in</div>
@@ -6475,7 +6475,7 @@ async function renderCoachReport() {
   const rptHeader = (iconSvg, title, meta, badgeHtml = '') => `
     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;padding-bottom:12px;border-bottom:0.5px solid rgba(255,255,255,0.06);">
       <div style="display:flex;align-items:center;gap:9px;">
-        <div style="width:30px;height:30px;border-radius:8px;background:rgba(245,197,24,0.1);border:0.5px solid rgba(245,197,24,0.22);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <div style="width:30px;height:30px;border-radius:8px;background:rgba(34,211,238,0.1);border:0.5px solid rgba(34,211,238,0.22);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--primary-bright)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${iconSvg}</svg>
         </div>
         <div>
@@ -6500,20 +6500,20 @@ async function renderCoachReport() {
       const wks    = Math.ceil(days / 7);
       const meta   = [show.federation, show.division].filter(Boolean).join(' · ');
       showBlock = `
-        <div style="margin-top:12px;padding-top:12px;border-top:0.5px solid rgba(245,197,24,0.15);display:flex;align-items:center;gap:12px;">
+        <div style="margin-top:12px;padding-top:12px;border-top:0.5px solid rgba(34,211,238,0.15);display:flex;align-items:center;gap:12px;">
           <div>
             ${meta ? `<div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--primary);margin-bottom:2px;">${escHtml(meta)}</div>` : ''}
             ${show.name ? `<div style="font-size:13px;font-weight:600;color:var(--text-primary);">${escHtml(show.name)}</div>` : ''}
             <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Show date: ${show.date}</div>
           </div>
-          ${days > 0 ? `<div style="margin-left:auto;text-align:center;flex-shrink:0;background:rgba(245,197,24,0.1);border:0.5px solid rgba(245,197,24,0.25);border-radius:10px;padding:8px 14px;">
+          ${days > 0 ? `<div style="margin-left:auto;text-align:center;flex-shrink:0;background:rgba(34,211,238,0.1);border:0.5px solid rgba(34,211,238,0.25);border-radius:10px;padding:8px 14px;">
             <div style="font-size:24px;font-weight:800;font-family:var(--font-data);color:var(--primary-bright);line-height:1;">${wks}</div>
             <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--primary);margin-top:2px;">Weeks Out</div>
           </div>` : ''}
         </div>`;
     }
     sections.push(`
-      <div class="report-card card" style="background:linear-gradient(135deg,rgba(245,197,24,0.07) 0%,rgba(245,197,24,0.01) 100%);border-color:rgba(245,197,24,0.28);margin-bottom:14px;padding:16px 18px;">
+      <div class="report-card card" style="background:linear-gradient(135deg,rgba(34,211,238,0.07) 0%,rgba(34,211,238,0.01) 100%);border-color:rgba(34,211,238,0.28);margin-bottom:14px;padding:16px 18px;">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
           <div style="flex:1;">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
@@ -6926,7 +6926,7 @@ function renderCompliancePage() {
   const rangeEl = document.getElementById('compliance-range-pills');
   if (rangeEl) {
     rangeEl.innerHTML = [30, 60, 90].map(d =>
-      `<button onclick="complianceSetRange(${d})" style="padding:4px 12px;border-radius:99px;border:1.5px solid ${_complianceRange===d?'var(--primary-bright)':'var(--border)'};background:${_complianceRange===d?'rgba(245,197,24,0.12)':'transparent'};color:${_complianceRange===d?'var(--primary-bright)':'var(--text-muted)'};font-size:12px;font-weight:600;cursor:pointer;">${d}d</button>`
+      `<button onclick="complianceSetRange(${d})" style="padding:4px 12px;border-radius:99px;border:1.5px solid ${_complianceRange===d?'var(--primary-bright)':'var(--border)'};background:${_complianceRange===d?'rgba(34,211,238,0.12)':'transparent'};color:${_complianceRange===d?'var(--primary-bright)':'var(--text-muted)'};font-size:12px;font-weight:600;cursor:pointer;">${d}d</button>`
     ).join('');
   }
 
@@ -7011,7 +7011,7 @@ function renderCompliancePage() {
     const fill = day.sched === 0 ? (isLightMode()?'rgba(0,0,0,0.07)':'rgba(255,255,255,0.04)') :
                  pct === 0   ? 'rgba(248,113,113,0.25)' :
                  pct < 0.5   ? 'rgba(251,146,60,0.40)'  :
-                 pct < 1     ? 'rgba(245,197,24,0.50)'  :
+                 pct < 1     ? 'rgba(34,211,238,0.50)'  :
                                'rgba(74,222,128,0.70)';
     const x = wi * (cellSize + gap);
     const y = di * (cellSize + gap);
@@ -7085,7 +7085,7 @@ function renderCompliancePage() {
         <span>Less</span>
         <div style="width:12px;height:12px;border-radius:2px;background:rgba(248,113,113,0.25);"></div>
         <div style="width:12px;height:12px;border-radius:2px;background:rgba(251,146,60,0.40);"></div>
-        <div style="width:12px;height:12px;border-radius:2px;background:rgba(245,197,24,0.50);"></div>
+        <div style="width:12px;height:12px;border-radius:2px;background:rgba(34,211,238,0.50);"></div>
         <div style="width:12px;height:12px;border-radius:2px;background:rgba(74,222,128,0.70);"></div>
         <span>All</span>
       </div>
@@ -7347,8 +7347,8 @@ function hkRenderCharts(container, rows) {
       datasets: [{
         label: 'Weight (lbs)',
         data: rows.map(r => hkVal(r, 'Weight (lbs)')),
-        borderColor: lm ? '#7B5507' : 'var(--primary-bright)',
-        backgroundColor: lm ? 'rgba(123,85,7,0.10)' : 'rgba(245,197,24,0.08)',
+        borderColor: lm ? '#D97706' : '#FB923C',
+        backgroundColor: lm ? 'rgba(217,119,6,0.12)' : 'rgba(251,146,60,0.10)',
         borderWidth: 2, pointRadius: 2, fill: true, spanGaps: true,
       }],
     },
@@ -7376,7 +7376,7 @@ function hkRenderCharts(container, rows) {
             const accounted = (d || 0) + (rem || 0);
             return Math.max(0, tot - accounted);
           }),
-          backgroundColor: 'rgba(245,197,24,0.45)', spanGaps: true,
+          backgroundColor: 'rgba(34,211,238,0.45)', spanGaps: true,
           label: 'Light (hr)',
         },
       ],
@@ -7471,7 +7471,7 @@ function hevyRenderTabs() {
     { key: 'e1rm',   label: 'E1RM Trends' },
   ];
   el.innerHTML = tabs.map(t =>
-    `<button onclick="hevySetTab('${t.key}')" style="padding:5px 14px;border-radius:99px;border:1.5px solid ${_hevyTab===t.key?'var(--primary-bright)':'var(--border)'};background:${_hevyTab===t.key?'rgba(245,197,24,0.12)':'transparent'};color:${_hevyTab===t.key?'var(--primary-bright)':'var(--text-muted)'};font-size:13px;font-weight:600;cursor:pointer;">${t.label}</button>`
+    `<button onclick="hevySetTab('${t.key}')" style="padding:5px 14px;border-radius:99px;border:1.5px solid ${_hevyTab===t.key?'var(--primary-bright)':'var(--border)'};background:${_hevyTab===t.key?'rgba(34,211,238,0.12)':'transparent'};color:${_hevyTab===t.key?'var(--primary-bright)':'var(--text-muted)'};font-size:13px;font-weight:600;cursor:pointer;">${t.label}</button>`
   ).join('');
 }
 
@@ -7995,7 +7995,7 @@ function renderHevyPRs(workouts) {
         const isNew  = daysAgo <= 14;
         const isWarm = daysAgo <= 30;
         const ageBadge = isNew
-          ? `<span style="font-size:10px;padding:1px 7px;border-radius:99px;background:rgba(245,197,24,0.15);color:var(--primary-bright);font-weight:700;">NEW</span>`
+          ? `<span style="font-size:10px;padding:1px 7px;border-radius:99px;background:rgba(34,211,238,0.15);color:var(--primary-bright);font-weight:700;">NEW</span>`
           : isWarm
           ? `<span style="font-size:10px;padding:1px 7px;border-radius:99px;background:rgba(74,222,128,0.10);color:var(--green);">${daysAgo}d ago</span>`
           : `<span style="font-size:11px;color:var(--text-muted);">${daysAgo}d ago</span>`;
@@ -8849,7 +8849,7 @@ function renderProtocolsPage() {
 
   if (!saved.length) {
     container.innerHTML = `<div class="card empty-state" style="padding:40px 20px;">
-      <div class="empty-state-icon" style="width:56px;height:56px;background:rgba(245,197,24,0.08);border-color:rgba(245,197,24,0.15);">
+      <div class="empty-state-icon" style="width:56px;height:56px;background:rgba(34,211,238,0.08);border-color:rgba(34,211,238,0.15);">
         <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#F5C518" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 3h3M12 3v7L7 18a2.5 2.5 0 0 0 2.2 3.7h5.6A2.5 2.5 0 0 0 17 18l-5-8"/><path d="M8.5 15h7"/></svg>
       </div>
       <div class="empty-state-title" style="font-size:15px;">No protocols saved yet</div>
@@ -9789,7 +9789,7 @@ function athleteCard(name, latestCheckin, latestBw, show, isSelf) {
 
   // Avatar initials + color
   const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-  const avatarBg = isSelf ? 'rgba(245,197,24,0.2)' : 'rgba(34,211,238,0.15)';
+  const avatarBg = isSelf ? 'rgba(34,211,238,0.2)' : 'rgba(34,211,238,0.15)';
   const avatarClr = isSelf ? 'var(--primary-bright)' : 'var(--teal)';
 
   // Check-in recency indicator
@@ -9804,7 +9804,7 @@ function athleteCard(name, latestCheckin, latestBw, show, isSelf) {
   let weeksOutBadge = '';
   if (show?.date) {
     const days = Math.round((new Date(show.date + 'T00:00:00') - new Date()) / 86400000);
-    if (days > 0) weeksOutBadge = `<span style="font-size:10px;font-weight:700;color:var(--primary);background:rgba(245,197,24,0.12);padding:2px 7px;border-radius:5px;">${Math.ceil(days/7)} wks out</span>`;
+    if (days > 0) weeksOutBadge = `<span style="font-size:10px;font-weight:700;color:var(--primary);background:rgba(34,211,238,0.12);padding:2px 7px;border-radius:5px;">${Math.ceil(days/7)} wks out</span>`;
     else if (days >= -6) weeksOutBadge = `<span style="font-size:10px;font-weight:700;color:var(--green);background:rgba(34,197,94,0.12);padding:2px 7px;border-radius:5px;">Post-Show</span>`;
   }
 
@@ -9826,7 +9826,7 @@ function athleteCard(name, latestCheckin, latestBw, show, isSelf) {
       ${ci.diet_adherence != null ? pill('Diet', ci.diet_adherence + '%') : ''}
     </div>`;
     dateRow = `<div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">${ci.check_in_date}</div>`;
-    if (ci.coach_note) coachNoteHtml = `<div style="margin-top:8px;padding:6px 10px;background:rgba(245,197,24,0.06);border-left:2px solid var(--primary);border-radius:0 6px 6px 0;font-size:12px;color:var(--text-secondary);font-style:italic;">${escHtml(ci.coach_note)}</div>`;
+    if (ci.coach_note) coachNoteHtml = `<div style="margin-top:8px;padding:6px 10px;background:rgba(34,211,238,0.06);border-left:2px solid var(--primary);border-radius:0 6px 6px 0;font-size:12px;color:var(--text-secondary);font-style:italic;">${escHtml(ci.coach_note)}</div>`;
   }
 
   // Bloodwork grade badge
@@ -9846,7 +9846,7 @@ function athleteCard(name, latestCheckin, latestBw, show, isSelf) {
     }
   }
 
-  return `<div class="card" style="margin-bottom:10px;${isSelf ? 'border-color:rgba(245,197,24,0.18);background:rgba(245,197,24,0.02);' : ''}">
+  return `<div class="card" style="margin-bottom:10px;${isSelf ? 'border-color:rgba(34,211,238,0.18);background:rgba(34,211,238,0.02);' : ''}">
     <div style="display:flex;align-items:center;gap:14px;">
       <!-- Avatar -->
       <div style="width:44px;height:44px;border-radius:12px;background:${avatarBg};display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:${avatarClr};flex-shrink:0;letter-spacing:0.03em;">${initials}</div>
@@ -10032,8 +10032,8 @@ function renderCoachNoteCallout() {
 
   el.style.display = '';
   el.innerHTML = `
-    <div style="background:linear-gradient(135deg,rgba(245,197,24,0.07),rgba(245,197,24,0.03));border:0.5px solid rgba(245,197,24,0.25);border-radius:14px;padding:16px 18px;position:relative;overflow:hidden;">
-      <div style="position:absolute;top:0;left:0;width:3px;height:100%;background:linear-gradient(180deg,var(--primary-bright),rgba(245,197,24,0.3));border-radius:3px 0 0 3px;"></div>
+    <div style="background:linear-gradient(135deg,rgba(34,211,238,0.07),rgba(34,211,238,0.03));border:0.5px solid rgba(34,211,238,0.25);border-radius:14px;padding:16px 18px;position:relative;overflow:hidden;">
+      <div style="position:absolute;top:0;left:0;width:3px;height:100%;background:linear-gradient(180deg,var(--primary-bright),rgba(34,211,238,0.3));border-radius:3px 0 0 3px;"></div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding-left:8px;">
         <div style="display:flex;align-items:center;gap:8px;">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--primary-bright)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
@@ -10099,7 +10099,7 @@ function renderComplianceHeatmap() {
   ).join('') + cells.map(({ ds, state, isFuture }) => {
     const _lm = isLightMode();
     const bg = state === 'full'    ? 'rgba(34,197,94,0.75)'
-             : state === 'partial' ? 'rgba(245,197,24,0.55)'
+             : state === 'partial' ? 'rgba(34,211,238,0.55)'
              : state === 'missed'  ? 'rgba(248,113,113,0.35)'
              : state === 'future'  ? (_lm ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.03)')
              : (_lm ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.05)');
@@ -10158,7 +10158,7 @@ function showCheckinReveal(row) {
       ${wellAvg != null ? `<div class="ci-reveal-stat"><div style="font-size:26px;font-weight:800;color:${scoreClr(wellAvg)};font-family:var(--font-data);line-height:1;">${wellAvg}</div><div style="font-size:13px;line-height:1.2;">&nbsp;</div><div style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-top:5px;">Wellbeing</div></div>` : ''}
       ${row.diet_adherence != null ? `<div class="ci-reveal-stat"><div style="font-size:26px;font-weight:800;color:${scoreClr(row.diet_adherence/10)};font-family:var(--font-data);line-height:1;">${row.diet_adherence}%</div><div style="font-size:13px;line-height:1.2;">&nbsp;</div><div style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-top:5px;">Diet</div></div>` : ''}
     </div>
-    ${row.coach_note ? `<div style="background:rgba(245,197,24,0.08);border:0.5px solid rgba(245,197,24,0.25);border-radius:10px;padding:12px;text-align:left;font-size:13px;color:var(--text-secondary);font-style:italic;margin-bottom:4px;"><span style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--primary);display:block;margin-bottom:4px;">Coach Note</span>${escHtml(row.coach_note)}</div>` : ''}
+    ${row.coach_note ? `<div style="background:rgba(34,211,238,0.08);border:0.5px solid rgba(34,211,238,0.25);border-radius:10px;padding:12px;text-align:left;font-size:13px;color:var(--text-secondary);font-style:italic;margin-bottom:4px;"><span style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--primary);display:block;margin-bottom:4px;">Coach Note</span>${escHtml(row.coach_note)}</div>` : ''}
     <button class="btn-secondary" onclick="openShareModal('${row.check_in_date}')" style="width:100%;padding:10px;margin-top:8px;font-size:13px;"><i class="ti ti-share"></i> Share This Check-In</button>`;
 
   const overlay = document.getElementById('ci-reveal-overlay');
@@ -10217,7 +10217,7 @@ function generateShareCanvas(row) {
   ctx.fillRect(0, 0, S, S);
 
   // Gold border
-  ctx.strokeStyle = 'rgba(245,197,24,0.4)';
+  ctx.strokeStyle = 'rgba(34,211,238,0.4)';
   ctx.lineWidth = 3;
   ctx.strokeRect(24, 24, S - 48, S - 48);
 
@@ -10290,7 +10290,7 @@ function generateShareCanvas(row) {
   }
 
   // Footer
-  ctx.fillStyle = 'rgba(245,197,24,0.4)';
+  ctx.fillStyle = 'rgba(34,211,238,0.4)';
   ctx.font = `500 ${S * 0.022}px -apple-system, system-ui, sans-serif`;
   ctx.fillText('hrt.cruznetllc.com', S * 0.5, S * 0.94);
 }
@@ -10341,7 +10341,7 @@ function renderShowCountdown() {
   const bigFontSize = String(bigNum).length > 2 ? '40px' : '52px';
 
   el.innerHTML = `
-    <div class="card" style="background:linear-gradient(135deg,rgba(245,197,24,0.07) 0%,rgba(245,197,24,0.01) 100%);border-color:rgba(245,197,24,0.28);cursor:pointer;" onclick="nav('settings')">
+    <div class="card" style="background:linear-gradient(135deg,rgba(34,211,238,0.07) 0%,rgba(34,211,238,0.01) 100%);border-color:rgba(34,211,238,0.28);cursor:pointer;" onclick="nav('settings')">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
         <div style="flex:1;min-width:0;">
           ${metaLine ? `<div style="font-size:10px;font-weight:700;letter-spacing:0.1em;color:var(--primary);text-transform:uppercase;margin-bottom:3px;">${escHtml(metaLine)}</div>` : ''}
@@ -10623,12 +10623,12 @@ function renderUpcoming() {
           ? `<span style="font-size:11px;color:var(--green);font-family:var(--font-data);font-weight:600;">✓ ${escHtml(i.label)}</span>`
           : `<button onclick="markDoseTaken('${i.label.replace(/'/g,"\\'")}', '${dateForRow}')"
                style="font-size:11px;padding:4px 10px;border-radius:8px;border:0.5px solid var(--border-mid);
-                      background:rgba(245,197,24,0.08);color:var(--primary-bright);cursor:pointer;font-weight:500;">
+                      background:rgba(34,211,238,0.08);color:var(--primary-bright);cursor:pointer;font-weight:500;">
                ✓ ${escHtml(i.label)}</button>`;
       }).join(' ');
-      rows.push(`<div style="padding:10px 12px;background:rgba(245,197,24,0.05);border:0.5px solid rgba(245,197,24,0.15);border-radius:10px;">
+      rows.push(`<div style="padding:10px 12px;background:rgba(34,211,238,0.05);border:0.5px solid rgba(34,211,238,0.15);border-radius:10px;">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-          <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--primary-bright);background:rgba(245,197,24,0.12);padding:2px 7px;border-radius:5px;">Today</span>
+          <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--primary-bright);background:rgba(34,211,238,0.12);padding:2px 7px;border-radius:5px;">Today</span>
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:6px;">${takenBtns}</div>
       </div>`);
@@ -11403,7 +11403,7 @@ async function submitFeedback() {
   <div class="modal" style="max-width:400px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
       <div style="display:flex;align-items:center;gap:10px;">
-        <div style="width:32px;height:32px;border-radius:9px;background:rgba(245,197,24,0.1);border:0.5px solid rgba(245,197,24,0.25);display:flex;align-items:center;justify-content:center;">
+        <div style="width:32px;height:32px;border-radius:9px;background:rgba(34,211,238,0.1);border:0.5px solid rgba(34,211,238,0.25);display:flex;align-items:center;justify-content:center;">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--primary-bright)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
         </div>
         <div>
