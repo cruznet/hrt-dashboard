@@ -4053,7 +4053,7 @@ function getCycleChartData(logs, fieldKey, protocol) {
 // ── Render vitals log → dashboard cards, deltas, sparklines, weight chart ──
 // Returns the most recent non-null value for a HealthKit metric key from the cached data
 function hkLatest(key) {
-  const rows = _hkSupaData || _hkData || [];
+  const rows = _hkSupaData || [];
   for (let i = rows.length - 1; i >= 0; i--) {
     const v = parseFloat(rows[i][key]);
     if (v > 0) return { value: v, date: (rows[i]['Date/Time'] || '').slice(0, 10) };
@@ -4074,7 +4074,7 @@ function getBestWeight() {
     const v = parseFloat(m.measurements?.weight);
     if (m.date && v > 0) candidates.push({ date: m.date, value: v, priority: 2 });
   }
-  for (const r of (_hkSupaData || _hkData || [])) {
+  for (const r of (_hkSupaData || [])) {
     const v = parseFloat(r['Weight (lbs)']);
     const date = (r['Date/Time'] || '').slice(0, 10);
     if (date && v > 0) candidates.push({ date, value: v, priority: 3 });
@@ -4097,7 +4097,7 @@ function renderVitalsToCards() {
   const protocol = lsGet('hrt_active_protocol_data', null);
 
   // Collapse 8 empty cards into a single nudge when there's no data of any kind
-  const hasHk = (_hkSupaData || _hkData || []).length > 0;
+  const hasHk = (_hkSupaData || []).length > 0;
   const grid = document.getElementById('metrics-grid');
   if (!logs.length && !hasHk) {
     if (grid) grid.outerHTML = `<div id="metrics-grid-prompt" style="margin-bottom:14px;">
@@ -4255,7 +4255,7 @@ function renderMoodEnergyCharts(supaLogs) {
 }
 
 function getHkTimeSeries(key, limit) {
-  const rows = (_hkSupaData || _hkData || []);
+  const rows = (_hkSupaData || []);
   const results = [];
   for (const r of rows) {
     const v = parseFloat(r[key]);
@@ -7140,7 +7140,6 @@ function isScheduledDay(compound, dateStr, protocolStart) {
 
 // ── HEALTHKIT ─────────────────────────────────────────────────────────────────
 
-let _hkData     = null; // cache for CSV data
 let _hkSupaData = null; // cache for Supabase cloud data
 let _hkRange    = 30;   // wellness chart window in days
 
@@ -7150,21 +7149,6 @@ function hkSetRange(days) {
   const btn = document.getElementById(`hk-r${days}`);
   if (btn) btn.classList.add('range-pill-active');
   renderWellnessPage();
-}
-
-async function hkLoadCSV() {
-  if (_hkData) return _hkData;
-  const resp = await fetch('healthkit-data.csv');
-  const text = await resp.text();
-  const lines = text.trim().split('\n');
-  const headers = lines[0].split(',').map(h => h.trim());
-  _hkData = lines.slice(1).map(line => {
-    const vals = line.split(',');
-    const row = {};
-    headers.forEach((h, i) => row[h] = (vals[i] || '').trim());
-    return row;
-  }).filter(r => r['Date/Time']);
-  return _hkData;
 }
 
 async function hkLoadFromSupabase() {
@@ -7207,15 +7191,7 @@ async function renderWellnessPage() {
   const syncEl    = document.getElementById('hk-last-sync');
   if (!container) return;
 
-  let rows   = null;
-  let source = 'csv';
-
-  // Use in-memory cache immediately — no shimmer, no await on repeat visits
-  if (_hkSupaData && _hkSupaData.length) {
-    rows = _hkSupaData; source = 'cloud';
-  } else if (_hkData && _hkData.length) {
-    rows = _hkData; source = 'csv';
-  }
+  let rows = _hkSupaData && _hkSupaData.length ? _hkSupaData : null;
 
   if (!rows) {
     // True first load — show shimmers while fetching
@@ -7223,15 +7199,7 @@ async function renderWellnessPage() {
     kpiRow.innerHTML = Array(6).fill(0).map(shimCard).join('');
     container.innerHTML = '';
 
-    // Cloud first when signed in
-    if (_supa && _supaUser) {
-      rows = await hkLoadFromSupabase();
-      if (rows && rows.length) source = 'cloud';
-    }
-    // Fall back to static CSV
-    if (!rows || !rows.length) {
-      try { rows = await hkLoadCSV(); source = 'csv'; } catch(e) { rows = null; }
-    }
+    if (_supa && _supaUser) rows = await hkLoadFromSupabase();
   }
 
   if (!rows || !rows.length) {
@@ -7246,9 +7214,8 @@ async function renderWellnessPage() {
   if (!latest) { container.innerHTML = '<div style="color:var(--text-muted);font-size:13px;">No data</div>'; return; }
 
   if (syncEl) {
-    const dateStr  = latest['Date/Time'].split(' ')[0];
-    const srcLabel = source === 'cloud' ? ' · Cloud' : ' · Local CSV';
-    syncEl.textContent = `Last entry: ${dateStr}${srcLabel}`;
+    const dateStr = latest['Date/Time'].split(' ')[0];
+    syncEl.textContent = `Last entry: ${dateStr} · Cloud`;
   }
 
   hkRenderKpis(kpiRow, latest, sorted);
@@ -9911,7 +9878,7 @@ function renderReadinessCard() {
   if (!el) return;
 
   // HRV — last 7 days from HK data
-  const hkRows = (_hkSupaData || _hkData || []);
+  const hkRows = (_hkSupaData || []);
   const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 7);
   const recentHk = hkRows.filter(r => r.date >= localDate(cutoff));
   const hrvVals  = recentHk.map(r => r['Heart Rate Variability (ms)'] ?? r.hrv_ms).filter(v => v != null);
@@ -10732,7 +10699,7 @@ async function checkDose(compound_name, dose, unit, date) {
   const entry = { label: compound_name, date, ts: new Date().toISOString(), id: null };
   taken.push(entry);
   localStorage.setItem('hrt_doses_taken', JSON.stringify(taken));
-  const hasVitals = lsGet('hrt_vitals_log', []).length > 0 || (_hkSupaData || _hkData || []).length > 0;
+  const hasVitals = lsGet('hrt_vitals_log', []).length > 0 || (_hkSupaData || []).length > 0;
   if (!hasVitals) {
     showToast(`${compound_name} ${dose}${unit} logged ✓ &mdash; <a href="#" onclick="nav('vitals');return false;" style="color:var(--primary-bright);text-decoration:underline;font-weight:600;">log your vitals while you're here →</a>`, 'success', 6000, true);
   } else {
