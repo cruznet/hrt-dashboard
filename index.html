@@ -2920,6 +2920,12 @@ body {
         </div>
         <div style="font-size:11px;color:var(--text-muted);margin-top:8px;">Prep mode activates automatically when you set a show date. Performance / Offseason unlocks AAS compounds, cycle tracking, and advanced calculators.</div>
         <hr class="divider">
+        <div class="card-title">Appearance</div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn-secondary" id="theme-btn-dark"  onclick="setTheme('dark')"><i class="ti ti-moon"></i> Dark</button>
+          <button class="btn-secondary" id="theme-btn-light" onclick="setTheme('light')"><i class="ti ti-sun"></i> Light</button>
+        </div>
+        <hr class="divider">
         <div class="card-title">Password</div>
         <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">Set or change your password to enable email sign-in alongside Google.</div>
         <div class="form-group">
@@ -3310,6 +3316,10 @@ function setTheme(mode) {
   localStorage.setItem('hrt_theme', mode);
   const icon = document.getElementById('theme-icon');
   if (icon) icon.className = mode === 'light' ? 'ti ti-moon' : 'ti ti-sun';
+  const darkBtn  = document.getElementById('theme-btn-dark');
+  const lightBtn = document.getElementById('theme-btn-light');
+  if (darkBtn)  darkBtn.className  = mode === 'dark'  ? 'btn-primary' : 'btn-secondary';
+  if (lightBtn) lightBtn.className = mode === 'light' ? 'btn-primary' : 'btn-secondary';
 }
 function initTheme() {
   const saved = localStorage.getItem('hrt_theme') || 'dark';
