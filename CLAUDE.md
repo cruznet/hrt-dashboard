@@ -88,7 +88,7 @@ Cloudflare's bot force-pushes `cloudflare/workers-autoconfig` regularly. Always 
 | `page-wellness` | Wellness | HealthKit KPI cards + charts, 7/30/90-day range toggle |
 | `page-timeline` | Timeline | Unified chronological activity feed — see `buildActivityFeed()` below |
 | `page-protocols` | My Protocols | CRUD for saved protocols, status badges, switch modal |
-| `page-builder` | Protocol Builder | Tabbed: Builder · Timeline · Log. Phased compound scheduling. |
+| `page-builder` | Protocol Builder | Tabbed: Builder · Schedule (Gantt) · Log. Phased compound scheduling. |
 | `page-compounds` | Compounds | Reference table for 60+ compounds (AAS, SARMs, peptides, etc.) |
 | `page-calculator` | Calculators | Tabs: AAS/Injectable PK simulation · Peptide reconstitution (blend mode) |
 | `page-athletes` | Athletes | Coach-facing client roster (linked via share token) |
