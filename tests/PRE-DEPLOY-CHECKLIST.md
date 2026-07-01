@@ -8,8 +8,10 @@ deploy. Open the browser console and keep an eye on it throughout.
    for the command. Don't proceed to the manual steps below until it passes.
 2. **Login** — go to `index.html`, sign in with Google. Confirm it lands on
    the dashboard (not stuck on the auth overlay).
-3. **Dashboard renders** — readiness score, streak card, mode context card,
-   and check-in card all show data (not blank/broken).
+3. **Dashboard renders** — Today / Health / Performance / Insights sections
+   all appear in order with correct content; readiness score, streak card,
+   mode context card, and check-in card all show data (not blank/broken);
+   Health Metrics cards render compactly with no clipped text.
 4. **Log a dose** — tap a scheduled dose, confirm it shows as taken and the
    adherence badge updates.
 5. **Log vitals** — open the log form, submit a BP/glucose/mood entry,

@@ -558,6 +558,16 @@ label.dose-row.dose-done .dose-name { text-decoration: line-through; }
 .mc-red    { border-top-color: var(--red);    } .mc-red    .metric-unit { color: var(--red); }
 .mc-purple { border-top-color: var(--purple); } .mc-purple .metric-unit { color: var(--purple); }
 .metric-delta { font-size:11px; font-family:var(--font-data); margin-top:3px; min-height:14px; }
+/* Compact widget density — scoped to the Dashboard's Health Metrics grid only,
+   so Bloodwork/Physique/Wellness KPI cards (which reuse .metric-card) are untouched. */
+.metric-value-row { display: flex; align-items: baseline; gap: 5px; margin-top: auto; }
+#metrics-grid .metric-card { padding: 11px 12px 10px; }
+#metrics-grid .metric-icon { width: 26px; height: 26px; margin-bottom: 6px; }
+#metrics-grid .metric-icon svg { width: 13px; height: 13px; }
+#metrics-grid .metric-label { margin-bottom: 2px; }
+#metrics-grid .metric-value { font-size: 19px; margin-top: 0; }
+#metrics-grid .metric-unit { margin-top: 0; }
+#metrics-grid .metric-badge { margin-top: 3px; }
 .delta-up   { color: var(--red); }
 .delta-down { color: var(--green); }
 .delta-same { color: var(--text-muted); }
@@ -1704,141 +1714,6 @@ body {
         </div>
       </div>
 
-      <!-- Readiness + Streak side-by-side -->
-      <div class="dash-row-2">
-        <div id="daily-readiness-card"></div>
-        <div id="streak-dash-card"></div>
-      </div>
-
-      <!-- Show countdown banner (Prep mode) -->
-      <div id="show-countdown" style="margin-bottom:14px;"></div>
-
-      <!-- Coach note callout -->
-      <div id="coach-note-callout" style="display:none;margin-bottom:14px;"></div>
-
-      <!-- Mode context card (TRT/Cruise or Offseason when no show date) -->
-      <div id="mode-context-card" style="margin-bottom:14px;"></div>
-
-      <!-- Weekly check-in nudge -->
-      <div id="checkin-dash-card" style="margin-bottom:14px;"></div>
-
-      <!-- HEALTH METRICS section -->
-      <div class="dash-section-label">Health Metrics</div>
-
-      <!-- Metric cards -->
-      <div class="metrics-grid" id="metrics-grid">
-        <div class="metric-card mc-red">
-          <div class="metric-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#F87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V22H4V12"/><path d="M22 7H2v5h20V7z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
-          </div>
-          <div class="metric-label">Blood Pressure</div>
-          <div class="metric-value" id="m-bp" style="font-size:18px;">—</div>
-          <div class="metric-unit">mmHg</div>
-          <span class="metric-badge badge-muted" id="m-bp-badge">No data</span>
-          <div class="metric-delta" id="m-bp-delta"></div>
-        </div>
-        <div class="metric-card mc-purple">
-          <div class="metric-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#C084FC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>
-          </div>
-          <div class="metric-label">Glucose</div>
-          <div class="metric-value" id="m-glucose">—</div>
-          <div class="metric-unit">mg/dL</div>
-          <span class="metric-badge badge-muted" id="m-glucose-badge">No data</span>
-          <div class="metric-delta" id="m-glucose-delta"></div>
-        </div>
-        <div class="metric-card mc-teal">
-          <div class="metric-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#22D3EE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
-          </div>
-          <div class="metric-label">Mood</div>
-          <div class="metric-value" id="m-mood">—</div>
-          <div class="metric-unit">/10</div>
-          <span class="metric-badge badge-muted" id="m-mood-badge">No data</span>
-          <div class="metric-delta" id="m-mood-delta"></div>
-        </div>
-        <div class="metric-card mc-amber">
-          <div class="metric-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#FB923C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-          </div>
-          <div class="metric-label">Energy</div>
-          <div class="metric-value" id="m-energy">—</div>
-          <div class="metric-unit">/10</div>
-          <span class="metric-badge badge-muted" id="m-energy-badge">No data</span>
-          <div class="metric-delta" id="m-energy-delta"></div>
-        </div>
-        <div class="metric-card mc-amber">
-          <div class="metric-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#FB923C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
-          </div>
-          <div class="metric-label">Active Energy</div>
-          <div class="metric-value" id="m-active-energy">—</div>
-          <div class="metric-unit">kcal</div>
-          <span class="metric-badge badge-muted" id="m-active-energy-badge">No data</span>
-          <div class="metric-delta" id="m-active-energy-delta"></div>
-        </div>
-        <div class="metric-card mc-red">
-          <div class="metric-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#F87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-          </div>
-          <div class="metric-label">Resting HR</div>
-          <div class="metric-value" id="m-resting-hr">—</div>
-          <div class="metric-unit">bpm</div>
-          <span class="metric-badge badge-muted" id="m-resting-hr-badge">No data</span>
-          <div class="metric-delta" id="m-resting-hr-delta"></div>
-        </div>
-        <div class="metric-card mc-green">
-          <div class="metric-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#34D399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="4" r="1"/><path d="M6.5 13.5l1.5-4 2.5 2.5 2-5 2.5 7"/></svg>
-          </div>
-          <div class="metric-label">Steps</div>
-          <div class="metric-value" id="m-steps">—</div>
-          <div class="metric-unit">steps</div>
-          <span class="metric-badge badge-muted" id="m-steps-badge">No data</span>
-          <div class="metric-delta" id="m-steps-delta"></div>
-        </div>
-        <div class="metric-card mc-teal">
-          <div class="metric-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#22D3EE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></svg>
-          </div>
-          <div class="metric-label">SpO₂</div>
-          <div class="metric-value" id="m-spo2">—</div>
-          <div class="metric-unit">%</div>
-          <span class="metric-badge badge-muted" id="m-spo2-badge">No data</span>
-          <div class="metric-delta" id="m-spo2-delta"></div>
-        </div>
-      </div>
-
-      <!-- Latest Labs strip -->
-      <div id="bw-dash-strip" style="display:none;margin-bottom:8px;cursor:pointer;" onclick="nav('bloodwork')"></div>
-      <!-- Latest Physique strip -->
-      <div id="ph-dash-strip" style="display:none;margin-bottom:12px;cursor:pointer;" onclick="nav('physique')"></div>
-
-      <!-- Compliance heatmap -->
-      <div class="card" id="compliance-heatmap-card" style="margin-bottom:14px;display:none;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-          <div style="display:flex;align-items:center;gap:8px;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--primary-bright)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            <div class="card-title" style="margin-bottom:0;">Compliance — Last 12 Weeks</div>
-          </div>
-          <div id="compliance-heatmap-pct" style="font-size:12px;font-family:var(--font-data);color:var(--primary-bright);"></div>
-        </div>
-        <div style="overflow-x:auto;">
-          <div id="compliance-heatmap-grid" style="display:inline-grid;grid-template-rows:repeat(7,1fr);grid-auto-flow:column;gap:3px;min-width:min-content;"></div>
-        </div>
-        <div style="display:flex;align-items:center;gap:6px;margin-top:10px;">
-          <span style="font-size:10px;color:var(--text-muted);">Less</span>
-          <div style="width:10px;height:10px;border-radius:2px;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.1);"></div>
-          <div style="width:10px;height:10px;border-radius:2px;background:rgba(34,211,238,0.25);"></div>
-          <div style="width:10px;height:10px;border-radius:2px;background:rgba(34,211,238,0.6);"></div>
-          <div style="width:10px;height:10px;border-radius:2px;background:var(--green);"></div>
-          <span style="font-size:10px;color:var(--text-muted);">More</span>
-          <span style="font-size:10px;color:var(--text-muted);margin-left:8px;">— No doses scheduled</span>
-          <div style="width:10px;height:10px;border-radius:2px;background:rgba(248,113,113,0.35);"></div>
-          <span style="font-size:10px;color:var(--text-muted);">Missed</span>
-        </div>
-      </div>
-
       <!-- Upcoming Doses widget -->
       <div class="card" id="upcoming-doses-card" style="margin-bottom:14px;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
@@ -1851,32 +1726,96 @@ body {
         <div id="upcoming-list"></div>
       </div>
 
-      <!-- Recent Activity widget -->
-      <div class="card" id="activity-dash-card" style="margin-bottom:14px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-          <div style="display:flex;align-items:center;gap:8px;">
-            <i class="ti ti-history" style="font-size:14px;color:var(--primary-bright);"></i>
-            <div class="card-title" style="margin-bottom:0;">Recent Activity</div>
-          </div>
-          <a href="#" onclick="nav('timeline');return false;" style="font-size:11px;color:var(--primary-bright);text-decoration:none;">Full timeline →</a>
-        </div>
-        <div id="activity-dash-list"></div>
-      </div>
+      <!-- Show countdown banner (Prep mode) -->
+      <div id="show-countdown" style="margin-bottom:14px;"></div>
 
-      <!-- Goals widget -->
-      <div class="card" id="goals-dash-card" style="margin-bottom:14px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-          <div style="display:flex;align-items:center;gap:8px;">
-            <i class="ti ti-target" style="font-size:14px;color:var(--primary-bright);"></i>
-            <div class="card-title" style="margin-bottom:0;">Goals</div>
-          </div>
-          <a href="#" onclick="goalOpenModal();return false;" style="font-size:11px;color:var(--primary-bright);text-decoration:none;">+ Add Goal</a>
-        </div>
-        <div id="goals-dash-list"></div>
-      </div>
+      <!-- Coach note callout -->
+      <div id="coach-note-callout" style="display:none;margin-bottom:14px;"></div>
 
-      <!-- TRENDS section -->
-      <div class="dash-section-label">Trends</div>
+      <!-- Weekly check-in nudge -->
+      <div id="checkin-dash-card" style="margin-bottom:14px;"></div>
+
+      <!-- Mode context card (TRT/Cruise or Offseason when no show date) -->
+      <div id="mode-context-card" style="margin-bottom:14px;"></div>
+
+      <!-- HEALTH section -->
+      <div class="dash-section-label">Health</div>
+
+      <!-- Metric cards -->
+      <div class="metrics-grid" id="metrics-grid">
+        <div class="metric-card mc-red">
+          <div class="metric-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#F87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V22H4V12"/><path d="M22 7H2v5h20V7z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+          </div>
+          <div class="metric-label">Blood Pressure</div>
+          <div class="metric-value-row"><div class="metric-value" id="m-bp" style="font-size:18px;">—</div><div class="metric-unit">mmHg</div></div>
+          <span class="metric-badge badge-muted" id="m-bp-badge">No data</span>
+          <div class="metric-delta" id="m-bp-delta"></div>
+        </div>
+        <div class="metric-card mc-purple">
+          <div class="metric-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#C084FC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>
+          </div>
+          <div class="metric-label">Glucose</div>
+          <div class="metric-value-row"><div class="metric-value" id="m-glucose">—</div><div class="metric-unit">mg/dL</div></div>
+          <span class="metric-badge badge-muted" id="m-glucose-badge">No data</span>
+          <div class="metric-delta" id="m-glucose-delta"></div>
+        </div>
+        <div class="metric-card mc-teal">
+          <div class="metric-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#22D3EE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+          </div>
+          <div class="metric-label">Mood</div>
+          <div class="metric-value-row"><div class="metric-value" id="m-mood">—</div><div class="metric-unit">/10</div></div>
+          <span class="metric-badge badge-muted" id="m-mood-badge">No data</span>
+          <div class="metric-delta" id="m-mood-delta"></div>
+        </div>
+        <div class="metric-card mc-amber">
+          <div class="metric-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#FB923C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          </div>
+          <div class="metric-label">Energy</div>
+          <div class="metric-value-row"><div class="metric-value" id="m-energy">—</div><div class="metric-unit">/10</div></div>
+          <span class="metric-badge badge-muted" id="m-energy-badge">No data</span>
+          <div class="metric-delta" id="m-energy-delta"></div>
+        </div>
+        <div class="metric-card mc-amber">
+          <div class="metric-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#FB923C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+          </div>
+          <div class="metric-label">Active Energy</div>
+          <div class="metric-value-row"><div class="metric-value" id="m-active-energy">—</div><div class="metric-unit">kcal</div></div>
+          <span class="metric-badge badge-muted" id="m-active-energy-badge">No data</span>
+          <div class="metric-delta" id="m-active-energy-delta"></div>
+        </div>
+        <div class="metric-card mc-red">
+          <div class="metric-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#F87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          </div>
+          <div class="metric-label">Resting HR</div>
+          <div class="metric-value-row"><div class="metric-value" id="m-resting-hr">—</div><div class="metric-unit">bpm</div></div>
+          <span class="metric-badge badge-muted" id="m-resting-hr-badge">No data</span>
+          <div class="metric-delta" id="m-resting-hr-delta"></div>
+        </div>
+        <div class="metric-card mc-green">
+          <div class="metric-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#34D399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="4" r="1"/><path d="M6.5 13.5l1.5-4 2.5 2.5 2-5 2.5 7"/></svg>
+          </div>
+          <div class="metric-label">Steps</div>
+          <div class="metric-value-row"><div class="metric-value" id="m-steps">—</div><div class="metric-unit">steps</div></div>
+          <span class="metric-badge badge-muted" id="m-steps-badge">No data</span>
+          <div class="metric-delta" id="m-steps-delta"></div>
+        </div>
+        <div class="metric-card mc-teal">
+          <div class="metric-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#22D3EE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></svg>
+          </div>
+          <div class="metric-label">SpO₂</div>
+          <div class="metric-value-row"><div class="metric-value" id="m-spo2">—</div><div class="metric-unit">%</div></div>
+          <span class="metric-badge badge-muted" id="m-spo2-badge">No data</span>
+          <div class="metric-delta" id="m-spo2-delta"></div>
+        </div>
+      </div>
 
       <!-- ROW 3: Trend charts -->
       <div class="grid-2" style="margin-bottom:12px;">
@@ -1942,6 +1881,73 @@ body {
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- PERFORMANCE section -->
+      <div class="dash-section-label">Performance</div>
+
+      <!-- Latest Physique strip -->
+      <div id="ph-dash-strip" style="display:none;margin-bottom:12px;cursor:pointer;" onclick="nav('physique')"></div>
+
+      <!-- INSIGHTS section -->
+      <div class="dash-section-label">Insights</div>
+
+      <!-- Readiness + Streak side-by-side -->
+      <div class="dash-row-2">
+        <div id="daily-readiness-card"></div>
+        <div id="streak-dash-card"></div>
+      </div>
+
+      <!-- Latest Labs strip -->
+      <div id="bw-dash-strip" style="display:none;margin-bottom:8px;cursor:pointer;" onclick="nav('bloodwork')"></div>
+
+      <!-- Compliance heatmap -->
+      <div class="card" id="compliance-heatmap-card" style="margin-bottom:14px;display:none;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--primary-bright)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <div class="card-title" style="margin-bottom:0;">Compliance — Last 12 Weeks</div>
+          </div>
+          <div id="compliance-heatmap-pct" style="font-size:12px;font-family:var(--font-data);color:var(--primary-bright);"></div>
+        </div>
+        <div style="overflow-x:auto;">
+          <div id="compliance-heatmap-grid" style="display:inline-grid;grid-template-rows:repeat(7,1fr);grid-auto-flow:column;gap:3px;min-width:min-content;"></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:10px;">
+          <span style="font-size:10px;color:var(--text-muted);">Less</span>
+          <div style="width:10px;height:10px;border-radius:2px;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.1);"></div>
+          <div style="width:10px;height:10px;border-radius:2px;background:rgba(34,211,238,0.25);"></div>
+          <div style="width:10px;height:10px;border-radius:2px;background:rgba(34,211,238,0.6);"></div>
+          <div style="width:10px;height:10px;border-radius:2px;background:var(--green);"></div>
+          <span style="font-size:10px;color:var(--text-muted);">More</span>
+          <span style="font-size:10px;color:var(--text-muted);margin-left:8px;">— No doses scheduled</span>
+          <div style="width:10px;height:10px;border-radius:2px;background:rgba(248,113,113,0.35);"></div>
+          <span style="font-size:10px;color:var(--text-muted);">Missed</span>
+        </div>
+      </div>
+
+      <!-- Recent Activity widget -->
+      <div class="card" id="activity-dash-card" style="margin-bottom:14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <i class="ti ti-history" style="font-size:14px;color:var(--primary-bright);"></i>
+            <div class="card-title" style="margin-bottom:0;">Recent Activity</div>
+          </div>
+          <a href="#" onclick="nav('timeline');return false;" style="font-size:11px;color:var(--primary-bright);text-decoration:none;">Full timeline →</a>
+        </div>
+        <div id="activity-dash-list"></div>
+      </div>
+
+      <!-- Goals widget -->
+      <div class="card" id="goals-dash-card" style="margin-bottom:14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <i class="ti ti-target" style="font-size:14px;color:var(--primary-bright);"></i>
+            <div class="card-title" style="margin-bottom:0;">Goals</div>
+          </div>
+          <a href="#" onclick="goalOpenModal();return false;" style="font-size:11px;color:var(--primary-bright);text-decoration:none;">+ Add Goal</a>
+        </div>
+        <div id="goals-dash-list"></div>
       </div>
 
     </section>
