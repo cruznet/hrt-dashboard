@@ -65,6 +65,10 @@
   --border:         rgba(255,255,255,0.10);
   --border-mid:     rgba(255,255,255,0.17);
 
+  --ring-track:     rgba(255,255,255,0.06);
+  --chart-grid:     rgba(255,255,255,0.04);
+  --chart-tick:     #64748B;
+
   --font-data: 'JetBrains Mono', monospace;
   --font-ui:   'DM Sans', system-ui, sans-serif;  /* open apertures, optimized for small UI text */
   --radius:    8px;
@@ -104,6 +108,10 @@
 
   --border:         rgba(0,0,0,0.09);
   --border-mid:     rgba(0,0,0,0.16);
+
+  --ring-track:     rgba(0,0,0,0.09);
+  --chart-grid:     rgba(0,0,0,0.07);
+  --chart-tick:     #6B6B78;
 }
 
 /* Light mode — fix elements that use hardcoded dark rgba values instead of tokens */
@@ -140,6 +148,15 @@
   -webkit-text-fill-color: var(--text-primary);
   color: var(--text-primary);
 }
+/* Light mode — structural rgba(white) elements */
+[data-theme="light"] .progress-wrap          { background: rgba(0,0,0,0.08); }
+[data-theme="light"] .stat-compare-bar-wrap  { background: rgba(0,0,0,0.08); }
+[data-theme="light"] .gantt-track            { background: rgba(0,0,0,0.07); }
+[data-theme="light"] .badge-muted            { background: rgba(0,0,0,0.06); color: var(--text-muted); }
+[data-theme="light"] .topbar-btn-ghost       { background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.10); color: var(--text-secondary); }
+[data-theme="light"] .topbar-btn-ghost:hover { background: rgba(0,0,0,0.09); }
+[data-theme="light"] .range-pill             { border-color: rgba(0,0,0,0.14); color: var(--text-muted); }
+[data-theme="light"] .range-pill-active      { background: rgba(123,85,7,0.10); border-color: rgba(123,85,7,0.30) !important; color: var(--primary) !important; }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -1653,7 +1670,7 @@ body {
                     <stop offset="100%" stop-color="#FDE68A"/>
                   </linearGradient>
                 </defs>
-                <circle cx="48" cy="48" r="40" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="6"/>
+                <circle cx="48" cy="48" r="40" fill="none" style="stroke:var(--ring-track)" stroke-width="6"/>
                 <circle id="cycle-ring-arc" cx="48" cy="48" r="40" fill="none"
                         stroke="url(#ring-grad)" stroke-width="6" stroke-linecap="round"
                         stroke-dasharray="251.3" stroke-dashoffset="251.3"
@@ -4644,8 +4661,8 @@ function buildWeekStrip(currentWeek, totalWeeks) {
     const pct     = past ? 1 : current ? 0.85 : 0;
     const bg = past    ? `rgba(245,197,24,${pct})`
              : current ? 'var(--primary-bright)'
-             : 'rgba(255,255,255,0.07)';
-    const border = current ? 'none' : past ? 'none' : '0.5px solid rgba(255,255,255,0.15)';
+             : (isLightMode() ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.07)');
+    const border = current ? 'none' : past ? 'none' : `0.5px solid ${isLightMode()?'rgba(0,0,0,0.10)':'rgba(255,255,255,0.15)'}`;
     const glow   = current ? 'box-shadow:0 0 8px rgba(245,197,24,0.5);' : '';
     const label  = (labelAt.has(w) || current)
       ? `<div style="font-size:8px;color:${current ? 'var(--primary-bright)' : 'var(--text-muted)'};text-align:center;margin-top:3px;font-family:var(--font-data);">${w}</div>`
@@ -5721,8 +5738,8 @@ function renderBwTrendCharts() {
       }
     },
     scales: {
-      x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#64748B', font: { family: "'JetBrains Mono', monospace", size: 11 } } },
-      y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#64748B', font: { family: "'JetBrains Mono', monospace", size: 11 } },
+      x: { grid: { color: (isLightMode()?'rgba(0,0,0,0.07)':'rgba(255,255,255,0.04)') }, ticks: { color: '#64748B', font: { family: "'JetBrains Mono', monospace", size: 11 } } },
+      y: { grid: { color: (isLightMode()?'rgba(0,0,0,0.07)':'rgba(255,255,255,0.04)') }, ticks: { color: '#64748B', font: { family: "'JetBrains Mono', monospace", size: 11 } },
            title: { display: true, text: m.unit, color: '#475569', font: { size: 10 } } }
     }
   });
@@ -5999,8 +6016,8 @@ function measRenderTrend(list) {
         label: ctx => ` ${ctx.parsed.y} ${m.unit}`
       }}},
       scales: {
-        x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#64748B', font: { family: "'JetBrains Mono', monospace", size: 11 } } },
-        y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#64748B', font: { family: "'JetBrains Mono', monospace", size: 11 } },
+        x: { grid: { color: (isLightMode()?'rgba(0,0,0,0.07)':'rgba(255,255,255,0.04)') }, ticks: { color: '#64748B', font: { family: "'JetBrains Mono', monospace", size: 11 } } },
+        y: { grid: { color: (isLightMode()?'rgba(0,0,0,0.07)':'rgba(255,255,255,0.04)') }, ticks: { color: '#64748B', font: { family: "'JetBrains Mono', monospace", size: 11 } },
              title: { display: true, text: m.unit, color: '#475569', font: { size: 10 } } }
       }
     }
@@ -6991,7 +7008,7 @@ function renderCompliancePage() {
   const cells = weeks.map((week, wi) => week.map((day, di) => {
     if (!day) return '';
     const pct  = day.sched > 0 ? day.taken / day.sched : 0;
-    const fill = day.sched === 0 ? 'rgba(255,255,255,0.04)' :
+    const fill = day.sched === 0 ? (isLightMode()?'rgba(0,0,0,0.07)':'rgba(255,255,255,0.04)') :
                  pct === 0   ? 'rgba(248,113,113,0.25)' :
                  pct < 0.5   ? 'rgba(251,146,60,0.40)'  :
                  pct < 1     ? 'rgba(245,197,24,0.50)'  :
@@ -7310,6 +7327,7 @@ function hkRenderKpis(container, latest, all) {
 
 function hkRenderCharts(container, rows) {
   const labels = rows.map(r => r['Date/Time'].split(' ')[0]);
+  const lm = isLightMode();
 
   const charts = [
     {
@@ -7318,7 +7336,8 @@ function hkRenderCharts(container, rows) {
       datasets: [{
         label: 'HRV (ms)',
         data: rows.map(r => hkVal(r, 'Heart Rate Variability (ms)')),
-        borderColor: 'var(--teal)', backgroundColor: 'rgba(34,211,238,0.08)',
+        borderColor: lm ? '#0891B2' : 'var(--teal)',
+        backgroundColor: lm ? 'rgba(8,145,178,0.12)' : 'rgba(34,211,238,0.08)',
         borderWidth: 2, pointRadius: 2, fill: true, spanGaps: true,
       }],
     },
@@ -7328,7 +7347,8 @@ function hkRenderCharts(container, rows) {
       datasets: [{
         label: 'Weight (lbs)',
         data: rows.map(r => hkVal(r, 'Weight (lbs)')),
-        borderColor: 'var(--primary-bright)', backgroundColor: 'rgba(245,197,24,0.08)',
+        borderColor: lm ? '#7B5507' : 'var(--primary-bright)',
+        backgroundColor: lm ? 'rgba(123,85,7,0.10)' : 'rgba(245,197,24,0.08)',
         borderWidth: 2, pointRadius: 2, fill: true, spanGaps: true,
       }],
     },
@@ -7378,17 +7398,17 @@ function hkRenderCharts(container, rows) {
         {
           label: 'Systolic (mmHg)',
           data: rows.map(r => hkVal(r, 'Blood Pressure [Systolic] (mmHg)')),
-          borderColor: '#F87171', backgroundColor: 'rgba(248,113,113,0.06)',
+          borderColor: lm ? '#DC2626' : '#F87171', backgroundColor: lm ? 'rgba(220,38,38,0.10)' : 'rgba(248,113,113,0.06)',
           borderWidth: 2, pointRadius: 2, fill: false, spanGaps: true,
         },
         {
           label: 'Diastolic (mmHg)',
           data: rows.map(r => hkVal(r, 'Blood Pressure [Diastolic] (mmHg)')),
-          borderColor: '#FB923C', backgroundColor: 'rgba(251,146,60,0.06)',
+          borderColor: lm ? '#D97706' : '#FB923C', backgroundColor: lm ? 'rgba(217,119,6,0.10)' : 'rgba(251,146,60,0.06)',
           borderWidth: 2, pointRadius: 2, fill: false, spanGaps: true,
         },
       ],
-      opts: { plugins: { legend: { display: true, labels: { color: '#C4C4CC', font: { size: 12, weight: '500' }, boxWidth: 12, padding: 14 } } } },
+      opts: { plugins: { legend: { display: true, labels: { color: lm ? '#4A4A58' : '#C4C4CC', font: { size: 12, weight: '500' }, boxWidth: 12, padding: 14 } } } },
     },
   ];
 
@@ -7408,8 +7428,8 @@ function hkRenderCharts(container, rows) {
     responsive: true, maintainAspectRatio: false,
     plugins: { legend: { display: false } },
     scales: {
-      x: { ticks: { color: '#A0A0AC', font: { size: 11 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { color: 'rgba(255,255,255,0.04)' } },
-      y: { ticks: { color: '#A0A0AC', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.06)' } },
+      x: { ticks: { color: isLightMode()?'#6B6B78':'#A0A0AC', font: { size: 11 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { color: (isLightMode()?'rgba(0,0,0,0.07)':'rgba(255,255,255,0.04)') } },
+      y: { ticks: { color: isLightMode()?'#6B6B78':'#A0A0AC', font: { size: 11 } }, grid: { color: isLightMode()?'rgba(0,0,0,0.07)':'rgba(255,255,255,0.06)' } },
     },
   };
 
@@ -7725,7 +7745,7 @@ function renderWorkoutsPage() {
     </div>
     <div style="display:flex;gap:4px;justify-content:space-between;">
       ${weekDayDots.map(d => `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
-        <div style="width:30px;height:30px;border-radius:50%;background:${d.worked?'rgba(74,222,128,0.15)':'rgba(255,255,255,0.04)'};border:1.5px solid ${d.worked?'#4ADE80':'rgba(255,255,255,0.06)'};display:flex;align-items:center;justify-content:center;">
+        <div style="width:30px;height:30px;border-radius:50%;background:${d.worked?'rgba(74,222,128,0.15)':(isLightMode()?'rgba(0,0,0,0.07)':'rgba(255,255,255,0.04)')};border:1.5px solid ${d.worked?'#4ADE80':'rgba(255,255,255,0.06)'};display:flex;align-items:center;justify-content:center;">
           ${d.worked?'<i class="ti ti-check" style="font-size:12px;color:#4ADE80;"></i>':''}
         </div>
         <span style="font-size:10px;color:var(--text-muted);">${d.label}</span>
@@ -7873,8 +7893,8 @@ function renderWorkoutsPage() {
           responsive: true, maintainAspectRatio: false, animation: false,
           plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${Math.round(ctx.parsed.y).toLocaleString()} lbs` } } },
           scales: {
-            x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#64748B', font: { size: 10 } } },
-            y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#64748B', font: { size: 10 }, callback: v => (v/1000).toFixed(0)+'k' } }
+            x: { grid: { color: (isLightMode()?'rgba(0,0,0,0.07)':'rgba(255,255,255,0.04)') }, ticks: { color: '#64748B', font: { size: 10 } } },
+            y: { grid: { color: (isLightMode()?'rgba(0,0,0,0.07)':'rgba(255,255,255,0.04)') }, ticks: { color: '#64748B', font: { size: 10 }, callback: v => (v/1000).toFixed(0)+'k' } }
           }
         }
       });
@@ -8135,9 +8155,9 @@ function renderHevyE1RM(workouts) {
           tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y} lbs e1rm` } }
         },
         scales: {
-          x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#64748B', font: { size: 10 }, maxTicksLimit: 10 } },
+          x: { grid: { color: (isLightMode()?'rgba(0,0,0,0.07)':'rgba(255,255,255,0.04)') }, ticks: { color: '#64748B', font: { size: 10 }, maxTicksLimit: 10 } },
           y: {
-            grid: { color: 'rgba(255,255,255,0.04)' },
+            grid: { color: (isLightMode()?'rgba(0,0,0,0.07)':'rgba(255,255,255,0.04)') },
             ticks: { color: '#64748B', font: { size: 10 } },
             title: { display: true, text: 'Est. 1RM (lbs)', color: '#475569', font: { size: 10 } }
           }
@@ -9383,29 +9403,38 @@ function filterCompounds() {
 }
 
 // ── Charts ──
-const chartDefaults = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: { display: false },
-    tooltip: {
-      backgroundColor: '#1C1C28',
-      borderColor: 'rgba(255,255,255,0.10)',
-      borderWidth: 1,
-      titleColor: '#F8FAFC',
-      bodyColor: '#94A3B8',
-      padding: 12,
-      cornerRadius: 8,
-      displayColors: false,
-      titleFont: { family: "'DM Sans', system-ui, sans-serif", weight: '600', size: 12 },
-      bodyFont: { family: "'JetBrains Mono', monospace", size: 12 },
+function isLightMode() {
+  return document.documentElement.getAttribute('data-theme') === 'light';
+}
+
+function getChartDefaults() {
+  const light = isLightMode();
+  const grid = light ? 'rgba(0,0,0,0.07)' : (isLightMode()?'rgba(0,0,0,0.07)':'rgba(255,255,255,0.04)');
+  const tick = light ? '#6B6B78' : '#64748B';
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: light ? '#FFFFFF' : '#1C1C28',
+        borderColor: light ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.10)',
+        borderWidth: 1,
+        titleColor: light ? '#111118' : '#F8FAFC',
+        bodyColor: light ? '#4A4A58' : '#94A3B8',
+        padding: 12,
+        cornerRadius: 8,
+        displayColors: false,
+        titleFont: { family: "'DM Sans', system-ui, sans-serif", weight: '600', size: 12 },
+        bodyFont: { family: "'JetBrains Mono', monospace", size: 12 },
+      }
+    },
+    scales: {
+      x: { grid: { color: grid, drawBorder: false }, ticks: { color: tick, font: { family: "'JetBrains Mono', monospace", size: 11 } } },
+      y: { grid: { color: grid, drawBorder: false }, ticks: { color: tick, font: { family: "'JetBrains Mono', monospace", size: 11 } } }
     }
-  },
-  scales: {
-    x: { grid: { color: 'rgba(255,255,255,0.04)', drawBorder: false }, ticks: { color: '#64748B', font: { family: "'JetBrains Mono', monospace", size: 11 } } },
-    y: { grid: { color: 'rgba(255,255,255,0.04)', drawBorder: false }, ticks: { color: '#64748B', font: { family: "'JetBrains Mono', monospace", size: 11 } } }
-  }
-};
+  };
+}
 
 // Render an animated SVG progress ring into containerId.
 // pct: 0-100, color: CSS color string, center: text inside ring, sub: line below
@@ -9417,7 +9446,7 @@ function makeProgressRing(containerId, pct, color, center, sub) {
   el.innerHTML = `
     <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
       <svg width="96" height="96" viewBox="0 0 96 96">
-        <circle cx="48" cy="48" r="${r}" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="6"/>
+        <circle cx="48" cy="48" r="${r}" fill="none" style="stroke:var(--ring-track)" stroke-width="6"/>
         <circle cx="48" cy="48" r="${r}" fill="none"
                 stroke="${color}" stroke-width="6" stroke-linecap="round"
                 stroke-dasharray="${circ.toFixed(1)}" stroke-dashoffset="${circ.toFixed(1)}"
@@ -9441,7 +9470,7 @@ function makeChart(id, type, labels, datasets, opts={}) {
   if (!canvas) return;
   const existing = Chart.getChart(canvas);
   if (existing) existing.destroy();
-  return new Chart(canvas, { type, data: { labels, datasets }, options: { ...chartDefaults, ...opts } });
+  return new Chart(canvas, { type, data: { labels, datasets }, options: { ...getChartDefaults(), ...opts } });
 }
 
 function renderDemoCharts() {
@@ -10068,12 +10097,13 @@ function renderComplianceHeatmap() {
   grid.innerHTML = dayLabels.map((label, idx) =>
     `<div style="font-size:9px;color:var(--text-muted);height:14px;display:flex;align-items:center;padding-right:4px;grid-row:${idx+1};">${label}</div>`
   ).join('') + cells.map(({ ds, state, isFuture }) => {
+    const _lm = isLightMode();
     const bg = state === 'full'    ? 'rgba(34,197,94,0.75)'
              : state === 'partial' ? 'rgba(245,197,24,0.55)'
              : state === 'missed'  ? 'rgba(248,113,113,0.35)'
-             : state === 'future'  ? 'rgba(255,255,255,0.03)'
-             : 'rgba(255,255,255,0.05)';
-    const border = state === 'none' || state === 'future' ? '0.5px solid rgba(255,255,255,0.07)' : 'none';
+             : state === 'future'  ? (_lm ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.03)')
+             : (_lm ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.05)');
+    const border = state === 'none' || state === 'future' ? `0.5px solid ${_lm?'rgba(0,0,0,0.08)':'rgba(255,255,255,0.07)'}` : 'none';
     const title = `${ds} — ${state === 'full' ? 'All doses taken' : state === 'partial' ? 'Partial' : state === 'missed' ? 'Missed' : state === 'future' ? 'Upcoming' : 'Not scheduled'}`;
     return `<div title="${title}" style="width:13px;height:13px;border-radius:2px;background:${bg};border:${border};cursor:default;transition:opacity 0.1s;" onmouseenter="this.style.opacity='0.75'" onmouseleave="this.style.opacity='1'"></div>`;
   }).join('');
@@ -10246,7 +10276,7 @@ function generateShareCanvas(row) {
     ctx.fillStyle = c;
     ctx.font = `800 ${S * 0.1}px -apple-system, system-ui, sans-serif`;
     ctx.fillText(val, cx, cy + S * 0.07);
-    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.fillStyle = isLightMode() ? 'rgba(0,0,0,0.4)' : 'rgba(255,255,255,0.4)';
     ctx.font = `500 ${S * 0.028}px -apple-system, system-ui, sans-serif`;
     ctx.fillText(label.toUpperCase(), cx, cy + S * 0.115);
   });
@@ -10254,7 +10284,7 @@ function generateShareCanvas(row) {
   // Diet adherence if present
   if (row.diet_adherence != null) {
     const dietY = startY + Math.ceil(metrics.length / cols) * cellH + S * 0.04;
-    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.fillStyle = isLightMode() ? 'rgba(0,0,0,0.35)' : 'rgba(255,255,255,0.15)';
     ctx.font = `500 ${S * 0.03}px -apple-system, system-ui, sans-serif`;
     ctx.fillText(`DIET ADHERENCE  ${row.diet_adherence}%`, S * 0.5, dietY);
   }
@@ -10902,7 +10932,7 @@ function _calcUpdateNow() {
       },
       scales: {
         x: {
-          grid: { color: 'rgba(255,255,255,0.03)' },
+          grid: { color: isLightMode()?'rgba(0,0,0,0.06)':'rgba(255,255,255,0.03)' },
           ticks: {
             color: '#64748B',
             font: { family: "'Fira Code'", size: 10 },
@@ -10911,7 +10941,7 @@ function _calcUpdateNow() {
           }
         },
         y: {
-          grid: { color: 'rgba(255,255,255,0.04)' },
+          grid: { color: (isLightMode()?'rgba(0,0,0,0.07)':'rgba(255,255,255,0.04)') },
           ticks: { color: '#64748B', font: { family: "'Fira Code'", size: 10 }, callback: v => v.toFixed(0) + ' mg' },
           min: 0
         }
