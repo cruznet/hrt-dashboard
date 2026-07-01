@@ -2024,11 +2024,89 @@ body {
             <div class="page-header-sub">Lab panels, hormone markers &amp; trends</div>
           </div>
         </div>
-        <div style="display:flex;gap:8px;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn-secondary" onclick="bwCopySummary()" style="padding:7px 14px;font-size:13px;" id="bw-copy-btn">Copy Summary</button>
+          <button class="btn-secondary" onclick="bwOpenImport()" style="padding:7px 14px;font-size:13px;display:flex;align-items:center;gap:6px;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+            Import PDF
+          </button>
           <button class="btn-primary" onclick="bwShowForm()" style="padding:7px 16px;font-size:13px;">+ Log Panel</button>
         </div>
       </div>
+
+      <!-- ── PDF Import Modal ── -->
+      <div id="bw-import-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:2000;align-items:center;justify-content:center;padding:16px;">
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:16px;width:100%;max-width:960px;max-height:92vh;display:flex;flex-direction:column;overflow:hidden;">
+
+          <!-- Header -->
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:0.5px solid var(--border);flex-shrink:0;">
+            <div style="font-size:15px;font-weight:700;color:var(--text-primary);">Import Lab PDF</div>
+            <button onclick="bwCloseImport()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:20px;line-height:1;padding:4px;">&times;</button>
+          </div>
+
+          <!-- Step: Upload -->
+          <div id="bw-import-upload" style="padding:40px 24px;display:flex;flex-direction:column;align-items:center;gap:16px;flex:1;">
+            <div style="width:64px;height:64px;background:rgba(34,211,238,0.08);border:1.5px solid rgba(34,211,238,0.2);border-radius:16px;display:flex;align-items:center;justify-content:center;">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--primary-bright)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+            </div>
+            <div style="text-align:center;">
+              <div style="font-size:16px;font-weight:600;color:var(--text-primary);margin-bottom:6px;">Upload your lab PDF</div>
+              <div style="font-size:13px;color:var(--text-muted);">Quest, LabCorp, Private MD, LabCorp, any lab format — Claude reads them all</div>
+            </div>
+            <label style="cursor:pointer;">
+              <input type="file" id="bw-pdf-input" accept=".pdf,application/pdf" style="display:none;" onchange="bwHandlePDFSelect(this.files[0])">
+              <div class="btn-primary" style="padding:11px 32px;font-size:14px;pointer-events:none;">Choose PDF</div>
+            </label>
+            <div style="font-size:11px;color:var(--text-muted);">Max 10MB · PDF only · Parsed by Claude AI · Never stored</div>
+          </div>
+
+          <!-- Step: Parsing -->
+          <div id="bw-import-parsing" style="display:none;padding:60px 24px;display:none;flex-direction:column;align-items:center;gap:20px;flex:1;">
+            <div style="width:48px;height:48px;border:3px solid var(--primary-bright);border-top-color:transparent;border-radius:50%;animation:spin 0.9s linear infinite;"></div>
+            <div style="text-align:center;">
+              <div style="font-size:15px;font-weight:600;color:var(--text-primary);margin-bottom:6px;">Reading your lab report…</div>
+              <div id="bw-import-parsing-file" style="font-size:12px;color:var(--text-muted);"></div>
+            </div>
+          </div>
+
+          <!-- Step: Review -->
+          <div id="bw-import-review" style="display:none;flex:1;overflow:hidden;flex-direction:row;">
+
+            <!-- Left: PDF viewer -->
+            <div id="bw-pdf-pane" style="width:45%;border-right:0.5px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;">
+              <div style="padding:10px 14px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+                <div style="font-size:12px;font-weight:600;color:var(--text-label);text-transform:uppercase;letter-spacing:0.06em;">Lab Report</div>
+                <a id="bw-pdf-open-link" href="#" target="_blank" style="font-size:12px;color:var(--primary-bright);text-decoration:none;">Open in tab ↗</a>
+              </div>
+              <iframe id="bw-pdf-iframe" src="" style="flex:1;border:none;background:#fff;"></iframe>
+            </div>
+
+            <!-- Right: Review table -->
+            <div style="flex:1;overflow-y:auto;display:flex;flex-direction:column;">
+              <div style="padding:14px 18px;border-bottom:0.5px solid var(--border);flex-shrink:0;">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+                  <div>
+                    <div class="form-label">Panel Date</div>
+                    <input type="date" class="form-input" id="bw-import-date">
+                  </div>
+                  <div>
+                    <div class="form-label">Lab / Clinic</div>
+                    <input type="text" class="form-input" id="bw-import-lab" placeholder="e.g. Quest Diagnostics">
+                  </div>
+                </div>
+                <div style="display:flex;align-items:center;justify-content:space-between;">
+                  <div id="bw-import-summary" style="font-size:12px;color:var(--text-muted);"></div>
+                  <button class="btn-primary" onclick="bwConfirmImport()" style="padding:8px 20px;font-size:13px;" id="bw-import-confirm-btn">Import</button>
+                </div>
+              </div>
+              <div id="bw-import-table" style="padding:0 18px 18px;"></div>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+      <input type="file" id="bw-pdf-input-hidden" accept=".pdf" style="display:none;">
 
       <!-- Add Panel Form -->
       <div id="bw-form" style="display:none;margin-bottom:16px;">
@@ -5068,6 +5146,225 @@ async function submitLog() {
 }
 
 // ── BLOODWORK ────────────────────────────────────────────────────────────────
+
+// ── Lab PDF Import ────────────────────────────────────────────────────────────
+
+const BW_NAME_MAP = {
+  // Testosterone
+  'total testosterone':'tt','testosterone, total':'tt','testosterone total':'tt','testosterone':'tt',
+  'free testosterone':'ft','testosterone, free':'ft','testosterone, free (direct)':'ft',
+  // Estrogen
+  'estradiol':'e2','estradiol (e2)':'e2','estrogen, estradiol':'e2','estradiol, serum':'e2',
+  // SHBG
+  'shbg':'shbg','sex hormone binding globulin':'shbg','sex hormone-binding globulin':'shbg',
+  // IGF-1
+  'igf-1':'igf1','igf1':'igf1','insulin-like growth factor 1':'igf1','insulin-like growth factor i':'igf1','somatomedin c':'igf1',
+  // LH / FSH
+  'lh':'lh','luteinizing hormone':'lh','fsh':'fsh','follicle stimulating hormone':'fsh','follicle-stimulating hormone':'fsh',
+  // CBC
+  'hematocrit':'hematocrit','hct':'hematocrit',
+  'hemoglobin':'hemoglobin','hgb':'hemoglobin','haemoglobin':'hemoglobin',
+  'rbc':'rbc','red blood cell count':'rbc','red blood cells':'rbc','erythrocytes':'rbc','red cell count':'rbc',
+  'wbc':'wbc','white blood cell count':'wbc','white blood cells':'wbc','leukocytes':'wbc','white cell count':'wbc',
+  'platelets':'platelets','plt':'platelets','platelet count':'platelets','thrombocytes':'platelets',
+  // Metabolic / Kidney
+  'creatinine':'creatinine','creatinine, serum':'creatinine','serum creatinine':'creatinine',
+  'bun':'bun','blood urea nitrogen':'bun','urea nitrogen':'bun','urea nitrogen (bun)':'bun',
+  'egfr':'egfr','estimated glomerular filtration rate':'egfr','gfr':'egfr','glomerular filtration rate':'egfr',
+  // Glucose / Diabetes
+  'fasting glucose':'glucose_f','glucose, fasting':'glucose_f','glucose':'glucose_f','glucose, serum':'glucose_f','blood glucose':'glucose_f',
+  'hba1c':'hba1c','hemoglobin a1c':'hba1c','glycated hemoglobin':'hba1c','a1c':'hba1c','glycohemoglobin':'hba1c',
+  'fasting insulin':'insulin_f','insulin, fasting':'insulin_f','insulin':'insulin_f',
+  // Liver
+  'alt':'alt','alanine aminotransferase':'alt','sgpt':'alt','alanine transaminase':'alt',
+  'ast':'ast','aspartate aminotransferase':'ast','sgot':'ast','aspartate transaminase':'ast',
+  'alp':'alp','alkaline phosphatase':'alp','alk phos':'alp','alk. phosphatase':'alp',
+  'ggt':'ggt','gamma-glutamyl transferase':'ggt','gamma glutamyl transferase':'ggt','gamma-glutamyltransferase':'ggt',
+  'total bilirubin':'bilirubin','bilirubin, total':'bilirubin','bilirubin':'bilirubin',
+  // Lipids
+  'total cholesterol':'cholesterol','cholesterol, total':'cholesterol','cholesterol':'cholesterol',
+  'hdl':'hdl','hdl cholesterol':'hdl','hdl-cholesterol':'hdl','high density lipoprotein':'hdl','hdl-c':'hdl',
+  'ldl':'ldl','ldl cholesterol':'ldl','ldl-cholesterol':'ldl','low density lipoprotein':'ldl','ldl-c':'ldl',
+  'triglycerides':'triglycerides','trigs':'triglycerides','triglyceride':'triglycerides',
+  'apolipoprotein b':'apob','apob':'apob','apo b':'apob','apolipoprotein b (apob)':'apob',
+  // Hormones extended
+  'dht':'dht','dihydrotestosterone':'dht',
+  'dhea-s':'dheas','dheas':'dheas','dehydroepiandrosterone sulfate':'dheas','dhea sulfate':'dheas',
+  'prolactin':'prolactin',
+  'free t3':'t3f','t3, free':'t3f','triiodothyronine, free':'t3f','ft3':'t3f',
+  'total t4':'t4','t4':'t4','thyroxine, total':'t4','t4, total':'t4',
+  // Other
+  'psa':'psa','prostate specific antigen':'psa','prostate-specific antigen':'psa',
+  'ferritin':'ferritin','ferritin, serum':'ferritin',
+  'vitamin d':'vitd','25-oh vitamin d':'vitd','vitamin d, 25-hydroxy':'vitd','25-hydroxyvitamin d':'vitd','25(oh)d':'vitd','vitamin d3':'vitd',
+  'tsh':'tsh','thyroid stimulating hormone':'tsh','thyroid-stimulating hormone':'tsh','thyrotropin':'tsh',
+  'hs-crp':'crp','crp':'crp','c-reactive protein':'crp','high sensitivity crp':'crp','hs crp':'crp','c-reactive protein, cardiac':'crp',
+  'cystatin c':'cystatinc',
+};
+
+function _bwMapName(name) {
+  return BW_NAME_MAP[name.toLowerCase().trim()] || null;
+}
+
+let _bwImportPdfUrl = null;
+let _bwParsedResult = null;
+
+function bwOpenImport() {
+  document.getElementById('bw-import-modal').style.display = 'flex';
+  _bwShowImportStep('upload');
+}
+
+function bwCloseImport() {
+  document.getElementById('bw-import-modal').style.display = 'none';
+  if (_bwImportPdfUrl) { URL.revokeObjectURL(_bwImportPdfUrl); _bwImportPdfUrl = null; }
+  document.getElementById('bw-pdf-input').value = '';
+}
+
+function _bwShowImportStep(step) {
+  ['upload','parsing','review'].forEach(s => {
+    const el = document.getElementById('bw-import-' + s);
+    if (el) el.style.display = s === step ? (s === 'review' ? 'flex' : 'flex') : 'none';
+  });
+}
+
+async function bwHandlePDFSelect(file) {
+  if (!file) return;
+  _bwShowImportStep('parsing');
+  document.getElementById('bw-import-parsing-file').textContent = file.name;
+
+  try {
+    // Read as base64
+    const base64 = await new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = e => res(e.target.result.split(',')[1]);
+      r.onerror = rej;
+      r.readAsDataURL(file);
+    });
+
+    // Store blob URL for viewer
+    if (_bwImportPdfUrl) URL.revokeObjectURL(_bwImportPdfUrl);
+    _bwImportPdfUrl = URL.createObjectURL(file);
+
+    // Call Edge Function
+    const resp = await fetch(`${SUPABASE_URL}/functions/v1/parse-lab-pdf`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({ pdf: base64 }),
+    });
+
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error);
+
+    _bwParsedResult = data;
+    _bwRenderReview(data, file.name);
+    _bwShowImportStep('review');
+
+  } catch(err) {
+    _bwShowImportStep('upload');
+    showToast(`Parse failed: ${err.message}`, 'error');
+  }
+}
+
+function _bwRenderReview(data, filename) {
+  // PDF viewer
+  const iframe = document.getElementById('bw-pdf-iframe');
+  const link   = document.getElementById('bw-pdf-open-link');
+  if (iframe && _bwImportPdfUrl) { iframe.src = _bwImportPdfUrl; link.href = _bwImportPdfUrl; }
+
+  // Pre-fill date + lab
+  if (data.date) document.getElementById('bw-import-date').value = data.date;
+  if (data.lab)  document.getElementById('bw-import-lab').value  = data.lab;
+
+  // Build review table
+  const markers = data.markers || [];
+  const mapped   = markers.filter(m => _bwMapName(m.name));
+  const unmapped = markers.filter(m => !_bwMapName(m.name));
+
+  document.getElementById('bw-import-summary').textContent =
+    `${mapped.length} recognized · ${unmapped.length} unrecognized`;
+  document.getElementById('bw-import-confirm-btn').textContent =
+    `Import ${mapped.length} marker${mapped.length !== 1 ? 's' : ''}`;
+
+  const flagColor = f => f === 'H' ? 'var(--red)' : f === 'L' ? 'var(--amber)' : 'var(--text-muted)';
+
+  const mappedRows = mapped.map(m => {
+    const key = _bwMapName(m.name);
+    const def = BW_MARKERS[key];
+    return `<tr>
+      <td style="padding:7px 8px;font-size:13px;color:var(--text-primary);">${escHtml(def?.label || m.name)}</td>
+      <td style="padding:7px 8px;">
+        <input type="number" step="any" value="${m.value}" data-bw-key="${escHtml(key)}"
+          style="width:90px;background:var(--bg-base);border:1px solid var(--border);border-radius:6px;padding:4px 8px;color:var(--text-primary);font-size:13px;font-family:var(--font-data);">
+      </td>
+      <td style="padding:7px 8px;font-size:12px;color:var(--text-muted);">${escHtml(m.unit||def?.unit||'')}</td>
+      <td style="padding:7px 8px;font-size:12px;font-weight:600;color:${flagColor(m.flag)};">${m.flag||'—'}</td>
+      <td style="padding:7px 8px;">
+        <input type="checkbox" checked data-bw-include="${escHtml(key)}" style="width:16px;height:16px;accent-color:var(--primary-bright);">
+      </td>
+    </tr>`;
+  }).join('');
+
+  const unmappedRows = unmapped.length ? `
+    <tr><td colspan="5" style="padding:14px 8px 4px;font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;font-weight:600;">
+      Not in panel (${unmapped.length}) — shown for reference only
+    </td></tr>
+    ${unmapped.map(m => `<tr style="opacity:0.5;">
+      <td style="padding:5px 8px;font-size:12px;color:var(--text-muted);">${escHtml(m.name)}</td>
+      <td style="padding:5px 8px;font-size:12px;color:var(--text-muted);font-family:var(--font-data);">${m.value}</td>
+      <td style="padding:5px 8px;font-size:12px;color:var(--text-muted);">${escHtml(m.unit||'')}</td>
+      <td></td><td></td>
+    </tr>`).join('')}
+  ` : '';
+
+  document.getElementById('bw-import-table').innerHTML = `
+    <table style="width:100%;border-collapse:collapse;margin-top:8px;">
+      <thead>
+        <tr style="border-bottom:1px solid var(--border);">
+          <th style="padding:6px 8px;text-align:left;font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.06em;">Marker</th>
+          <th style="padding:6px 8px;text-align:left;font-size:11px;color:var(--text-muted);font-weight:600;">Value</th>
+          <th style="padding:6px 8px;text-align:left;font-size:11px;color:var(--text-muted);font-weight:600;">Unit</th>
+          <th style="padding:6px 8px;text-align:left;font-size:11px;color:var(--text-muted);font-weight:600;">Flag</th>
+          <th style="padding:6px 8px;text-align:left;font-size:11px;color:var(--text-muted);font-weight:600;">Include</th>
+        </tr>
+      </thead>
+      <tbody>${mappedRows}${unmappedRows}</tbody>
+    </table>`;
+}
+
+function bwConfirmImport() {
+  const date = document.getElementById('bw-import-date').value;
+  const lab  = document.getElementById('bw-import-lab').value.trim();
+  if (!date) { showToast('Please enter the panel date', 'warn'); return; }
+
+  const markers = {};
+  document.querySelectorAll('[data-bw-include]').forEach(cb => {
+    if (!cb.checked) return;
+    const key = cb.dataset.bwInclude;
+    const inp = document.querySelector(`[data-bw-key="${key}"]`);
+    if (inp) {
+      const v = parseFloat(inp.value);
+      if (!isNaN(v)) markers[key] = v;
+    }
+  });
+
+  if (!Object.keys(markers).length) { showToast('No markers selected', 'warn'); return; }
+
+  const panels = bwLoad();
+  panels.push({
+    id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36),
+    date, lab, notes: 'Imported from PDF',
+    markers,
+  });
+  bwSaveAll(panels);
+  bwCloseImport();
+  renderBloodworkPage();
+  showToast(`${Object.keys(markers).length} markers imported`, 'success');
+}
+
+// ── END Lab PDF Import ─────────────────────────────────────────────────────────
 
 const BW_MARKERS = {
   // Hormones
