@@ -1,13 +1,36 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="112" fill="#0D0D15"/>
-  <circle cx="256" cy="256" r="160" fill="none" stroke="#F5C518" stroke-width="20" opacity="0.15"/>
-  <!-- DNA helix simplified: two strands + rungs -->
-  <path d="M180 120 Q256 180 332 240 Q256 300 180 360 Q256 300 332 240 Q256 180 180 120" fill="none" stroke="#F5C518" stroke-width="14" stroke-linecap="round"/>
-  <path d="M332 120 Q256 180 180 240 Q256 300 332 360 Q256 300 180 240 Q256 180 332 120" fill="none" stroke="#F5C518" stroke-width="14" stroke-linecap="round" opacity="0.55"/>
-  <!-- rungs -->
-  <line x1="196" y1="155" x2="316" y2="192" stroke="#F5C518" stroke-width="7" stroke-linecap="round" opacity="0.7"/>
-  <line x1="185" y1="212" x2="327" y2="212" stroke="#F5C518" stroke-width="7" stroke-linecap="round" opacity="0.7"/>
-  <line x1="196" y1="269" x2="316" y2="232" stroke="#F5C518" stroke-width="7" stroke-linecap="round" opacity="0.7"/>
-  <line x1="196" y1="305" x2="316" y2="268" stroke="#F5C518" stroke-width="7" stroke-linecap="round" opacity="0.7"/>
-  <line x1="185" y1="330" x2="327" y2="330" stroke="#F5C518" stroke-width="7" stroke-linecap="round" opacity="0.7"/>
+  <!-- Background -->
+  <rect width="512" height="512" rx="114" fill="#0F172A"/>
+
+  <!-- Subtle radial glow behind the mark -->
+  <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+    <stop offset="0%" stop-color="#22D3EE" stop-opacity="0.12"/>
+    <stop offset="100%" stop-color="#22D3EE" stop-opacity="0"/>
+  </radialGradient>
+  <rect width="512" height="512" rx="114" fill="url(#glow)"/>
+
+  <!-- Bold H lettermark, stroke style -->
+  <!-- Left vertical bar -->
+  <line x1="148" y1="128" x2="148" y2="384" stroke="#22D3EE" stroke-width="52" stroke-linecap="round"/>
+  <!-- Right vertical bar -->
+  <line x1="364" y1="128" x2="364" y2="384" stroke="#22D3EE" stroke-width="52" stroke-linecap="round"/>
+
+  <!-- Crossbar replaced with ECG pulse line -->
+  <!-- flat lead-in from left bar -->
+  <polyline
+    points="148,256 192,256 216,192 240,320 264,208 288,290 312,256 364,256"
+    fill="none"
+    stroke="#0F172A"
+    stroke-width="56"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <polyline
+    points="148,256 192,256 216,192 240,320 264,208 288,290 312,256 364,256"
+    fill="none"
+    stroke="#22D3EE"
+    stroke-width="28"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
 </svg>
