@@ -3899,6 +3899,7 @@ async function loadUserData() {
     }
     await hkLoadFromSupabase();
     renderVitalsToCards();
+    if (currentPage === 'wellness') renderWellnessPage();
 
     setTimeout(renderRealCharts, 100);
   } catch (e) {
@@ -7188,25 +7189,35 @@ async function renderWellnessPage() {
   const syncEl    = document.getElementById('hk-last-sync');
   if (!container) return;
 
-  const shimCard = () => `<div class="shimmer-card"><div class="shimmer shimmer-line" style="width:45%;"></div><div class="shimmer shimmer-value"></div><div class="shimmer shimmer-sub"></div></div>`;
-  kpiRow.innerHTML = Array(6).fill(0).map(shimCard).join('');
-  container.innerHTML = '';
-
-  let rows  = null;
+  let rows   = null;
   let source = 'csv';
 
-  // Cloud data first when signed in — merges CSV baseline with live Supabase rows
-  if (_supa && _supaUser) {
-    rows = await hkLoadFromSupabase();
-    if (rows && rows.length) source = 'cloud';
+  // Use in-memory cache immediately — no shimmer, no await on repeat visits
+  if (_hkSupaData && _hkSupaData.length) {
+    rows = _hkSupaData; source = 'cloud';
+  } else if (_hkData && _hkData.length) {
+    rows = _hkData; source = 'csv';
   }
 
-  // Fall back to static CSV (no auth required)
-  if (!rows || !rows.length) {
-    try { rows = await hkLoadCSV(); } catch(e) { rows = null; }
+  if (!rows) {
+    // True first load — show shimmers while fetching
+    const shimCard = () => `<div class="shimmer-card"><div class="shimmer shimmer-line" style="width:45%;"></div><div class="shimmer shimmer-value"></div><div class="shimmer shimmer-sub"></div></div>`;
+    kpiRow.innerHTML = Array(6).fill(0).map(shimCard).join('');
+    container.innerHTML = '';
+
+    // Cloud first when signed in
+    if (_supa && _supaUser) {
+      rows = await hkLoadFromSupabase();
+      if (rows && rows.length) source = 'cloud';
+    }
+    // Fall back to static CSV
+    if (!rows || !rows.length) {
+      try { rows = await hkLoadCSV(); source = 'csv'; } catch(e) { rows = null; }
+    }
   }
 
   if (!rows || !rows.length) {
+    kpiRow.innerHTML = '';
     container.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:24px 0;">No wellness data. Configure Health Auto Export on your iPhone to sync to this dashboard.</div>';
     return;
   }
