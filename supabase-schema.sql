@@ -1103,3 +1103,6 @@ CREATE INDEX IF NOT EXISTS idx_analytics_events_created_at ON analytics_events(c
 ALTER TABLE analytics_events ENABLE ROW LEVEL SECURITY;
 -- No policies defined on purpose: only the service role (used by the Worker)
 -- can read/write. Regular users and the anon key get zero access.
+
+-- Goals sync: add column to user_settings
+ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS goals jsonb DEFAULT '[]';

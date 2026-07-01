@@ -3933,6 +3933,8 @@ async function loadUserData() {
         localStorage.setItem('hrt_bloodwork', JSON.stringify(settings.bloodwork_panels));
       if (Array.isArray(settings.physique_measurements) && settings.physique_measurements.length)
         localStorage.setItem('hrt_measurements', JSON.stringify(settings.physique_measurements));
+      if (Array.isArray(settings.goals) && settings.goals.length)
+        localStorage.setItem('hrt_goals', JSON.stringify(settings.goals));
       if (settings.user_profile)
         localStorage.setItem('hrt_user_profile', JSON.stringify(settings.user_profile));
       if (settings.app_mode)
@@ -4035,6 +4037,7 @@ async function syncProtocolsToSupabase() {
     active_protocol_data:  lsGet('hrt_active_protocol_data', null),
     bloodwork_panels:      lsGet('hrt_bloodwork', []),
     physique_measurements: lsGet('hrt_measurements', []),
+    goals:                 lsGet('hrt_goals', []),
     user_profile:          lsGet('hrt_user_profile', null),
     app_mode:              localStorage.getItem('hrt_mode') || 'trt',
     hevy_api_key:          localStorage.getItem(HEVY_KEY_LS) || null,
