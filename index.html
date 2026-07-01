@@ -9546,10 +9546,20 @@ function printProtocol(index) {
   th { background: #f5f5f5; padding: 6px 8px; text-align: left; font-weight: 600; border: 1px solid #ddd; white-space: nowrap; }
   td { padding: 5px 8px; border: 1px solid #ddd; vertical-align: top; }
   .grid-wrap { overflow-x: auto; }
-  @media print { body { padding: 16px; } }
+  .doc-actions { display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 20px; }
+  .doc-actions button {
+    font-family: Arial, sans-serif; font-size: 13px; padding: 7px 14px;
+    border-radius: 6px; cursor: pointer; border: 1px solid #ccc; background: #f7f7f7;
+  }
+  .doc-actions button.primary { background: #111; color: #fff; border-color: #111; }
+  @media print { body { padding: 16px; } .doc-actions { display: none; } }
 </style>
 </head>
 <body>
+  <div class="doc-actions">
+    <button onclick="window.print()">🖨 Print</button>
+    <button class="primary" onclick="window.close()">✕ Close</button>
+  </div>
   <h1>${escHtml(p.name)} <span style="display:inline-block;padding:2px 10px;border-radius:4px;font-size:12px;font-weight:600;background:${sc.bg};color:${sc.fg};">${statusLabel}</span></h1>
   <div class="meta">${escHtml(String(totalWeeks))} weeks · ${dateRange} · Generated ${generatedDate}</div>
 
