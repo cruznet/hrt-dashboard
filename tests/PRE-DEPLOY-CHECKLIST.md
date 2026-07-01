@@ -22,7 +22,10 @@ deploy. Open the browser console and keep an eye on it throughout.
 9. **Timeline page** — navigate there, confirm the activity feed (or empty
    state) renders with no layout breakage; confirm the Dashboard's "Recent
    Activity" card matches its most recent entries.
-10. **Console check** — confirm no red errors logged during steps 2-9.
+10. **Goals card** — on Dashboard, add a goal via each source type (Manual,
+    Bodyweight, Lift PR, Lab Marker); confirm progress bar and current value
+    render, then delete one to confirm it removes cleanly.
+11. **Console check** — confirm no red errors logged during steps 2-10.
 
 If anything fails, stop and fix before deploying — don't ship on top of a
 broken auth-gated path.

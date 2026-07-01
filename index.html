@@ -1863,6 +1863,18 @@ body {
         <div id="activity-dash-list"></div>
       </div>
 
+      <!-- Goals widget -->
+      <div class="card" id="goals-dash-card" style="margin-bottom:14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <i class="ti ti-target" style="font-size:14px;color:var(--primary-bright);"></i>
+            <div class="card-title" style="margin-bottom:0;">Goals</div>
+          </div>
+          <a href="#" onclick="goalOpenModal();return false;" style="font-size:11px;color:var(--primary-bright);text-decoration:none;">+ Add Goal</a>
+        </div>
+        <div id="goals-dash-list"></div>
+      </div>
+
       <!-- TRENDS section -->
       <div class="dash-section-label">Trends</div>
 
@@ -3246,6 +3258,84 @@ body {
   </div>
 </div>
 
+<div class="modal-overlay" id="goal-modal">
+  <div class="modal">
+    <div class="modal-title">
+      <span id="goal-modal-title">Add Goal</span>
+      <span class="modal-close" onclick="closeModal('goal-modal')"><i class="ti ti-x"></i></span>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Label</label>
+        <input type="text" class="form-input" id="goal-label" placeholder="e.g. Bench Press">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Category</label>
+        <select class="form-select" id="goal-category">
+          <option value="performance">Performance</option>
+          <option value="body">Body Composition</option>
+          <option value="health">Health</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Tracked From</label>
+        <select class="form-select" id="goal-source" onchange="goalOnSourceChange()">
+          <option value="manual">Manual entry</option>
+          <option value="weight">Bodyweight (Physique log)</option>
+          <option value="bodyfat">Body Fat % (Physique log)</option>
+          <option value="lift">Lift PR (Hevy)</option>
+          <option value="lab">Lab Marker (Bloodwork)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Direction</label>
+        <select class="form-select" id="goal-direction">
+          <option value="up">Higher is better</option>
+          <option value="down">Lower is better</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row" id="goal-lift-row" style="display:none;">
+      <div class="form-group">
+        <label class="form-label">Exercise</label>
+        <select class="form-select" id="goal-lift-select"></select>
+      </div>
+      <div class="form-group"></div>
+    </div>
+    <div class="form-row" id="goal-lab-row" style="display:none;">
+      <div class="form-group">
+        <label class="form-label">Marker</label>
+        <select class="form-select" id="goal-lab-select"></select>
+      </div>
+      <div class="form-group"></div>
+    </div>
+    <div class="form-row" id="goal-manual-row" style="display:none;">
+      <div class="form-group">
+        <label class="form-label">Current Value</label>
+        <input type="number" step="any" class="form-input" id="goal-manual-current" placeholder="Update this as you progress">
+      </div>
+      <div class="form-group"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Target Value</label>
+        <input type="number" step="any" class="form-input" id="goal-target" placeholder="315">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Unit</label>
+        <input type="text" class="form-input" id="goal-unit" placeholder="lbs">
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:6px;">
+      <button class="btn-secondary" onclick="closeModal('goal-modal')">Cancel</button>
+      <button class="btn-primary" onclick="goalSave()">Save Goal</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="insulin-modal">
   <div class="modal">
     <div class="modal-title">
@@ -4566,7 +4656,7 @@ function nav(page) {
   if (page === 'timeline') renderActivityTimeline();
   if (page === 'calculator') setTimeout(() => { calcBuildCompoundSelect(); pepUpdate(); }, 100);
   if (page === 'settings') setTimeout(populateShowForm, 50);
-  if (page === 'dashboard') { renderSetupPromptCard(); renderReadinessCard(); renderStreakCard(); renderCoachNoteCallout(); renderComplianceHeatmap(); renderShowCountdown(); renderModeContextCard(); renderDashboardCheckinCard(); renderVitalsToCards(); renderBwDashStrip(); renderPhysiqueDashStrip(); renderUpcoming(); renderDashboardActivityWidget(); setTimeout(() => { if (_supa && _supaUser) renderRealCharts(); else renderDemoCharts(); }, 100); setTimeout(checkLabReminder, 1200); }
+  if (page === 'dashboard') { renderSetupPromptCard(); renderReadinessCard(); renderStreakCard(); renderCoachNoteCallout(); renderComplianceHeatmap(); renderShowCountdown(); renderModeContextCard(); renderDashboardCheckinCard(); renderVitalsToCards(); renderBwDashStrip(); renderPhysiqueDashStrip(); renderUpcoming(); renderDashboardActivityWidget(); renderGoalsWidget(); setTimeout(() => { if (_supa && _supaUser) renderRealCharts(); else renderDemoCharts(); }, 100); setTimeout(checkLabReminder, 1200); }
   // Load active protocol on dashboard
   if (page === 'dashboard') {
     const activeData = localStorage.getItem('hrt_active_protocol_data');
@@ -8941,6 +9031,183 @@ function renderActivityTimeline() {
     html += _activityRowHtml(ev, false);
   });
   el.innerHTML = `<div class="card">${html}</div>`;
+}
+
+// ── Goals ──
+// hrt_goals is localStorage-only (v1) — user_settings has fixed Supabase columns,
+// so adding an unmigrated `goals` key to that upsert would break sync for every
+// other field until the schema is updated. Cross-device sync is a deliberate follow-up.
+function goalsLoad()          { return lsGet('hrt_goals', []); }
+function goalsSaveAll(list)   { localStorage.setItem('hrt_goals', JSON.stringify(list)); }
+
+const GOAL_CATEGORY_META = {
+  performance: { label: 'Performance',        color: 'var(--teal)',   icon: 'ti-barbell' },
+  body:        { label: 'Body Composition',   color: 'var(--green)',  icon: 'ti-ruler-measure' },
+  health:      { label: 'Health',             color: 'var(--purple)', icon: 'ti-test-pipe' },
+  other:       { label: 'Other',              color: 'var(--amber)',  icon: 'ti-target' },
+};
+
+function goalCurrentValue(g) {
+  if (g.source === 'weight' || g.source === 'bodyfat') {
+    const list = measLoad().slice().sort((a, b) => a.date.localeCompare(b.date));
+    const latest = list[list.length - 1];
+    if (!latest) return null;
+    const v = g.source === 'weight' ? latest.weight : latest.bf;
+    return (v != null && v !== '') ? parseFloat(v) : null;
+  }
+  if (g.source === 'lift') {
+    try {
+      const pr = hevyBuildPRMap(lsGet('hrt_hevy_data', [])).get(g.sourceKey);
+      return (pr && pr.bestWeight > 0) ? Math.round(pr.bestWeight * 2.205) : null;
+    } catch (e) { return null; }
+  }
+  if (g.source === 'lab') {
+    const panels = bwLoad().slice().sort((a, b) => b.date.localeCompare(a.date));
+    const latest = panels.find(p => p.markers && p.markers[g.sourceKey] != null);
+    return latest ? parseFloat(latest.markers[g.sourceKey]) : null;
+  }
+  return (g.manualCurrent != null && g.manualCurrent !== '') ? parseFloat(g.manualCurrent) : null;
+}
+
+function goalProgressPct(g, current) {
+  if (current == null || isNaN(current)) return null;
+  const target = parseFloat(g.target);
+  const base = (g.baseline != null && !isNaN(parseFloat(g.baseline))) ? parseFloat(g.baseline) : current;
+  if (target === base) return current === target ? 100 : 0;
+  const pct = g.direction === 'down'
+    ? (base - current) / (base - target) * 100
+    : (current - base) / (target - base) * 100;
+  return Math.max(0, Math.min(100, Math.round(pct)));
+}
+
+function goalIsAchieved(g, current) {
+  if (current == null || isNaN(current)) return false;
+  const target = parseFloat(g.target);
+  return g.direction === 'down' ? current <= target : current >= target;
+}
+
+function renderGoalsWidget() {
+  const el = document.getElementById('goals-dash-list');
+  if (!el) return;
+  const goals = goalsLoad();
+  if (!goals.length) {
+    el.innerHTML = '<div style="color:var(--text-muted);font-size:12px;">No goals set yet. Add one to track progress automatically.</div>';
+    return;
+  }
+  el.innerHTML = goals.map(g => {
+    const current  = goalCurrentValue(g);
+    const pct      = goalProgressPct(g, current);
+    const achieved = goalIsAchieved(g, current);
+    const meta     = GOAL_CATEGORY_META[g.category] || GOAL_CATEGORY_META.other;
+    const curStr   = current != null ? current : '—';
+    return `<div style="padding:10px 0;border-bottom:1px solid var(--border);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;gap:8px;">
+        <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-primary);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+          <i class="ti ${meta.icon}" style="color:${meta.color};font-size:13px;flex-shrink:0;"></i>
+          <span onclick="goalOpenModal('${g.id}')" style="cursor:pointer;">${escHtml(g.label)}</span>
+          ${achieved ? '<span style="color:var(--green);font-size:11px;flex-shrink:0;">✓</span>' : ''}
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+          <span style="font-size:11px;font-family:var(--font-data);color:var(--text-muted);white-space:nowrap;">${escHtml(String(curStr))} → ${escHtml(String(g.target))}${escHtml(g.unit || '')}</span>
+          <span onclick="goalDelete('${g.id}')" style="cursor:pointer;color:var(--text-muted);font-size:14px;" title="Delete goal">×</span>
+        </div>
+      </div>
+      <div style="height:5px;border-radius:3px;background:rgba(255,255,255,0.06);overflow:hidden;">
+        <div style="height:100%;width:${pct != null ? pct : 0}%;background:${achieved ? 'var(--green)' : meta.color};border-radius:3px;"></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+let _goalEditId = null;
+
+function goalOnSourceChange() {
+  const src = document.getElementById('goal-source').value;
+  document.getElementById('goal-lift-row').style.display   = src === 'lift'   ? '' : 'none';
+  document.getElementById('goal-lab-row').style.display     = src === 'lab'    ? '' : 'none';
+  document.getElementById('goal-manual-row').style.display  = src === 'manual' ? '' : 'none';
+  if (src === 'lift') goalPopulateLiftSelect();
+  if (src === 'lab')  goalPopulateLabSelect();
+}
+
+function goalPopulateLiftSelect() {
+  const sel = document.getElementById('goal-lift-select');
+  const workouts = lsGet('hrt_hevy_data', []);
+  let names = [];
+  try { names = workouts.length ? [...hevyBuildPRMap(workouts).keys()].sort() : []; } catch (e) { names = []; }
+  sel.innerHTML = names.length
+    ? names.map(n => `<option value="${escHtml(n)}">${escHtml(n)}</option>`).join('')
+    : '<option value="">No Hevy data synced yet</option>';
+}
+
+function goalPopulateLabSelect() {
+  const sel = document.getElementById('goal-lab-select');
+  sel.innerHTML = BW_GROUP_ORDER.map(group => {
+    const opts = Object.entries(BW_MARKERS)
+      .filter(([, m]) => m.group === group)
+      .map(([key, m]) => `<option value="${key}">${escHtml(m.label)}</option>`)
+      .join('');
+    return `<optgroup label="${escHtml(group)}">${opts}</optgroup>`;
+  }).join('');
+}
+
+function goalOpenModal(id) {
+  _goalEditId = id || null;
+  const g = id ? goalsLoad().find(x => x.id === id) : null;
+  document.getElementById('goal-modal-title').textContent   = g ? 'Edit Goal' : 'Add Goal';
+  document.getElementById('goal-label').value                = g?.label || '';
+  document.getElementById('goal-category').value              = g?.category || 'performance';
+  document.getElementById('goal-source').value                = g?.source || 'manual';
+  document.getElementById('goal-direction').value              = g?.direction || 'up';
+  document.getElementById('goal-target').value                 = g?.target ?? '';
+  document.getElementById('goal-unit').value                   = g?.unit || '';
+  document.getElementById('goal-manual-current').value         = g?.manualCurrent ?? '';
+  goalOnSourceChange();
+  if (g?.source === 'lift') document.getElementById('goal-lift-select').value = g.sourceKey || '';
+  if (g?.source === 'lab')  document.getElementById('goal-lab-select').value  = g.sourceKey || '';
+  openModal('goal-modal');
+}
+
+function goalSave() {
+  const label     = document.getElementById('goal-label').value.trim();
+  const category  = document.getElementById('goal-category').value;
+  const source    = document.getElementById('goal-source').value;
+  const direction = document.getElementById('goal-direction').value;
+  const target    = parseFloat(document.getElementById('goal-target').value);
+  let unit        = document.getElementById('goal-unit').value.trim();
+  if (!label || isNaN(target)) { showToast('Enter a label and target value', 'info'); return; }
+
+  let sourceKey = null;
+  if (source === 'lift') sourceKey = document.getElementById('goal-lift-select').value;
+  if (source === 'lab')  { sourceKey = document.getElementById('goal-lab-select').value; if (!unit) unit = BW_MARKERS[sourceKey]?.unit || ''; }
+  if (source === 'weight'   && !unit) unit = 'lbs';
+  if (source === 'bodyfat'  && !unit) unit = '%';
+
+  const manualRaw = document.getElementById('goal-manual-current').value;
+  const manualCurrent = manualRaw !== '' ? parseFloat(manualRaw) : null;
+
+  const goals = goalsLoad();
+  if (_goalEditId) {
+    const g = goals.find(x => x.id === _goalEditId);
+    if (g) Object.assign(g, { label, category, source, sourceKey, direction, target, unit, manualCurrent });
+  } else {
+    const baseline = goalCurrentValue({ source, sourceKey, manualCurrent });
+    goals.push({
+      id: 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      label, category, source, sourceKey, direction, target, unit, manualCurrent,
+      baseline, createdAt: Date.now()
+    });
+  }
+  goalsSaveAll(goals);
+  closeModal('goal-modal');
+  renderGoalsWidget();
+  showToast('Goal saved');
+}
+
+function goalDelete(id) {
+  if (!confirm('Delete this goal?')) return;
+  goalsSaveAll(goalsLoad().filter(g => g.id !== id));
+  renderGoalsWidget();
 }
 
 function pbAddNote() {

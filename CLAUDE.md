@@ -108,6 +108,7 @@ Cloudflare's bot force-pushes `cloudflare/workers-autoconfig` regularly. Always 
 | `hrt_bloodwork` | Array of bloodwork panels `{id, date, lab, markers, notes}` |
 | `hrt_measurements` | Array of physique entries `{id, date, notes, weight, bf, waist, chest, arms, quads, calves}` — **not** `hrt_physique_measurements` despite older docs |
 | `hrt_weekly_checkins` | Array of weekly check-ins `{check_in_date, weeks_out, fullness, dryness, vascularity, diet_adherence, cardio_sessions, energy_score, sleep_score, mood_score, notes, coach_note}` |
+| `hrt_goals` | Array of goals `{id, label, category, source, sourceKey, direction, target, unit, manualCurrent, baseline, createdAt}`. **Local-only — not synced to Supabase** (`user_settings` has fixed columns; adding an unmigrated key would break sync for every other field). Single-device until a schema migration adds a `goals` column. |
 | `hrt_hevy_key` | Hevy API key (set by user in Workouts settings) |
 | `hrt_hevy_data` | Cached Hevy workout array |
 | `hrt_last_active` | ISO timestamp of last user interaction — used for inactivity timeout |
@@ -152,6 +153,9 @@ Cloudflare's bot force-pushes `cloudflare/workers-autoconfig` regularly. Always 
 | `buildActivityFeed(limit)` | Pure aggregator — merges dose log, bloodwork, physique, weekly check-ins, protocol modification log, and Hevy all-time PRs into one reverse-chronological array. Sorts on each event's own `date` string, never re-derives via `toISOString()`. |
 | `renderDashboardActivityWidget()` | Renders the Dashboard "Recent Activity" card (top 6 events from `buildActivityFeed`) |
 | `renderActivityTimeline()` | Renders the full `page-timeline` feed (up to 200 events), grouped by date header |
+| `goalCurrentValue(g)` | Resolves a goal's live current value from its `source` — latest `hrt_measurements` weight/bf, latest matching `hrt_bloodwork` marker, Hevy all-time PR (kg→lbs via `hevyBuildPRMap`), or manual entry. Returns `null` if no data yet. |
+| `goalProgressPct(g, current)` | `0–100` progress toward target, direction-aware (`up`/`down`), relative to the goal's `baseline` captured at creation |
+| `renderGoalsWidget()` | Renders the Dashboard "Goals" card from `hrt_goals` |
 | `reportCopy()` | Builds plain-text coach report from all data sources, copies to clipboard |
 | `escHtml(s)` | XSS sanitization — use on all user-input before `innerHTML` |
 | `makeChart(id, type, labels, datasets, opts)` | Destroys existing chart before re-creating |
