@@ -19,7 +19,10 @@ deploy. Open the browser console and keep an eye on it throughout.
 7. **Protocols page** — navigate there, confirm the protocol list (or empty
    state) renders correctly.
 8. **Settings page** — navigate there, confirm it opens without errors.
-9. **Console check** — confirm no red errors logged during steps 2-8.
+9. **Timeline page** — navigate there, confirm the activity feed (or empty
+   state) renders with no layout breakage; confirm the Dashboard's "Recent
+   Activity" card matches its most recent entries.
+10. **Console check** — confirm no red errors logged during steps 2-9.
 
 If anything fails, stop and fix before deploying — don't ship on top of a
 broken auth-gated path.

@@ -85,10 +85,13 @@ Cloudflare's bot force-pushes `cloudflare/workers-autoconfig` regularly. Always 
 | `page-workouts` | Workouts | Hevy API integration — week grouping, PR Tracker, E1RM Trends |
 | `page-report` | Coach Report | Auto-generated text report — Copy + Print |
 | `page-compliance` | Dose Compliance | Heatmap + bar charts for dose adherence (30/60/90 day) |
+| `page-wellness` | Wellness | HealthKit KPI cards + charts, 7/30/90-day range toggle |
+| `page-timeline` | Timeline | Unified chronological activity feed — see `buildActivityFeed()` below |
 | `page-protocols` | My Protocols | CRUD for saved protocols, status badges, switch modal |
 | `page-builder` | Protocol Builder | Tabbed: Builder · Timeline · Log. Phased compound scheduling. |
 | `page-compounds` | Compounds | Reference table for 60+ compounds (AAS, SARMs, peptides, etc.) |
 | `page-calculator` | Calculators | Tabs: AAS/Injectable PK simulation · Peptide reconstitution (blend mode) |
+| `page-athletes` | Athletes | Coach-facing client roster (linked via share token) |
 | `page-settings` | Settings | Profile (sex + focus), mode preference |
 
 ---
@@ -103,7 +106,8 @@ Cloudflare's bot force-pushes `cloudflare/workers-autoconfig` regularly. Always 
 | `hrt_vitals_log` | Array of `{date, weight, systolic, diastolic, glucose, mood, energy, notes}` |
 | `hrt_doses_taken` | Array of dose acknowledgments `{label, date, ts}` |
 | `hrt_bloodwork` | Array of bloodwork panels `{id, date, lab, markers, notes}` |
-| `hrt_physique_measurements` | Array of physique entries `{date, measurements}` |
+| `hrt_measurements` | Array of physique entries `{id, date, notes, weight, bf, waist, chest, arms, quads, calves}` — **not** `hrt_physique_measurements` despite older docs |
+| `hrt_weekly_checkins` | Array of weekly check-ins `{check_in_date, weeks_out, fullness, dryness, vascularity, diet_adherence, cardio_sessions, energy_score, sleep_score, mood_score, notes, coach_note}` |
 | `hrt_hevy_key` | Hevy API key (set by user in Workouts settings) |
 | `hrt_hevy_data` | Cached Hevy workout array |
 | `hrt_last_active` | ISO timestamp of last user interaction — used for inactivity timeout |
@@ -145,6 +149,9 @@ Cloudflare's bot force-pushes `cloudflare/workers-autoconfig` regularly. Always 
 | `renderPhysiquePage()` | Physique tracker render |
 | `renderWorkoutsPage()` | Workouts page render — triggers Hevy tab setup |
 | `renderCompliancePage()` | Renders dose compliance heatmap + charts |
+| `buildActivityFeed(limit)` | Pure aggregator — merges dose log, bloodwork, physique, weekly check-ins, protocol modification log, and Hevy all-time PRs into one reverse-chronological array. Sorts on each event's own `date` string, never re-derives via `toISOString()`. |
+| `renderDashboardActivityWidget()` | Renders the Dashboard "Recent Activity" card (top 6 events from `buildActivityFeed`) |
+| `renderActivityTimeline()` | Renders the full `page-timeline` feed (up to 200 events), grouped by date header |
 | `reportCopy()` | Builds plain-text coach report from all data sources, copies to clipboard |
 | `escHtml(s)` | XSS sanitization — use on all user-input before `innerHTML` |
 | `makeChart(id, type, labels, datasets, opts)` | Destroys existing chart before re-creating |

@@ -1557,6 +1557,10 @@ body {
       <span class="nav-icon"><i class="ti ti-activity-heartbeat"></i></span>
       <span class="nav-text">Wellness</span>
     </div>
+    <div class="nav-item" onclick="nav('timeline')">
+      <span class="nav-icon"><i class="ti ti-history"></i></span>
+      <span class="nav-text">Timeline</span>
+    </div>
   </div>
 
   <div class="sidebar-footer">
@@ -1845,6 +1849,18 @@ body {
           <a href="#" onclick="nav('dose-schedule');return false;" style="font-size:11px;color:var(--primary-bright);text-decoration:none;">Full schedule →</a>
         </div>
         <div id="upcoming-list"></div>
+      </div>
+
+      <!-- Recent Activity widget -->
+      <div class="card" id="activity-dash-card" style="margin-bottom:14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <i class="ti ti-history" style="font-size:14px;color:var(--primary-bright);"></i>
+            <div class="card-title" style="margin-bottom:0;">Recent Activity</div>
+          </div>
+          <a href="#" onclick="nav('timeline');return false;" style="font-size:11px;color:var(--primary-bright);text-decoration:none;">Full timeline →</a>
+        </div>
+        <div id="activity-dash-list"></div>
       </div>
 
       <!-- TRENDS section -->
@@ -2264,6 +2280,14 @@ body {
       </div>
       <div id="hk-kpi-row" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px;"></div>
       <div id="hk-charts"></div>
+    </section>
+
+    <!-- ── TIMELINE PAGE ── -->
+    <section class="page" id="page-timeline">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding-bottom:12px;border-bottom:0.5px solid var(--border);">
+        <div style="font-size:15px;font-weight:600;color:var(--text-primary);">Timeline</div>
+      </div>
+      <div id="timeline-content"></div>
     </section>
 
     <!-- ── PROTOCOLS PAGE ── -->
@@ -4515,7 +4539,8 @@ function nav(page) {
     dashboard: 'Dashboard', log: 'Log Entry', vitals: 'Health Log', bloodwork: 'Bloodwork',
     physique: 'Physique', workouts: 'Workouts', report: 'Coach Report', compliance: 'Dose Compliance',
     protocols: 'My Protocols', builder: 'Protocol Builder', compounds: 'Compound Library',
-    calculator: 'Dose Calculator', settings: 'Settings', wellness: 'Wellness', athletes: 'Athletes'
+    calculator: 'Dose Calculator', settings: 'Settings', wellness: 'Wellness', athletes: 'Athletes',
+    timeline: 'Timeline'
   };
   document.getElementById('topbar-title').textContent = titles[page] || page;
   document.querySelectorAll('.nav-item').forEach(n => {
@@ -4538,9 +4563,10 @@ function nav(page) {
   if (page === 'report') renderCoachReport(); // async — shows loading state then renders
   if (page === 'compliance') renderCompliancePage();
   if (page === 'wellness') renderWellnessPage();
+  if (page === 'timeline') renderActivityTimeline();
   if (page === 'calculator') setTimeout(() => { calcBuildCompoundSelect(); pepUpdate(); }, 100);
   if (page === 'settings') setTimeout(populateShowForm, 50);
-  if (page === 'dashboard') { renderSetupPromptCard(); renderReadinessCard(); renderStreakCard(); renderCoachNoteCallout(); renderComplianceHeatmap(); renderShowCountdown(); renderModeContextCard(); renderDashboardCheckinCard(); renderVitalsToCards(); renderBwDashStrip(); renderPhysiqueDashStrip(); renderUpcoming(); setTimeout(() => { if (_supa && _supaUser) renderRealCharts(); else renderDemoCharts(); }, 100); setTimeout(checkLabReminder, 1200); }
+  if (page === 'dashboard') { renderSetupPromptCard(); renderReadinessCard(); renderStreakCard(); renderCoachNoteCallout(); renderComplianceHeatmap(); renderShowCountdown(); renderModeContextCard(); renderDashboardCheckinCard(); renderVitalsToCards(); renderBwDashStrip(); renderPhysiqueDashStrip(); renderUpcoming(); renderDashboardActivityWidget(); setTimeout(() => { if (_supa && _supaUser) renderRealCharts(); else renderDemoCharts(); }, 100); setTimeout(checkLabReminder, 1200); }
   // Load active protocol on dashboard
   if (page === 'dashboard') {
     const activeData = localStorage.getItem('hrt_active_protocol_data');
@@ -8815,6 +8841,106 @@ function renderProtocolLog() {
       <span style="font-size:11px;color:var(--text-muted);white-space:nowrap;">${date}</span>
     </div>`;
   }).join('');
+}
+
+// Pure aggregator — merges dose log, bloodwork, physique, weekly check-ins, protocol
+// modification history, and Hevy all-time PRs into one reverse-chronological feed.
+// Every event carries a canonical YYYY-MM-DD `date` string sourced directly from its
+// origin record (never re-derived via toISOString) so day grouping can't drift by timezone.
+function buildActivityFeed(limit) {
+  const events = [];
+
+  lsGet('hrt_doses_taken', []).forEach(d => {
+    if (!d.date) return;
+    events.push({ date: d.date, ts: d.ts || 0, icon: 'ti-syringe', color: 'var(--teal)', title: `${d.label || 'Dose'} logged`, sub: '' });
+  });
+
+  bwLoad().forEach(p => {
+    if (!p.date) return;
+    events.push({ date: p.date, ts: 0, icon: 'ti-test-pipe', color: 'var(--purple)', title: 'Bloodwork panel logged', sub: p.lab || '' });
+  });
+
+  measLoad().forEach(m => {
+    if (!m.date) return;
+    events.push({ date: m.date, ts: 0, icon: 'ti-ruler-measure', color: 'var(--green)', title: 'Physique check-in logged', sub: m.weight ? `${m.weight} lbs` : '' });
+  });
+
+  lsGet('hrt_weekly_checkins', []).forEach(c => {
+    if (!c.check_in_date) return;
+    events.push({ date: c.check_in_date, ts: 0, icon: 'ti-clipboard-check', color: 'var(--amber)', title: 'Weekly check-in logged', sub: c.notes ? c.notes.slice(0, 80) : '' });
+  });
+
+  lsGet('hrt_protocols', []).forEach(proto => {
+    (proto.modificationLog || []).forEach(entry => {
+      if (!entry.ts) return;
+      const meta = _pbLogIcons[entry.type] || { icon: '•', color: 'var(--text-muted)' };
+      let title;
+      if (entry.type === 'cycle_closed') title = entry.closed_as === 'abandoned' ? 'Cycle abandoned' : 'Cycle completed';
+      else if (entry.type === 'addition') title = `Added ${entry.compound || 'compound'}`;
+      else if (entry.type === 'removal') title = `Removed ${entry.compound || 'compound'}`;
+      else if (entry.type === 'dose_change') title = `Dose changed — ${entry.compound || ''}`;
+      else if (entry.type === 'cycle_extended') title = 'Cycle extended';
+      else if (entry.type === 'cycle_shortened') title = 'Cycle shortened';
+      else title = entry.compound ? `Note — ${entry.compound}` : 'Protocol note';
+      events.push({ date: localDate(new Date(entry.ts)), ts: entry.ts, icon: 'ti-pill', color: meta.color, title, sub: entry.note || proto.name || '' });
+    });
+  });
+
+  try {
+    const workouts = lsGet('hrt_hevy_data', []);
+    if (workouts.length) {
+      hevyBuildPRMap(workouts).forEach((pr, exercise) => {
+        if (pr.weightDate) {
+          events.push({ date: pr.weightDate, ts: 0, icon: 'ti-trophy', color: 'var(--primary-bright)', title: `New PR — ${exercise}`, sub: `${pr.bestWeight} kg × ${pr.bestWeightReps}` });
+        }
+      });
+    }
+  } catch (e) { console.error('[buildActivityFeed] PR aggregation failed:', e); }
+
+  events.sort((a, b) => a.date !== b.date ? b.date.localeCompare(a.date) : b.ts - a.ts);
+  return limit ? events.slice(0, limit) : events;
+}
+
+function _activityRowHtml(ev, showDate) {
+  return `<div style="display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--border);">
+    <span style="font-size:15px;color:${ev.color};min-width:20px;text-align:center;"><i class="ti ${ev.icon}"></i></span>
+    <div style="flex:1;font-size:12px;">
+      <span style="color:var(--text-primary);">${escHtml(ev.title)}</span>
+      ${ev.sub ? `<span style="color:var(--text-muted);"> — ${escHtml(ev.sub)}</span>` : ''}
+    </div>
+    ${showDate === false ? '' : `<span style="font-size:11px;color:var(--text-muted);white-space:nowrap;">${escHtml(ev.date)}</span>`}
+  </div>`;
+}
+
+function renderDashboardActivityWidget() {
+  const el = document.getElementById('activity-dash-list');
+  if (!el) return;
+  const events = buildActivityFeed(6);
+  el.innerHTML = events.length
+    ? events.map(_activityRowHtml).join('')
+    : '<div style="color:var(--text-muted);font-size:12px;">No activity logged yet.</div>';
+}
+
+function renderActivityTimeline() {
+  const el = document.getElementById('timeline-content');
+  if (!el) return;
+  const events = buildActivityFeed(200);
+  if (!events.length) {
+    el.innerHTML = '<div class="card"><div style="color:var(--text-muted);font-size:13px;text-align:center;padding:24px 0;">No activity logged yet. Doses, bloodwork, physique check-ins, and protocol changes will appear here automatically.</div></div>';
+    return;
+  }
+  let html = '';
+  let lastDate = null;
+  events.forEach(ev => {
+    if (ev.date !== lastDate) {
+      const d = new Date(ev.date + 'T00:00:00');
+      const label = isNaN(d) ? ev.date : d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+      html += `<div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;margin:${lastDate ? '18px' : '0'} 0 8px;">${escHtml(label)}</div>`;
+      lastDate = ev.date;
+    }
+    html += _activityRowHtml(ev, false);
+  });
+  el.innerHTML = `<div class="card">${html}</div>`;
 }
 
 function pbAddNote() {
