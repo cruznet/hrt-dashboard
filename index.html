@@ -9667,9 +9667,16 @@ function deleteProtocol(index) {
   const saved = lsGet('hrt_protocols', []);
   const p = saved[index];
   const active = localStorage.getItem('hrt_active_protocol');
+  const isActive = active === p?.saved_at;
+  const label = p?.name ? `"${p.name}"` : 'this protocol';
+  const warning = isActive
+    ? `Delete ${label}? This is your active protocol — deleting it also clears your dose schedule and cycle progress on the Dashboard. This cannot be undone.`
+    : `Delete ${label}? This cannot be undone.`;
+  if (!confirm(warning)) return;
+
   saved.splice(index, 1);
   localStorage.setItem('hrt_protocols', JSON.stringify(saved));
-  if (active === p?.saved_at) {
+  if (isActive) {
     localStorage.removeItem('hrt_active_protocol');
     localStorage.removeItem('hrt_active_protocol_data');
   }
