@@ -24,6 +24,7 @@
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
 <style>
 /* ── Design Tokens: High-Visibility Dark (outdoor-readable, macrofactor × testosterone.tools) ── */
 :root {
@@ -4218,7 +4219,7 @@ function renderVitalsToCards() {
   }
 
   // ── SpO₂ (HealthKit) ──
-  const hkSpo2 = hkLatest('Oxygen Saturation (%)');
+  const hkSpo2 = hkLatest('Blood Oxygen Saturation (%)');
   if (hkSpo2) {
     const spo2 = hkSpo2.value;
     const spo2Badge = spo2 >= 97 ? ['Normal','badge-green'] : spo2 >= 94 ? ['Low-Normal','badge-amber'] : ['Low','badge-red'];
@@ -6689,7 +6690,7 @@ async function renderCoachReport() {
     const hkPairs = [
       ['Heart Rate Variability (ms)',  'HRV',           'ms',    v => v >= 50 ? 'var(--green)' : v >= 30 ? 'var(--amber)' : 'var(--red)'],
       ['Resting Heart Rate (bpm)',     'Resting HR',    'bpm',   v => v <= 60 ? 'var(--green)' : v <= 80 ? 'var(--amber)' : 'var(--red)'],
-      ['Oxygen Saturation (%)',        'SpO₂',          '%',     v => v >= 97 ? 'var(--green)' : v >= 94 ? 'var(--amber)' : 'var(--red)'],
+      ['Blood Oxygen Saturation (%)',   'SpO₂',          '%',     v => v >= 97 ? 'var(--green)' : v >= 94 ? 'var(--amber)' : 'var(--red)'],
       ['Sleep Analysis [Total] (hr)',  'Sleep Total',   'hr',    v => v >= 7.5 ? 'var(--green)' : v >= 6 ? 'var(--amber)' : 'var(--red)'],
       ['Sleep Analysis [Deep] (hr)',   'Deep Sleep',    'hr',    null],
       ['Sleep Analysis [REM] (hr)',    'REM Sleep',     'hr',    null],
@@ -7195,7 +7196,7 @@ async function hkLoadFromSupabase() {
     'Apple Exercise Time (min)':         r.exercise_min        ?? '',
     'Blood Pressure [Systolic] (mmHg)':  r.bp_systolic         ?? '',
     'Blood Pressure [Diastolic] (mmHg)': r.bp_diastolic        ?? '',
-    'Oxygen Saturation (%)':             r.spo2_pct            ?? '',
+    'Blood Oxygen Saturation (%)':        r.spo2_pct            ?? '',
   }));
   return _hkSupaData;
 }
@@ -7269,6 +7270,7 @@ function hkRenderKpis(container, latest, all) {
     { label: 'Body Fat',       col: 'Body Fat Percentage (%)',           unit: '%',     color: 'var(--amber)',          },
     { label: 'Sleep',          col: 'Sleep Analysis [Total] (hr)',       unit: 'hr',    color: 'var(--purple)',         },
     { label: 'Steps',          col: 'Step Count (steps)',                unit: 'steps', color: 'var(--green)',          },
+    { label: 'SpO₂',          col: 'Blood Oxygen Saturation (%)',       unit: '%',     color: '#60A5FA',               },
   ];
 
   // compute 7-day averages for delta
@@ -7409,6 +7411,38 @@ function hkRenderCharts(container, rows) {
         },
       ],
       opts: { plugins: { legend: { display: true, labels: { color: lm ? '#4A4A58' : '#C4C4CC', font: { size: 12, weight: '500' }, boxWidth: 12, padding: 14 } } } },
+    },
+    {
+      id: 'hk-chart-spo2', title: 'Blood Oxygen (SpO₂)',
+      type: 'line',
+      datasets: [{
+        label: 'SpO₂ (%)',
+        data: rows.map(r => hkVal(r, 'Blood Oxygen Saturation (%)')),
+        borderColor: lm ? '#2563EB' : '#60A5FA',
+        backgroundColor: lm ? 'rgba(37,99,235,0.10)' : 'rgba(96,165,250,0.09)',
+        borderWidth: 2, pointRadius: 3, fill: true, spanGaps: true,
+      }],
+      opts: {
+        scales: {
+          y: {
+            min: 93, max: 100,
+            ticks: { callback: v => v + '%', color: lm ? '#6B6B78' : '#A0A0AC', font: { size: 11 } },
+            grid:  { color: lm ? 'rgba(0,0,0,0.07)' : 'rgba(255,255,255,0.06)' },
+          },
+        },
+        plugins: {
+          annotation: {
+            annotations: {
+              threshold: {
+                type: 'line', yMin: 95, yMax: 95,
+                borderColor: lm ? 'rgba(239,68,68,0.45)' : 'rgba(248,113,113,0.50)',
+                borderWidth: 1, borderDash: [4, 4],
+                label: { display: true, content: '95% threshold', position: 'end', color: lm ? '#DC2626' : '#F87171', font: { size: 10 } },
+              },
+            },
+          },
+        },
+      },
     },
   ];
 
