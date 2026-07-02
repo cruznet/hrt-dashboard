@@ -168,10 +168,10 @@ function hevyVolByWeek(workouts, cutoffMs) {
   };
 }
 
-const nowSec = Math.floor(Date.now() / 1000);
-const wPush = { start_time: nowSec - 2*86400, title:'Push A', exercises:[{sets:[{weight_kg:100,reps:5}]}] };
-const wPull = { start_time: nowSec - 3*86400, title:'Pull B', exercises:[{sets:[{weight_kg:80, reps:8}]}] };
-const wLegs = { start_time: nowSec - 4*86400, title:'Leg Day', exercises:[{sets:[{weight_kg:120,reps:6}]}] };
+const nowSecVbw = Math.floor(Date.now() / 1000);
+const wPush = { start_time: nowSecVbw - 2*86400, title:'Push A', exercises:[{sets:[{weight_kg:100,reps:5}]}] };
+const wPull = { start_time: nowSecVbw - 3*86400, title:'Pull B', exercises:[{sets:[{weight_kg:80, reps:8}]}] };
+const wLegs = { start_time: nowSecVbw - 4*86400, title:'Leg Day', exercises:[{sets:[{weight_kg:120,reps:6}]}] };
 const cutoff = Date.now() - 30*86400000;
 const vbw = hevyVolByWeek([wPush, wPull, wLegs], cutoff);
 
