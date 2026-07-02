@@ -294,8 +294,8 @@ function isDueToday(freq, startDate) {
 
 section('isDueToday');
 (function() {
-  const todayStr     = new Date().toISOString().split('T')[0];
-  const yesterdayStr = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+  const todayStr     = new Date().toLocaleDateString('en-CA');
+  const yesterdayStr = new Date(Date.now() - 86400000).toLocaleDateString('en-CA');
   const todayDay     = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date().getDay()];
   // Find a weekday that is NOT today for negative tests
   const otherDays    = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].filter(d => d !== todayDay);
@@ -305,7 +305,7 @@ section('isDueToday');
     const target = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(day);
     for (let i = 1; i <= 7; i++) {
       const d = new Date(Date.now() - i * 86400000);
-      if (d.getDay() === target) return d.toISOString().split('T')[0];
+      if (d.getDay() === target) return d.toLocaleDateString('en-CA');
     }
   }
   const notTodayStart = startDateForWeekday(notTodayDay);
@@ -366,8 +366,8 @@ function daysUntilNextDose(freq, startDate) {
 
 section('daysUntilNextDose');
 (function() {
-  const todayStr     = new Date().toISOString().split('T')[0];
-  const yesterdayStr = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+  const todayStr     = new Date().toLocaleDateString('en-CA');
+  const yesterdayStr = new Date(Date.now() - 86400000).toLocaleDateString('en-CA');
   const todayDay     = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date().getDay()];
 
   assert('ED → null (every day, no countdown)',          daysUntilNextDose('ED', todayStr), null);
