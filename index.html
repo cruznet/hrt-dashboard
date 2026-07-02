@@ -8009,6 +8009,35 @@ function hevyFreqHeatmap(workouts, days) {
   return `<div style="display:flex;flex-wrap:wrap;gap:3px;">${cells.join('')}</div>`;
 }
 
+function hevyVolByWeek(workouts, cutoffMs) {
+  const byWeek = {}; // weekKey → { push, pull, legs, other }
+
+  workouts.forEach(w => {
+    const ms = hevyParseMs(w.start_time);
+    if (ms < cutoffMs) return;
+    const d   = new Date(ms);
+    const day = d.getDay();
+    const monMs = ms - (day === 0 ? 6 : day - 1) * 86400000;
+    const wk  = localDate(new Date(new Date(monMs).setHours(0,0,0,0)));
+    if (!byWeek[wk]) byWeek[wk] = { push:0, pull:0, legs:0, other:0 };
+    const vol  = hevyWorkoutVolume(w);
+    const grp  = hevyMuscleTag(w).toLowerCase();
+    byWeek[wk][grp] = (byWeek[wk][grp] || 0) + vol;
+  });
+
+  const weeks = Object.keys(byWeek).sort();
+  return {
+    weeks: weeks.map(w => {
+      const d = new Date(w + 'T00:00:00');
+      return d.toLocaleDateString('en-US', { month:'short', day:'numeric' });
+    }),
+    push:  weeks.map(w => Math.round(byWeek[w].push)),
+    pull:  weeks.map(w => Math.round(byWeek[w].pull)),
+    legs:  weeks.map(w => Math.round(byWeek[w].legs)),
+    other: weeks.map(w => Math.round(byWeek[w].other)),
+  };
+}
+
 function hevySetVolRange(days) {
   _hevyVolRange = days;
   document.querySelectorAll('.hevy-vol-pill').forEach(b => {
@@ -8051,6 +8080,24 @@ function renderHevyVolume(workouts) {
     <div style="margin-bottom:16px;">${hevyFreqHeatmap(workouts, _hevyVolRange)}</div>
     <div style="margin-bottom:16px;"><canvas id="hevy-chart-vol-muscle"></canvas></div>
   `;
+
+  // Render stacked bar chart
+  const { weeks, push, pull, legs, other } = hevyVolByWeek(workouts, cutoffMs);
+  if (weeks.length) {
+    const lm = document.documentElement.dataset.theme === 'light';
+    makeChart('hevy-chart-vol-muscle', 'bar', weeks, [
+      { label: 'Push', data: push,  backgroundColor: 'rgba(245,197,24,0.85)' },
+      { label: 'Pull', data: pull,  backgroundColor: 'rgba(34,211,238,0.85)' },
+      { label: 'Legs', data: legs,  backgroundColor: 'rgba(192,132,252,0.85)' },
+      { label: 'Other',data: other, backgroundColor: 'rgba(144,144,152,0.5)'  },
+    ], {
+      plugins: { legend: { labels: { color: lm ? '#1a1a2e' : '#E8E8ED', font:{ size:12 } } } },
+      scales: {
+        x: { stacked: true, ticks:{ color: lm?'#374151':'#909098' }, grid:{ color:'rgba(255,255,255,0.05)' } },
+        y: { stacked: true, ticks:{ color: lm?'#374151':'#909098' }, grid:{ color:'rgba(255,255,255,0.05)' } },
+      },
+    });
+  }
 }
 
 function renderWorkoutsPage() {

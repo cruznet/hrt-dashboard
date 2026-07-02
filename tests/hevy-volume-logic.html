@@ -69,8 +69,10 @@ function hevyWorkoutVolume(w) {
       s + (set.weight_kg > 0 && set.reps > 0 ? set.weight_kg * 2.205 * set.reps : 0), 0), 0);
 }
 function hevyVolKpis(workouts, cutoffMs) {
-  // PLACEHOLDER
-  return { totalVol: 0, sessions: 0, avgSession: 0 };
+  const inWindow = workouts.filter(w => hevyParseMs(w.start_time) >= cutoffMs);
+  const totalVol = inWindow.reduce((s, w) => s + hevyWorkoutVolume(w), 0);
+  const sessions = inWindow.length;
+  return { totalVol, sessions, avgSession: sessions ? totalVol / sessions : 0 };
 }
 
 const now = Date.now();
@@ -132,6 +134,59 @@ const html7   = hevyFreqHeatmap([wToday, wYest], 7);
 assert('hevyFreqHeatmap returns non-empty string', html7.length > 0, true);
 assert('hevyFreqHeatmap contains 7 cells', (html7.match(/hevy-hm-cell/g)||[]).length, 7);
 assert('hevyFreqHeatmap has teal cell for workout day', html7.includes('rgba(34,211,238'), true);
+</script>
+
+<script>
+// ── hevyVolByWeek ────────────────────────────────────────────────────────────
+function hevyVolByWeek(workouts, cutoffMs) {
+  const byWeek = {}; // weekKey → { push, pull, legs, other }
+
+  workouts.forEach(w => {
+    const ms = hevyParseMs(w.start_time);
+    if (ms < cutoffMs) return;
+    const d   = new Date(ms);
+    const day = d.getDay();
+    const monMs = ms - (day === 0 ? 6 : day - 1) * 86400000;
+    const wk  = localDate(new Date(new Date(monMs).setHours(0,0,0,0)));
+    if (!byWeek[wk]) byWeek[wk] = { push:0, pull:0, legs:0, other:0 };
+    const vol  = hevyWorkoutVolume(w);
+    const grp  = hevyMuscleTag(w).toLowerCase();
+    byWeek[wk][grp] = (byWeek[wk][grp] || 0) + vol;
+  });
+
+  const weeks = Object.keys(byWeek).sort();
+  return {
+    weeks: weeks.map(w => {
+      const d = new Date(w + 'T00:00:00');
+      return d.toLocaleDateString('en-US', { month:'short', day:'numeric' });
+    }),
+    push:  weeks.map(w => Math.round(byWeek[w].push)),
+    pull:  weeks.map(w => Math.round(byWeek[w].pull)),
+    legs:  weeks.map(w => Math.round(byWeek[w].legs)),
+    other: weeks.map(w => Math.round(byWeek[w].other)),
+  };
+}
+
+// Monday of week containing a date
+function weekKey(ms) {
+  const d = new Date(ms);
+  const day = d.getDay(); // 0=Sun
+  const mon = new Date(ms - ((day === 0 ? 6 : day - 1) * 86400000));
+  return mon.toLocaleDateString('en-CA').slice(0, 10);
+}
+
+const nowSec = Math.floor(Date.now() / 1000);
+const wPush = { start_time: nowSec - 2*86400, title:'Push A', exercises:[{sets:[{weight_kg:100,reps:5}]}] };
+const wPull = { start_time: nowSec - 3*86400, title:'Pull B', exercises:[{sets:[{weight_kg:80, reps:8}]}] };
+const wLegs = { start_time: nowSec - 4*86400, title:'Leg Day', exercises:[{sets:[{weight_kg:120,reps:6}]}] };
+const cutoff = Date.now() - 30*86400000;
+const vbw = hevyVolByWeek([wPush, wPull, wLegs], cutoff);
+
+assert('hevyVolByWeek returns weeks array', Array.isArray(vbw.weeks), true);
+assert('hevyVolByWeek has matching array lengths', vbw.weeks.length === vbw.push.length && vbw.push.length === vbw.pull.length, true);
+assert('hevyVolByWeek push vol > 0', vbw.push.some(v => v > 0), true);
+assert('hevyVolByWeek pull vol > 0', vbw.pull.some(v => v > 0), true);
+assert('hevyVolByWeek legs vol > 0', vbw.legs.some(v => v > 0), true);
 </script>
 
 <script>
