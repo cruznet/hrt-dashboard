@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head><title>Hevy Volume Logic Tests</title>
+<style>
+  body { font-family: monospace; padding: 20px; background:#111; color:#eee; }
+  .pass { color: #4ADE80; } .fail { color: #F87171; }
+  h2 { color: #F5C518; }
+</style>
+</head>
+<body>
+<h2>Hevy Volume Logic Tests</h2>
+<div id="results"></div>
+<script>
+const results = document.getElementById('results');
+let passed = 0, failed = 0;
+
+function assert(label, actual, expected) {
+  const ok = JSON.stringify(actual) === JSON.stringify(expected);
+  results.innerHTML += `<div class="${ok?'pass':'fail'}">${ok?'✅':'❌'} ${label}${ok?'':' | got: '+JSON.stringify(actual)+' expected: '+JSON.stringify(expected)}</div>`;
+  ok ? passed++ : failed++;
+}
+
+// ── hevyMuscleTag ────────────────────────────────────────────────────────────
+// Paste hevyMuscleTag here for testing
+function hevyWorkoutTag(title) {
+  const t = (title||'').toLowerCase();
+  if (/pull|back|row|deadlift|curl|lat|bicep/i.test(t))  return { label:'Pull',  color:'#38BDF8' };
+  if (/push|chest|press|delt|tricep|shoulder/i.test(t))  return { label:'Push',  color:'#F87171' };
+  if (/leg|squat|quad|hamstring|glute|calf|calves/i.test(t)) return { label:'Legs', color:'#4ADE80' };
+  if (/upper/i.test(t)) return { label:'Upper', color:'#A78BFA' };
+  if (/lower/i.test(t)) return { label:'Lower', color:'#FB923C' };
+  if (/full|total/i.test(t)) return { label:'Full',  color:'#F5C518' };
+  if (/cardio|run|bike|swim/i.test(t)) return { label:'Cardio', color:'#F472B6' };
+  return null;
+}
+
+function hevyMuscleTag(workout) {
+  // PLACEHOLDER — implement in Task 3
+  return 'Other';
+}
+
+assert('hevyMuscleTag Pull workout → Pull', hevyMuscleTag({title:'Pull Day'}), 'Pull');
+assert('hevyMuscleTag Push workout → Push', hevyMuscleTag({title:'Push A'}), 'Push');
+assert('hevyMuscleTag Legs workout → Legs', hevyMuscleTag({title:'Leg Day'}), 'Legs');
+assert('hevyMuscleTag Upper → Push', hevyMuscleTag({title:'Upper Body'}), 'Push');
+assert('hevyMuscleTag Lower → Legs', hevyMuscleTag({title:'Lower Body'}), 'Legs');
+assert('hevyMuscleTag Full → Push', hevyMuscleTag({title:'Full Body'}), 'Push');
+assert('hevyMuscleTag Cardio → Other', hevyMuscleTag({title:'Cardio Run'}), 'Other');
+assert('hevyMuscleTag null tag → Other', hevyMuscleTag({title:'Random'}), 'Other');
+
+results.innerHTML += `<h2>${passed} passed, ${failed} failed</h2>`;
+</script>
+</body>
+</html>

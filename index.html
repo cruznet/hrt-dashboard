@@ -7780,7 +7780,8 @@ const HEVY_KEY_LS      = 'hrt_hevy_key';
 const HEVY_DATA_LS     = 'hrt_hevy_workouts';
 const HEVY_MEAS_SYN_LS = 'hrt_hevy_meas_synced';
 
-let _hevyTab     = 'recent';
+let _hevyTab      = 'recent';
+let _hevyVolRange = 30;
 let _hevyE1RMKey = null;   // selected exercise for E1RM chart
 let _hevyE1RMChart = null;
 
@@ -7799,6 +7800,7 @@ function hevyRenderTabs() {
     { key: 'recent', label: 'Recent' },
     { key: 'prs',    label: 'PRs' },
     { key: 'e1rm',   label: 'E1RM Trends' },
+    { key: 'volume', label: 'Volume' },
   ];
   el.innerHTML = tabs.map(t =>
     `<button onclick="hevySetTab('${t.key}')" style="padding:5px 14px;border-radius:99px;border:1.5px solid ${_hevyTab===t.key?'var(--primary-bright)':'var(--border)'};background:${_hevyTab===t.key?'rgba(34,211,238,0.12)':'transparent'};color:${_hevyTab===t.key?'var(--primary-bright)':'var(--text-muted)'};font-size:13px;font-weight:600;cursor:pointer;">${t.label}</button>`
@@ -7956,6 +7958,22 @@ function hevyWorkoutTag(title) {
   return null;
 }
 
+function hevySetVolRange(days) {
+  _hevyVolRange = days;
+  document.querySelectorAll('.hevy-vol-pill').forEach(b => {
+    b.style.borderColor = b.dataset.days == days ? 'var(--primary-bright)' : 'var(--border)';
+    b.style.color       = b.dataset.days == days ? 'var(--primary-bright)' : 'var(--text-muted)';
+    b.style.background  = b.dataset.days == days ? 'rgba(34,211,238,0.12)' : 'transparent';
+  });
+  renderHevyVolume(hevyCache());
+}
+
+function renderHevyVolume(workouts) {
+  const content = document.getElementById('hevy-content');
+  if (!content) return;
+  content.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:24px 0;">Loading volume...</div>';
+}
+
 function renderWorkoutsPage() {
   const setup  = document.getElementById('hevy-setup');
   const content= document.getElementById('hevy-content');
@@ -7982,8 +8000,9 @@ function renderWorkoutsPage() {
     return;
   }
 
-  if (_hevyTab === 'prs')  { renderHevyPRs(workouts);   return; }
-  if (_hevyTab === 'e1rm') { renderHevyE1RM(workouts);  return; }
+  if (_hevyTab === 'prs')    { renderHevyPRs(workouts);    return; }
+  if (_hevyTab === 'e1rm')   { renderHevyE1RM(workouts);   return; }
+  if (_hevyTab === 'volume') { renderHevyVolume(workouts); return; }
 
   const synced = localStorage.getItem('hrt_hevy_synced');
   const syncedStr = synced ? `Last synced ${new Date(synced).toLocaleString('default',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}` : '';
