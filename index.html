@@ -7965,6 +7965,50 @@ function hevyVolKpis(workouts, cutoffMs) {
   return { totalVol, sessions, avgSession: sessions ? totalVol / sessions : 0 };
 }
 
+function hevyMuscleTag(workout) {
+  const tag = hevyWorkoutTag(workout.title);
+  if (!tag) return 'Other';
+  const { label } = tag;
+  if (label === 'Pull') return 'Pull';
+  if (label === 'Push' || label === 'Upper' || label === 'Full') return 'Push';
+  if (label === 'Legs' || label === 'Lower') return 'Legs';
+  return 'Other';
+}
+
+function hevyFreqHeatmap(workouts, days) {
+  const todayMs  = new Date().setHours(0, 0, 0, 0);
+  const cutoffMs = todayMs - (days - 1) * 86400000;
+  const volByDate = {};
+  workouts.forEach(w => {
+    const ms = hevyParseMs(w.start_time);
+    if (ms < cutoffMs) return;
+    const d = localDate(new Date(ms));
+    volByDate[d] = (volByDate[d] || 0) + hevyWorkoutVolume(w);
+  });
+  const vols = Object.values(volByDate).filter(v => v > 0);
+  vols.sort((a, b) => a - b);
+  const median = vols.length ? vols[Math.floor(vols.length / 2)] : 1;
+  const cells = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const ms  = todayMs - i * 86400000;
+    const d   = localDate(new Date(ms));
+    const vol = volByDate[d] || 0;
+    let bg;
+    if (!vol) {
+      bg = 'var(--bg-card-hover)';
+    } else {
+      const ratio = Math.min(vol / median, 2);
+      const alpha = ratio <= 1 ? 0.35 + 0.30 * ratio : 0.65 + 0.35 * (ratio - 1);
+      bg = `rgba(34,211,238,${Math.min(alpha, 1).toFixed(2)})`;
+    }
+    const title = vol
+      ? `${d} · ${workouts.find(w => localDate(new Date(hevyParseMs(w.start_time))) === d)?.title || 'Workout'} · ${Math.round(vol).toLocaleString()} lbs`
+      : d;
+    cells.push(`<div class="hevy-hm-cell" title="${escHtml(title)}" style="width:12px;height:12px;border-radius:2px;background:${bg};flex-shrink:0;"></div>`);
+  }
+  return `<div style="display:flex;flex-wrap:wrap;gap:3px;">${cells.join('')}</div>`;
+}
+
 function hevySetVolRange(days) {
   _hevyVolRange = days;
   document.querySelectorAll('.hevy-vol-pill').forEach(b => {
@@ -8003,7 +8047,8 @@ function renderHevyVolume(workouts) {
       ${kpiCard('Sessions', sessions, 'workouts', 'var(--teal)')}
       ${kpiCard('Avg Session', sessions ? Math.round(avgSession).toLocaleString() : '—', 'lbs', 'var(--text-primary)')}
     </div>
-    <div id="hevy-vol-heatmap" style="margin-bottom:16px;"></div>
+    <div style="margin-bottom:4px;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);">Training Frequency</div>
+    <div style="margin-bottom:16px;">${hevyFreqHeatmap(workouts, _hevyVolRange)}</div>
     <div style="margin-bottom:16px;"><canvas id="hevy-chart-vol-muscle"></canvas></div>
   `;
 }

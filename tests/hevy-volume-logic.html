@@ -35,7 +35,12 @@ function hevyWorkoutTag(title) {
 }
 
 function hevyMuscleTag(workout) {
-  // PLACEHOLDER — implement in Task 3
+  const tag = hevyWorkoutTag(workout.title);
+  if (!tag) return 'Other';
+  const { label } = tag;
+  if (label === 'Pull') return 'Pull';
+  if (label === 'Push' || label === 'Upper' || label === 'Full') return 'Push';
+  if (label === 'Legs' || label === 'Lower') return 'Legs';
   return 'Other';
 }
 
@@ -79,6 +84,54 @@ assert('hevyVolKpis sessions counts only within window', kpis.sessions, 2);
 assert('hevyVolKpis totalVol sums lbs in window', Math.round(kpis.totalVol), Math.round(100*2.205*5 + 50*2.205*10));
 assert('hevyVolKpis avgSession = totalVol/sessions', Math.round(kpis.avgSession), Math.round(kpis.totalVol / 2));
 assert('hevyVolKpis empty window returns zeros', hevyVolKpis([], cutoff30), { totalVol: 0, sessions: 0, avgSession: 0 });
+</script>
+
+<script>
+// ── hevyFreqHeatmap ───────────────────────────────────────────────────────────
+function localDate(d) { return d.toLocaleDateString('en-CA'); }
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function hevyFreqHeatmap(workouts, days) {
+  const todayMs  = new Date().setHours(0, 0, 0, 0);
+  const cutoffMs = todayMs - (days - 1) * 86400000;
+  const volByDate = {};
+  workouts.forEach(w => {
+    const ms = hevyParseMs(w.start_time);
+    if (ms < cutoffMs) return;
+    const d = localDate(new Date(ms));
+    volByDate[d] = (volByDate[d] || 0) + hevyWorkoutVolume(w);
+  });
+  const vols = Object.values(volByDate).filter(v => v > 0);
+  vols.sort((a, b) => a - b);
+  const median = vols.length ? vols[Math.floor(vols.length / 2)] : 1;
+  const cells = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const ms  = todayMs - i * 86400000;
+    const d   = localDate(new Date(ms));
+    const vol = volByDate[d] || 0;
+    let bg;
+    if (!vol) {
+      bg = 'var(--bg-card-hover)';
+    } else {
+      const ratio = Math.min(vol / median, 2);
+      const alpha = ratio <= 1 ? 0.35 + 0.30 * ratio : 0.65 + 0.35 * (ratio - 1);
+      bg = `rgba(34,211,238,${Math.min(alpha, 1).toFixed(2)})`;
+    }
+    const title = vol
+      ? `${d} · ${workouts.find(w => localDate(new Date(hevyParseMs(w.start_time))) === d)?.title || 'Workout'} · ${Math.round(vol).toLocaleString()} lbs`
+      : d;
+    cells.push(`<div class="hevy-hm-cell" title="${escHtml(title)}" style="width:12px;height:12px;border-radius:2px;background:${bg};flex-shrink:0;"></div>`);
+  }
+  return `<div style="display:flex;flex-wrap:wrap;gap:3px;">${cells.join('')}</div>`;
+}
+
+const todayMs  = new Date().setHours(0,0,0,0);
+const todaySec = Math.floor(todayMs / 1000);
+const wToday  = { start_time: todaySec, exercises: [{ sets:[{ weight_kg:100, reps:5 }] }] };
+const wYest   = { start_time: todaySec - 86400, exercises: [{ sets:[{ weight_kg:100, reps:5 }] }] };
+const html7   = hevyFreqHeatmap([wToday, wYest], 7);
+assert('hevyFreqHeatmap returns non-empty string', html7.length > 0, true);
+assert('hevyFreqHeatmap contains 7 cells', (html7.match(/hevy-hm-cell/g)||[]).length, 7);
+assert('hevyFreqHeatmap has teal cell for workout day', html7.includes('rgba(34,211,238'), true);
 </script>
 
 <script>
