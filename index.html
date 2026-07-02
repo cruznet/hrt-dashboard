@@ -9224,7 +9224,7 @@ function renderActivityTimeline() {
 // so adding an unmigrated `goals` key to that upsert would break sync for every
 // other field until the schema is updated. Cross-device sync is a deliberate follow-up.
 function goalsLoad()          { return lsGet('hrt_goals', []); }
-function goalsSaveAll(list)   { localStorage.setItem('hrt_goals', JSON.stringify(list)); }
+function goalsSaveAll(list)   { localStorage.setItem('hrt_goals', JSON.stringify(list)); syncProtocolsToSupabase(); }
 
 const GOAL_CATEGORY_META = {
   performance: { label: 'Performance',        color: 'var(--teal)',   icon: 'ti-barbell' },
