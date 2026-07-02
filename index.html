@@ -558,6 +558,16 @@ label.dose-row.dose-done .dose-name { text-decoration: line-through; }
 .mc-red    { border-top-color: var(--red);    } .mc-red    .metric-unit { color: var(--red); }
 .mc-purple { border-top-color: var(--purple); } .mc-purple .metric-unit { color: var(--purple); }
 .metric-delta { font-size:11px; font-family:var(--font-data); margin-top:3px; min-height:14px; }
+/* Compact widget density — scoped to the Dashboard's Health Metrics grid only,
+   so Bloodwork/Physique/Wellness KPI cards (which reuse .metric-card) are untouched. */
+.metric-value-row { display: flex; align-items: baseline; gap: 5px; margin-top: auto; }
+#metrics-grid .metric-card { padding: 11px 12px 10px; }
+#metrics-grid .metric-icon { width: 26px; height: 26px; margin-bottom: 6px; }
+#metrics-grid .metric-icon svg { width: 13px; height: 13px; }
+#metrics-grid .metric-label { margin-bottom: 2px; }
+#metrics-grid .metric-value { font-size: 19px; margin-top: 0; }
+#metrics-grid .metric-unit { margin-top: 0; }
+#metrics-grid .metric-badge { margin-top: 3px; }
 .delta-up   { color: var(--red); }
 .delta-down { color: var(--green); }
 .delta-same { color: var(--text-muted); }
@@ -1542,7 +1552,7 @@ body {
       <span class="nav-icon"><i class="ti ti-barbell"></i></span>
       <span class="nav-text">Workouts</span>
     </div>
-    <div class="nav-item" onclick="nav('athletes')">
+    <div class="nav-item" id="nav-item-athletes" style="display:none;" onclick="nav('athletes')">
       <i class="ti ti-users"></i><span>Athletes</span>
     </div>
     <div class="nav-item" onclick="nav('report')">
@@ -1556,6 +1566,10 @@ body {
     <div class="nav-item" onclick="nav('wellness')">
       <span class="nav-icon"><i class="ti ti-activity-heartbeat"></i></span>
       <span class="nav-text">Wellness</span>
+    </div>
+    <div class="nav-item" onclick="nav('timeline')">
+      <span class="nav-icon"><i class="ti ti-history"></i></span>
+      <span class="nav-text">Timeline</span>
     </div>
   </div>
 
@@ -1700,141 +1714,6 @@ body {
         </div>
       </div>
 
-      <!-- Readiness + Streak side-by-side -->
-      <div class="dash-row-2">
-        <div id="daily-readiness-card"></div>
-        <div id="streak-dash-card"></div>
-      </div>
-
-      <!-- Show countdown banner (Prep mode) -->
-      <div id="show-countdown" style="margin-bottom:14px;"></div>
-
-      <!-- Coach note callout -->
-      <div id="coach-note-callout" style="display:none;margin-bottom:14px;"></div>
-
-      <!-- Mode context card (TRT/Cruise or Offseason when no show date) -->
-      <div id="mode-context-card" style="margin-bottom:14px;"></div>
-
-      <!-- Weekly check-in nudge -->
-      <div id="checkin-dash-card" style="margin-bottom:14px;"></div>
-
-      <!-- HEALTH METRICS section -->
-      <div class="dash-section-label">Health Metrics</div>
-
-      <!-- Metric cards -->
-      <div class="metrics-grid" id="metrics-grid">
-        <div class="metric-card mc-red">
-          <div class="metric-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#F87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V22H4V12"/><path d="M22 7H2v5h20V7z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
-          </div>
-          <div class="metric-label">Blood Pressure</div>
-          <div class="metric-value" id="m-bp" style="font-size:18px;">—</div>
-          <div class="metric-unit">mmHg</div>
-          <span class="metric-badge badge-muted" id="m-bp-badge">No data</span>
-          <div class="metric-delta" id="m-bp-delta"></div>
-        </div>
-        <div class="metric-card mc-purple">
-          <div class="metric-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#C084FC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>
-          </div>
-          <div class="metric-label">Glucose</div>
-          <div class="metric-value" id="m-glucose">—</div>
-          <div class="metric-unit">mg/dL</div>
-          <span class="metric-badge badge-muted" id="m-glucose-badge">No data</span>
-          <div class="metric-delta" id="m-glucose-delta"></div>
-        </div>
-        <div class="metric-card mc-teal">
-          <div class="metric-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#22D3EE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
-          </div>
-          <div class="metric-label">Mood</div>
-          <div class="metric-value" id="m-mood">—</div>
-          <div class="metric-unit">/10</div>
-          <span class="metric-badge badge-muted" id="m-mood-badge">No data</span>
-          <div class="metric-delta" id="m-mood-delta"></div>
-        </div>
-        <div class="metric-card mc-amber">
-          <div class="metric-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#FB923C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-          </div>
-          <div class="metric-label">Energy</div>
-          <div class="metric-value" id="m-energy">—</div>
-          <div class="metric-unit">/10</div>
-          <span class="metric-badge badge-muted" id="m-energy-badge">No data</span>
-          <div class="metric-delta" id="m-energy-delta"></div>
-        </div>
-        <div class="metric-card mc-amber">
-          <div class="metric-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#FB923C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
-          </div>
-          <div class="metric-label">Active Energy</div>
-          <div class="metric-value" id="m-active-energy">—</div>
-          <div class="metric-unit">kcal</div>
-          <span class="metric-badge badge-muted" id="m-active-energy-badge">No data</span>
-          <div class="metric-delta" id="m-active-energy-delta"></div>
-        </div>
-        <div class="metric-card mc-red">
-          <div class="metric-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#F87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-          </div>
-          <div class="metric-label">Resting HR</div>
-          <div class="metric-value" id="m-resting-hr">—</div>
-          <div class="metric-unit">bpm</div>
-          <span class="metric-badge badge-muted" id="m-resting-hr-badge">No data</span>
-          <div class="metric-delta" id="m-resting-hr-delta"></div>
-        </div>
-        <div class="metric-card mc-green">
-          <div class="metric-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#34D399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="4" r="1"/><path d="M6.5 13.5l1.5-4 2.5 2.5 2-5 2.5 7"/></svg>
-          </div>
-          <div class="metric-label">Steps</div>
-          <div class="metric-value" id="m-steps">—</div>
-          <div class="metric-unit">steps</div>
-          <span class="metric-badge badge-muted" id="m-steps-badge">No data</span>
-          <div class="metric-delta" id="m-steps-delta"></div>
-        </div>
-        <div class="metric-card mc-teal">
-          <div class="metric-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#22D3EE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></svg>
-          </div>
-          <div class="metric-label">SpO₂</div>
-          <div class="metric-value" id="m-spo2">—</div>
-          <div class="metric-unit">%</div>
-          <span class="metric-badge badge-muted" id="m-spo2-badge">No data</span>
-          <div class="metric-delta" id="m-spo2-delta"></div>
-        </div>
-      </div>
-
-      <!-- Latest Labs strip -->
-      <div id="bw-dash-strip" style="display:none;margin-bottom:8px;cursor:pointer;" onclick="nav('bloodwork')"></div>
-      <!-- Latest Physique strip -->
-      <div id="ph-dash-strip" style="display:none;margin-bottom:12px;cursor:pointer;" onclick="nav('physique')"></div>
-
-      <!-- Compliance heatmap -->
-      <div class="card" id="compliance-heatmap-card" style="margin-bottom:14px;display:none;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-          <div style="display:flex;align-items:center;gap:8px;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--primary-bright)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            <div class="card-title" style="margin-bottom:0;">Compliance — Last 12 Weeks</div>
-          </div>
-          <div id="compliance-heatmap-pct" style="font-size:12px;font-family:var(--font-data);color:var(--primary-bright);"></div>
-        </div>
-        <div style="overflow-x:auto;">
-          <div id="compliance-heatmap-grid" style="display:inline-grid;grid-template-rows:repeat(7,1fr);grid-auto-flow:column;gap:3px;min-width:min-content;"></div>
-        </div>
-        <div style="display:flex;align-items:center;gap:6px;margin-top:10px;">
-          <span style="font-size:10px;color:var(--text-muted);">Less</span>
-          <div style="width:10px;height:10px;border-radius:2px;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.1);"></div>
-          <div style="width:10px;height:10px;border-radius:2px;background:rgba(34,211,238,0.25);"></div>
-          <div style="width:10px;height:10px;border-radius:2px;background:rgba(34,211,238,0.6);"></div>
-          <div style="width:10px;height:10px;border-radius:2px;background:var(--green);"></div>
-          <span style="font-size:10px;color:var(--text-muted);">More</span>
-          <span style="font-size:10px;color:var(--text-muted);margin-left:8px;">— No doses scheduled</span>
-          <div style="width:10px;height:10px;border-radius:2px;background:rgba(248,113,113,0.35);"></div>
-          <span style="font-size:10px;color:var(--text-muted);">Missed</span>
-        </div>
-      </div>
-
       <!-- Upcoming Doses widget -->
       <div class="card" id="upcoming-doses-card" style="margin-bottom:14px;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
@@ -1847,8 +1726,96 @@ body {
         <div id="upcoming-list"></div>
       </div>
 
-      <!-- TRENDS section -->
-      <div class="dash-section-label">Trends</div>
+      <!-- Show countdown banner (Prep mode) -->
+      <div id="show-countdown" style="margin-bottom:14px;"></div>
+
+      <!-- Coach note callout -->
+      <div id="coach-note-callout" style="display:none;margin-bottom:14px;"></div>
+
+      <!-- Weekly check-in nudge -->
+      <div id="checkin-dash-card" style="margin-bottom:14px;"></div>
+
+      <!-- Mode context card (TRT/Cruise or Offseason when no show date) -->
+      <div id="mode-context-card" style="margin-bottom:14px;"></div>
+
+      <!-- HEALTH section -->
+      <div class="dash-section-label">Health</div>
+
+      <!-- Metric cards -->
+      <div class="metrics-grid" id="metrics-grid">
+        <div class="metric-card mc-red">
+          <div class="metric-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#F87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V22H4V12"/><path d="M22 7H2v5h20V7z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+          </div>
+          <div class="metric-label">Blood Pressure</div>
+          <div class="metric-value-row"><div class="metric-value" id="m-bp" style="font-size:18px;">—</div><div class="metric-unit">mmHg</div></div>
+          <span class="metric-badge badge-muted" id="m-bp-badge">No data</span>
+          <div class="metric-delta" id="m-bp-delta"></div>
+        </div>
+        <div class="metric-card mc-purple">
+          <div class="metric-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#C084FC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>
+          </div>
+          <div class="metric-label">Glucose</div>
+          <div class="metric-value-row"><div class="metric-value" id="m-glucose">—</div><div class="metric-unit">mg/dL</div></div>
+          <span class="metric-badge badge-muted" id="m-glucose-badge">No data</span>
+          <div class="metric-delta" id="m-glucose-delta"></div>
+        </div>
+        <div class="metric-card mc-teal">
+          <div class="metric-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#22D3EE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+          </div>
+          <div class="metric-label">Mood</div>
+          <div class="metric-value-row"><div class="metric-value" id="m-mood">—</div><div class="metric-unit">/10</div></div>
+          <span class="metric-badge badge-muted" id="m-mood-badge">No data</span>
+          <div class="metric-delta" id="m-mood-delta"></div>
+        </div>
+        <div class="metric-card mc-amber">
+          <div class="metric-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#FB923C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          </div>
+          <div class="metric-label">Energy</div>
+          <div class="metric-value-row"><div class="metric-value" id="m-energy">—</div><div class="metric-unit">/10</div></div>
+          <span class="metric-badge badge-muted" id="m-energy-badge">No data</span>
+          <div class="metric-delta" id="m-energy-delta"></div>
+        </div>
+        <div class="metric-card mc-amber">
+          <div class="metric-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#FB923C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+          </div>
+          <div class="metric-label">Active Energy</div>
+          <div class="metric-value-row"><div class="metric-value" id="m-active-energy">—</div><div class="metric-unit">kcal</div></div>
+          <span class="metric-badge badge-muted" id="m-active-energy-badge">No data</span>
+          <div class="metric-delta" id="m-active-energy-delta"></div>
+        </div>
+        <div class="metric-card mc-red">
+          <div class="metric-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#F87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          </div>
+          <div class="metric-label">Resting HR</div>
+          <div class="metric-value-row"><div class="metric-value" id="m-resting-hr">—</div><div class="metric-unit">bpm</div></div>
+          <span class="metric-badge badge-muted" id="m-resting-hr-badge">No data</span>
+          <div class="metric-delta" id="m-resting-hr-delta"></div>
+        </div>
+        <div class="metric-card mc-green">
+          <div class="metric-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#34D399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="4" r="1"/><path d="M6.5 13.5l1.5-4 2.5 2.5 2-5 2.5 7"/></svg>
+          </div>
+          <div class="metric-label">Steps</div>
+          <div class="metric-value-row"><div class="metric-value" id="m-steps">—</div><div class="metric-unit">steps</div></div>
+          <span class="metric-badge badge-muted" id="m-steps-badge">No data</span>
+          <div class="metric-delta" id="m-steps-delta"></div>
+        </div>
+        <div class="metric-card mc-teal">
+          <div class="metric-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#22D3EE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></svg>
+          </div>
+          <div class="metric-label">SpO₂</div>
+          <div class="metric-value-row"><div class="metric-value" id="m-spo2">—</div><div class="metric-unit">%</div></div>
+          <span class="metric-badge badge-muted" id="m-spo2-badge">No data</span>
+          <div class="metric-delta" id="m-spo2-delta"></div>
+        </div>
+      </div>
 
       <!-- ROW 3: Trend charts -->
       <div class="grid-2" style="margin-bottom:12px;">
@@ -1916,64 +1883,74 @@ body {
         </div>
       </div>
 
-    </section>
+      <!-- PERFORMANCE section -->
+      <div class="dash-section-label">Performance</div>
 
-    <!-- ── LOG ENTRY PAGE ── -->
-    <section class="page" id="page-log">
-      <div style="max-width:600px;">
-        <div class="section-heading">Daily Log Entry</div>
-        <div class="card">
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">Date</label>
-              <input type="date" class="form-input" id="log-date">
-            </div>
-          </div>
+      <!-- Latest Physique strip -->
+      <div id="ph-dash-strip" style="display:none;margin-bottom:12px;cursor:pointer;" onclick="nav('physique')"></div>
 
-          <div class="card-title" style="margin-top:8px;">Vitals</div>
-          <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;display:flex;align-items:center;gap:6px;">
-            <i class="ti ti-brand-apple" style="font-size:13px;"></i>
-            Weight, HR, active energy, steps, and SpO₂ are imported automatically from Apple Health.
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">Blood Pressure</label>
-              <input type="text" class="form-input" id="log-bp" placeholder="134/82">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Glucose (mg/dL)</label>
-              <input type="number" class="form-input" id="log-glucose" placeholder="94">
-            </div>
-          </div>
+      <!-- INSIGHTS section -->
+      <div class="dash-section-label">Insights</div>
 
-          <div class="divider"></div>
-          <div class="card-title">Wellbeing</div>
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">Mood (1–10)</label>
-              <input type="range" min="1" max="10" value="7" class="form-input" id="log-mood" style="padding:8px 0;">
-              <div style="font-size:11px;color:var(--primary-bright);font-family:var(--font-data);text-align:center;" id="log-mood-val">7</div>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Energy (1–10)</label>
-              <input type="range" min="1" max="10" value="7" class="form-input" id="log-energy" style="padding:8px 0;">
-              <div style="font-size:11px;color:var(--primary-bright);font-family:var(--font-data);text-align:center;" id="log-energy-val">7</div>
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Notes</label>
-            <textarea class="form-input" id="log-notes" rows="3" placeholder="Any observations, side effects, or notes..." style="resize:vertical;"></textarea>
-          </div>
+      <!-- Readiness + Streak side-by-side -->
+      <div class="dash-row-2">
+        <div id="daily-readiness-card"></div>
+        <div id="streak-dash-card"></div>
+      </div>
 
-          <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:6px;">
-            <button class="btn-secondary" onclick="resetLogForm()">Clear</button>
-            <button class="btn-primary" onclick="submitLog()">Save Entry</button>
+      <!-- Latest Labs strip -->
+      <div id="bw-dash-strip" style="display:none;margin-bottom:8px;cursor:pointer;" onclick="nav('bloodwork')"></div>
+
+      <!-- Compliance heatmap -->
+      <div class="card" id="compliance-heatmap-card" style="margin-bottom:14px;display:none;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--primary-bright)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <div class="card-title" style="margin-bottom:0;">Compliance — Last 12 Weeks</div>
           </div>
-          <div id="log-status" style="font-size:12px;color:var(--green);text-align:right;margin-top:8px;display:none;"></div>
+          <div id="compliance-heatmap-pct" style="font-size:12px;font-family:var(--font-data);color:var(--primary-bright);"></div>
+        </div>
+        <div style="overflow-x:auto;">
+          <div id="compliance-heatmap-grid" style="display:inline-grid;grid-template-rows:repeat(7,1fr);grid-auto-flow:column;gap:3px;min-width:min-content;"></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:10px;">
+          <span style="font-size:10px;color:var(--text-muted);">Less</span>
+          <div style="width:10px;height:10px;border-radius:2px;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.1);"></div>
+          <div style="width:10px;height:10px;border-radius:2px;background:rgba(34,211,238,0.25);"></div>
+          <div style="width:10px;height:10px;border-radius:2px;background:rgba(34,211,238,0.6);"></div>
+          <div style="width:10px;height:10px;border-radius:2px;background:var(--green);"></div>
+          <span style="font-size:10px;color:var(--text-muted);">More</span>
+          <span style="font-size:10px;color:var(--text-muted);margin-left:8px;">— No doses scheduled</span>
+          <div style="width:10px;height:10px;border-radius:2px;background:rgba(248,113,113,0.35);"></div>
+          <span style="font-size:10px;color:var(--text-muted);">Missed</span>
         </div>
       </div>
-    </section>
 
+      <!-- Recent Activity widget -->
+      <div class="card" id="activity-dash-card" style="margin-bottom:14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <i class="ti ti-history" style="font-size:14px;color:var(--primary-bright);"></i>
+            <div class="card-title" style="margin-bottom:0;">Recent Activity</div>
+          </div>
+          <a href="#" onclick="nav('timeline');return false;" style="font-size:11px;color:var(--primary-bright);text-decoration:none;">Full timeline →</a>
+        </div>
+        <div id="activity-dash-list"></div>
+      </div>
+
+      <!-- Goals widget -->
+      <div class="card" id="goals-dash-card" style="margin-bottom:14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <i class="ti ti-target" style="font-size:14px;color:var(--primary-bright);"></i>
+            <div class="card-title" style="margin-bottom:0;">Goals</div>
+          </div>
+          <a href="#" onclick="goalOpenModal();return false;" style="font-size:11px;color:var(--primary-bright);text-decoration:none;">+ Add Goal</a>
+        </div>
+        <div id="goals-dash-list"></div>
+      </div>
+
+    </section>
 
     <!-- ── VITALS PAGE ── -->
     <section class="page" id="page-vitals">
@@ -2255,8 +2232,8 @@ body {
         </div>
       </div>
 
-      <!-- Weekly Check-In section — always visible -->
-      <div style="margin-top:14px;">
+      <!-- Weekly Check-In section — shown once an Active Competition is set, or once the user has actual check-in history -->
+      <div id="weekly-checkin-section" style="margin-top:14px;display:none;">
         <div class="card">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
             <div class="card-title" style="margin-bottom:0;">Weekly Check-Ins</div>
@@ -2344,6 +2321,14 @@ body {
       <div id="hk-charts"></div>
     </section>
 
+    <!-- ── TIMELINE PAGE ── -->
+    <section class="page" id="page-timeline">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding-bottom:12px;border-bottom:0.5px solid var(--border);">
+        <div style="font-size:15px;font-weight:600;color:var(--text-primary);">Timeline</div>
+      </div>
+      <div id="timeline-content"></div>
+    </section>
+
     <!-- ── PROTOCOLS PAGE ── -->
     <section class="page" id="page-protocols">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px;padding-bottom:12px;border-bottom:0.5px solid var(--border);">
@@ -2398,7 +2383,7 @@ body {
       <!-- Tab bar -->
       <div style="display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:18px;">
         <button id="pb-tab-builder" class="pb-tab pb-tab-active" onclick="pbSwitchTab('builder')">Builder</button>
-        <button id="pb-tab-timeline" class="pb-tab" onclick="pbSwitchTab('timeline')">Timeline</button>
+        <button id="pb-tab-timeline" class="pb-tab" onclick="pbSwitchTab('timeline')">Schedule</button>
         <button id="pb-tab-log" class="pb-tab" onclick="pbSwitchTab('log')">Log</button>
       </div>
 
@@ -3300,6 +3285,84 @@ body {
   </div>
 </div>
 
+<div class="modal-overlay" id="goal-modal">
+  <div class="modal">
+    <div class="modal-title">
+      <span id="goal-modal-title">Add Goal</span>
+      <span class="modal-close" onclick="closeModal('goal-modal')"><i class="ti ti-x"></i></span>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Label</label>
+        <input type="text" class="form-input" id="goal-label" placeholder="e.g. Bench Press">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Category</label>
+        <select class="form-select" id="goal-category">
+          <option value="performance">Performance</option>
+          <option value="body">Body Composition</option>
+          <option value="health">Health</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Tracked From</label>
+        <select class="form-select" id="goal-source" onchange="goalOnSourceChange()">
+          <option value="manual">Manual entry</option>
+          <option value="weight">Bodyweight (Physique log)</option>
+          <option value="bodyfat">Body Fat % (Physique log)</option>
+          <option value="lift">Lift PR (Hevy)</option>
+          <option value="lab">Lab Marker (Bloodwork)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Direction</label>
+        <select class="form-select" id="goal-direction">
+          <option value="up">Higher is better</option>
+          <option value="down">Lower is better</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row" id="goal-lift-row" style="display:none;">
+      <div class="form-group">
+        <label class="form-label">Exercise</label>
+        <select class="form-select" id="goal-lift-select"></select>
+      </div>
+      <div class="form-group"></div>
+    </div>
+    <div class="form-row" id="goal-lab-row" style="display:none;">
+      <div class="form-group">
+        <label class="form-label">Marker</label>
+        <select class="form-select" id="goal-lab-select"></select>
+      </div>
+      <div class="form-group"></div>
+    </div>
+    <div class="form-row" id="goal-manual-row" style="display:none;">
+      <div class="form-group">
+        <label class="form-label">Current Value</label>
+        <input type="number" step="any" class="form-input" id="goal-manual-current" placeholder="Update this as you progress">
+      </div>
+      <div class="form-group"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Target Value</label>
+        <input type="number" step="any" class="form-input" id="goal-target" placeholder="315">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Unit</label>
+        <input type="text" class="form-input" id="goal-unit" placeholder="lbs">
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:6px;">
+      <button class="btn-secondary" onclick="closeModal('goal-modal')">Cancel</button>
+      <button class="btn-primary" onclick="goalSave()">Save Goal</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="insulin-modal">
   <div class="modal">
     <div class="modal-title">
@@ -3967,6 +4030,7 @@ async function loadUserData() {
         .select('*')
         .or(`coach_user_id.eq.${uid},athlete_user_id.eq.${uid}`);
       if (caRows) localStorage.setItem('hrt_coach_athletes', JSON.stringify(caRows));
+      updateCoachNavVisibility();
     } catch(e) { console.warn('[loadUserData] coach_athletes:', e.message); }
 
     if (logsRes.data?.length) renderLastEntry(logsRes.data[0]);
@@ -4001,7 +4065,7 @@ async function loadUserData() {
     renderDoseSchedule();   // always call — reads localStorage directly, independent of cycle card
     updateTopbarBadge();
 
-    // Store for chart rendering and map to hrt_vitals_log (match field names submitLog() uses)
+    // Store for chart rendering and map to hrt_vitals_log field names
     window._weightHistory = metricsRes.data || [];
     if (window._weightHistory.length) {
       const vitals = window._weightHistory
@@ -4593,10 +4657,11 @@ function nav(page) {
   const pageEl = document.getElementById('page-' + page);
   if (pageEl) pageEl.classList.add('active');
   const titles = {
-    dashboard: 'Dashboard', log: 'Log Entry', vitals: 'Health Log', bloodwork: 'Bloodwork',
+    dashboard: 'Dashboard', vitals: 'Health Log', bloodwork: 'Bloodwork',
     physique: 'Physique', workouts: 'Workouts', report: 'Coach Report', compliance: 'Dose Compliance',
     protocols: 'My Protocols', builder: 'Protocol Builder', compounds: 'Compound Library',
-    calculator: 'Dose Calculator', settings: 'Settings', wellness: 'Wellness', athletes: 'Athletes'
+    calculator: 'Dose Calculator', settings: 'Settings', wellness: 'Wellness', athletes: 'Athletes',
+    timeline: 'Timeline'
   };
   document.getElementById('topbar-title').textContent = titles[page] || page;
   document.querySelectorAll('.nav-item').forEach(n => {
@@ -4619,9 +4684,10 @@ function nav(page) {
   if (page === 'report') renderCoachReport(); // async — shows loading state then renders
   if (page === 'compliance') renderCompliancePage();
   if (page === 'wellness') renderWellnessPage();
+  if (page === 'timeline') renderActivityTimeline();
   if (page === 'calculator') setTimeout(() => { calcBuildCompoundSelect(); pepUpdate(); }, 100);
   if (page === 'settings') setTimeout(populateShowForm, 50);
-  if (page === 'dashboard') { renderSetupPromptCard(); renderReadinessCard(); renderStreakCard(); renderCoachNoteCallout(); renderComplianceHeatmap(); renderShowCountdown(); renderModeContextCard(); renderDashboardCheckinCard(); renderVitalsToCards(); renderBwDashStrip(); renderPhysiqueDashStrip(); renderUpcoming(); setTimeout(() => { if (_supa && _supaUser) renderRealCharts(); else renderDemoCharts(); }, 100); setTimeout(checkLabReminder, 1200); }
+  if (page === 'dashboard') { renderSetupPromptCard(); renderReadinessCard(); renderStreakCard(); renderCoachNoteCallout(); renderComplianceHeatmap(); renderShowCountdown(); renderModeContextCard(); renderDashboardCheckinCard(); renderVitalsToCards(); renderBwDashStrip(); renderPhysiqueDashStrip(); renderUpcoming(); renderDashboardActivityWidget(); renderGoalsWidget(); setTimeout(() => { if (_supa && _supaUser) renderRealCharts(); else renderDemoCharts(); }, 100); setTimeout(checkLabReminder, 1200); }
   // Load active protocol on dashboard
   if (page === 'dashboard') {
     const activeData = localStorage.getItem('hrt_active_protocol_data');
@@ -5063,11 +5129,8 @@ document.addEventListener('click', e => {
 
 // ── Log form ──
 const _today = localDate();
-document.getElementById('log-date').value = _today;
 const _labDateEl = document.getElementById('lab-date');
 if (_labDateEl) _labDateEl.value = _today;
-document.getElementById('log-mood').addEventListener('input', function() { document.getElementById('log-mood-val').textContent = this.value; });
-document.getElementById('log-energy').addEventListener('input', function() { document.getElementById('log-energy-val').textContent = this.value; });
 document.getElementById('modal-mood').addEventListener('input', function() { document.getElementById('modal-mood-val').textContent = this.value; });
 document.getElementById('modal-energy').addEventListener('input', function() { document.getElementById('modal-energy-val').textContent = this.value; });
 
@@ -5080,72 +5143,6 @@ function addCompoundRow() {
 function removeCompoundRow(btn) {
   const rows = document.querySelectorAll('.log-compound-row');
   if (rows.length > 1) btn.closest('.log-compound-row').remove();
-}
-
-async function submitLog() {
-  const status = document.getElementById('log-status');
-  const entry = {
-    date:    document.getElementById('log-date').value,
-    bp:      document.getElementById('log-bp').value,
-    glucose: document.getElementById('log-glucose').value,
-    mood:    document.getElementById('log-mood').value,
-    energy:  document.getElementById('log-energy').value,
-    notes:   document.getElementById('log-notes').value
-  };
-  if (!entry.date) { status.textContent = 'Please select a date.'; status.style.color = 'var(--red)'; status.style.display='block'; return; }
-
-  // Always persist locally so Vitals page can show it without Supabase
-  // One row per date — merge if same date, otherwise new row
-  const logs = lsGet('hrt_vitals_log', []);
-  const idx = logs.findIndex(l => l.date === entry.date);
-  const isUpdate = idx >= 0;
-  if (isUpdate) {
-    // Merge: only overwrite fields that were actually filled in this submission
-    const existing = logs[idx];
-    logs[idx] = {
-      ...existing,
-      ...(entry.bp      ? { bp:      entry.bp      } : {}),
-      ...(entry.glucose ? { glucose: entry.glucose } : {}),
-      ...(entry.mood    ? { mood:    entry.mood    } : {}),
-      ...(entry.energy  ? { energy:  entry.energy  } : {}),
-      ...(entry.notes   ? { notes:   entry.notes   } : {}),
-    };
-  } else {
-    logs.unshift(entry);
-  }
-  logs.sort((a,b) => b.date.localeCompare(a.date));
-  localStorage.setItem('hrt_vitals_log', JSON.stringify(logs));
-
-  // Also push to Supabase if connected
-  if (_supa && _supaUser) {
-    const metricsRow = {
-      user_id: _supaUser.id, date: entry.date,
-      mood:   entry.mood   ? parseInt(entry.mood)   : null,
-      energy: entry.energy ? parseInt(entry.energy) : null,
-      notes:  entry.notes  || null
-    };
-    const bpParts = entry.bp ? entry.bp.split('/') : [];
-    metricsRow.bp_systolic    = bpParts.length >= 1 && bpParts[0] ? parseInt(bpParts[0]) : null;
-    metricsRow.bp_diastolic   = bpParts.length === 2             ? parseInt(bpParts[1]) : null;
-    metricsRow.fasting_glucose = entry.glucose       ? parseFloat(entry.glucose)   : null;
-    const { error: metricsErr } = await _supa.from('daily_logs').upsert(metricsRow, { onConflict: 'user_id,date' });
-    if (metricsErr) console.error('[submitLog] daily_logs upsert failed:', metricsErr);
-  }
-
-  // Clear value fields, keep date set to today for next entry
-  ['log-bp','log-glucose','log-mood','log-energy','log-notes'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.value = '';
-  });
-  document.getElementById('log-date').value = localDate();
-
-  renderLastVitalsEntry();
-  renderVitalsToCards(); // refresh dashboard cards + deltas + sparklines
-  trackFirstLogIfNeeded('vitals');
-  status.textContent = isUpdate ? `✓ ${entry.date} updated.` : '✓ New entry saved.';
-  status.style.color = 'var(--green)';
-  status.style.display = 'block';
-  setTimeout(() => { status.style.display='none'; }, 3000);
 }
 
 // ── BLOODWORK ────────────────────────────────────────────────────────────────
@@ -6503,9 +6500,13 @@ async function submitWeeklyCheckin() {
 }
 
 function renderWeeklyCheckinSection() {
+  const section = document.getElementById('weekly-checkin-section');
   const el = document.getElementById('ci-history-list');
   if (!el) return;
   const all = lsGet('hrt_weekly_checkins', []);
+  // Prep-specific check-in fields (fullness/dryness/vascularity) are only relevant once
+  // the user has an Active Competition set (Settings), or they already have real history.
+  if (section) section.style.display = (getShow() || all.length) ? '' : 'none';
   if (!all.length) {
     el.innerHTML = `<div class="empty-state" style="padding:32px 20px;">
       <div class="empty-state-icon" style="width:52px;height:52px;background:rgba(34,211,238,0.08);border-color:rgba(34,211,238,0.15);">
@@ -6560,6 +6561,11 @@ function renderDashboardCheckinCard() {
   const today  = new Date(); today.setHours(0,0,0,0);
 
   if (!latest) {
+    // Prep-specific nudge only makes sense once an Active Competition is set (Settings) —
+    // otherwise this permanently-empty card just invites solo TRT/HRT users to track
+    // fullness/dryness/vascularity that don't apply to them.
+    if (!getShow()) { el.style.display = 'none'; el.innerHTML = ''; return; }
+    el.style.display = '';
     el.innerHTML = `<div class="card" style="border-color:rgba(168,139,250,0.3);">
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <div>
@@ -6585,6 +6591,7 @@ function renderDashboardCheckinCard() {
     latest.diet_adherence != null ? `Diet <b>${latest.diet_adherence}%</b>`                                          : null,
   ].filter(Boolean).join(' <span style="color:var(--border);">·</span> ');
 
+  el.style.display = '';
   if (isDue) {
     el.innerHTML = `<div class="card" style="border-color:rgba(251,146,60,0.4);background:rgba(251,146,60,0.04);">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
@@ -8719,12 +8726,6 @@ function renderVitalsCharts(logs) {
     }
   }
 }
-function resetLogForm() {
-  document.getElementById('log-bp').value = '';
-  document.getElementById('log-glucose').value = '';
-  document.getElementById('log-notes').value = '';
-}
-
 async function submitQuickLog() {
   const date    = document.getElementById('modal-date').value;
   const bp      = document.getElementById('modal-bp').value.trim();
@@ -8735,7 +8736,7 @@ async function submitQuickLog() {
 
   if (!date) { closeModal('log-modal'); return; }
 
-  // Merge into vitals log (same store as Log Entry page)
+  // Merge into vitals log
   const logs  = lsGet('hrt_vitals_log', []);
   const idx   = logs.findIndex(l => l.date === date);
   const entry = idx >= 0 ? { ...logs[idx] } : { date };
@@ -8785,6 +8786,7 @@ async function submitQuickLog() {
   document.getElementById('modal-energy').value = 7; document.getElementById('modal-energy-val').textContent = '7';
   document.getElementById('modal-notes').value  = '';
 
+  trackFirstLogIfNeeded('vitals');
   showToast('Entry saved', 'success');
   closeModal('log-modal');
 }
@@ -9117,6 +9119,283 @@ function renderProtocolLog() {
   }).join('');
 }
 
+// Pure aggregator — merges dose log, bloodwork, physique, weekly check-ins, protocol
+// modification history, and Hevy all-time PRs into one reverse-chronological feed.
+// Every event carries a canonical YYYY-MM-DD `date` string sourced directly from its
+// origin record (never re-derived via toISOString) so day grouping can't drift by timezone.
+function buildActivityFeed(limit) {
+  const events = [];
+
+  lsGet('hrt_doses_taken', []).forEach(d => {
+    if (!d.date) return;
+    events.push({ date: d.date, ts: d.ts || 0, icon: 'ti-syringe', color: 'var(--teal)', title: `${d.label || 'Dose'} logged`, sub: '' });
+  });
+
+  bwLoad().forEach(p => {
+    if (!p.date) return;
+    events.push({ date: p.date, ts: 0, icon: 'ti-test-pipe', color: 'var(--purple)', title: 'Bloodwork panel logged', sub: p.lab || '' });
+  });
+
+  measLoad().forEach(m => {
+    if (!m.date) return;
+    events.push({ date: m.date, ts: 0, icon: 'ti-ruler-measure', color: 'var(--green)', title: 'Physique check-in logged', sub: m.weight ? `${m.weight} lbs` : '' });
+  });
+
+  lsGet('hrt_weekly_checkins', []).forEach(c => {
+    if (!c.check_in_date) return;
+    events.push({ date: c.check_in_date, ts: 0, icon: 'ti-clipboard-check', color: 'var(--amber)', title: 'Weekly check-in logged', sub: c.notes ? c.notes.slice(0, 80) : '' });
+  });
+
+  lsGet('hrt_protocols', []).forEach(proto => {
+    (proto.modificationLog || []).forEach(entry => {
+      if (!entry.ts) return;
+      const meta = _pbLogIcons[entry.type] || { icon: '•', color: 'var(--text-muted)' };
+      let title;
+      if (entry.type === 'cycle_closed') title = entry.closed_as === 'abandoned' ? 'Cycle abandoned' : 'Cycle completed';
+      else if (entry.type === 'addition') title = `Added ${entry.compound || 'compound'}`;
+      else if (entry.type === 'removal') title = `Removed ${entry.compound || 'compound'}`;
+      else if (entry.type === 'dose_change') title = `Dose changed — ${entry.compound || ''}`;
+      else if (entry.type === 'cycle_extended') title = 'Cycle extended';
+      else if (entry.type === 'cycle_shortened') title = 'Cycle shortened';
+      else title = entry.compound ? `Note — ${entry.compound}` : 'Protocol note';
+      events.push({ date: localDate(new Date(entry.ts)), ts: entry.ts, icon: 'ti-pill', color: meta.color, title, sub: entry.note || proto.name || '' });
+    });
+  });
+
+  try {
+    const workouts = lsGet('hrt_hevy_data', []);
+    if (workouts.length) {
+      hevyBuildPRMap(workouts).forEach((pr, exercise) => {
+        if (pr.weightDate) {
+          events.push({ date: pr.weightDate, ts: 0, icon: 'ti-trophy', color: 'var(--primary-bright)', title: `New PR — ${exercise}`, sub: `${pr.bestWeight} kg × ${pr.bestWeightReps}` });
+        }
+      });
+    }
+  } catch (e) { console.error('[buildActivityFeed] PR aggregation failed:', e); }
+
+  events.sort((a, b) => a.date !== b.date ? b.date.localeCompare(a.date) : b.ts - a.ts);
+  return limit ? events.slice(0, limit) : events;
+}
+
+function _activityRowHtml(ev, showDate) {
+  return `<div style="display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--border);">
+    <span style="font-size:15px;color:${ev.color};min-width:20px;text-align:center;"><i class="ti ${ev.icon}"></i></span>
+    <div style="flex:1;font-size:12px;">
+      <span style="color:var(--text-primary);">${escHtml(ev.title)}</span>
+      ${ev.sub ? `<span style="color:var(--text-muted);"> — ${escHtml(ev.sub)}</span>` : ''}
+    </div>
+    ${showDate === false ? '' : `<span style="font-size:11px;color:var(--text-muted);white-space:nowrap;">${escHtml(ev.date)}</span>`}
+  </div>`;
+}
+
+function renderDashboardActivityWidget() {
+  const el = document.getElementById('activity-dash-list');
+  if (!el) return;
+  const events = buildActivityFeed(6);
+  el.innerHTML = events.length
+    ? events.map(_activityRowHtml).join('')
+    : '<div style="color:var(--text-muted);font-size:12px;">No activity logged yet.</div>';
+}
+
+function renderActivityTimeline() {
+  const el = document.getElementById('timeline-content');
+  if (!el) return;
+  const events = buildActivityFeed(200);
+  if (!events.length) {
+    el.innerHTML = '<div class="card"><div style="color:var(--text-muted);font-size:13px;text-align:center;padding:24px 0;">No activity logged yet. Doses, bloodwork, physique check-ins, and protocol changes will appear here automatically.</div></div>';
+    return;
+  }
+  let html = '';
+  let lastDate = null;
+  events.forEach(ev => {
+    if (ev.date !== lastDate) {
+      const d = new Date(ev.date + 'T00:00:00');
+      const label = isNaN(d) ? ev.date : d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+      html += `<div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;margin:${lastDate ? '18px' : '0'} 0 8px;">${escHtml(label)}</div>`;
+      lastDate = ev.date;
+    }
+    html += _activityRowHtml(ev, false);
+  });
+  el.innerHTML = `<div class="card">${html}</div>`;
+}
+
+// ── Goals ──
+// hrt_goals is localStorage-only (v1) — user_settings has fixed Supabase columns,
+// so adding an unmigrated `goals` key to that upsert would break sync for every
+// other field until the schema is updated. Cross-device sync is a deliberate follow-up.
+function goalsLoad()          { return lsGet('hrt_goals', []); }
+function goalsSaveAll(list)   { localStorage.setItem('hrt_goals', JSON.stringify(list)); }
+
+const GOAL_CATEGORY_META = {
+  performance: { label: 'Performance',        color: 'var(--teal)',   icon: 'ti-barbell' },
+  body:        { label: 'Body Composition',   color: 'var(--green)',  icon: 'ti-ruler-measure' },
+  health:      { label: 'Health',             color: 'var(--purple)', icon: 'ti-test-pipe' },
+  other:       { label: 'Other',              color: 'var(--amber)',  icon: 'ti-target' },
+};
+
+function goalCurrentValue(g) {
+  if (g.source === 'weight' || g.source === 'bodyfat') {
+    const list = measLoad().slice().sort((a, b) => a.date.localeCompare(b.date));
+    const latest = list[list.length - 1];
+    if (!latest) return null;
+    const v = g.source === 'weight' ? latest.weight : latest.bf;
+    return (v != null && v !== '') ? parseFloat(v) : null;
+  }
+  if (g.source === 'lift') {
+    try {
+      const pr = hevyBuildPRMap(lsGet('hrt_hevy_data', [])).get(g.sourceKey);
+      return (pr && pr.bestWeight > 0) ? Math.round(pr.bestWeight * 2.205) : null;
+    } catch (e) { return null; }
+  }
+  if (g.source === 'lab') {
+    const panels = bwLoad().slice().sort((a, b) => b.date.localeCompare(a.date));
+    const latest = panels.find(p => p.markers && p.markers[g.sourceKey] != null);
+    return latest ? parseFloat(latest.markers[g.sourceKey]) : null;
+  }
+  return (g.manualCurrent != null && g.manualCurrent !== '') ? parseFloat(g.manualCurrent) : null;
+}
+
+function goalProgressPct(g, current) {
+  if (current == null || isNaN(current)) return null;
+  const target = parseFloat(g.target);
+  const base = (g.baseline != null && !isNaN(parseFloat(g.baseline))) ? parseFloat(g.baseline) : current;
+  if (target === base) return current === target ? 100 : 0;
+  const pct = g.direction === 'down'
+    ? (base - current) / (base - target) * 100
+    : (current - base) / (target - base) * 100;
+  return Math.max(0, Math.min(100, Math.round(pct)));
+}
+
+function goalIsAchieved(g, current) {
+  if (current == null || isNaN(current)) return false;
+  const target = parseFloat(g.target);
+  return g.direction === 'down' ? current <= target : current >= target;
+}
+
+function renderGoalsWidget() {
+  const el = document.getElementById('goals-dash-list');
+  if (!el) return;
+  const goals = goalsLoad();
+  if (!goals.length) {
+    el.innerHTML = '<div style="color:var(--text-muted);font-size:12px;">No goals set yet. Add one to track progress automatically.</div>';
+    return;
+  }
+  el.innerHTML = goals.map(g => {
+    const current  = goalCurrentValue(g);
+    const pct      = goalProgressPct(g, current);
+    const achieved = goalIsAchieved(g, current);
+    const meta     = GOAL_CATEGORY_META[g.category] || GOAL_CATEGORY_META.other;
+    const curStr   = current != null ? current : '—';
+    return `<div style="padding:10px 0;border-bottom:1px solid var(--border);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;gap:8px;">
+        <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-primary);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+          <i class="ti ${meta.icon}" style="color:${meta.color};font-size:13px;flex-shrink:0;"></i>
+          <span onclick="goalOpenModal('${g.id}')" style="cursor:pointer;">${escHtml(g.label)}</span>
+          ${achieved ? '<span style="color:var(--green);font-size:11px;flex-shrink:0;">✓</span>' : ''}
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+          <span style="font-size:11px;font-family:var(--font-data);color:var(--text-muted);white-space:nowrap;">${escHtml(String(curStr))} → ${escHtml(String(g.target))}${escHtml(g.unit || '')}</span>
+          <span onclick="goalDelete('${g.id}')" style="cursor:pointer;color:var(--text-muted);font-size:14px;" title="Delete goal">×</span>
+        </div>
+      </div>
+      <div style="height:5px;border-radius:3px;background:rgba(255,255,255,0.06);overflow:hidden;">
+        <div style="height:100%;width:${pct != null ? pct : 0}%;background:${achieved ? 'var(--green)' : meta.color};border-radius:3px;"></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+let _goalEditId = null;
+
+function goalOnSourceChange() {
+  const src = document.getElementById('goal-source').value;
+  document.getElementById('goal-lift-row').style.display   = src === 'lift'   ? '' : 'none';
+  document.getElementById('goal-lab-row').style.display     = src === 'lab'    ? '' : 'none';
+  document.getElementById('goal-manual-row').style.display  = src === 'manual' ? '' : 'none';
+  if (src === 'lift') goalPopulateLiftSelect();
+  if (src === 'lab')  goalPopulateLabSelect();
+}
+
+function goalPopulateLiftSelect() {
+  const sel = document.getElementById('goal-lift-select');
+  const workouts = lsGet('hrt_hevy_data', []);
+  let names = [];
+  try { names = workouts.length ? [...hevyBuildPRMap(workouts).keys()].sort() : []; } catch (e) { names = []; }
+  sel.innerHTML = names.length
+    ? names.map(n => `<option value="${escHtml(n)}">${escHtml(n)}</option>`).join('')
+    : '<option value="">No Hevy data synced yet</option>';
+}
+
+function goalPopulateLabSelect() {
+  const sel = document.getElementById('goal-lab-select');
+  sel.innerHTML = BW_GROUP_ORDER.map(group => {
+    const opts = Object.entries(BW_MARKERS)
+      .filter(([, m]) => m.group === group)
+      .map(([key, m]) => `<option value="${key}">${escHtml(m.label)}</option>`)
+      .join('');
+    return `<optgroup label="${escHtml(group)}">${opts}</optgroup>`;
+  }).join('');
+}
+
+function goalOpenModal(id) {
+  _goalEditId = id || null;
+  const g = id ? goalsLoad().find(x => x.id === id) : null;
+  document.getElementById('goal-modal-title').textContent   = g ? 'Edit Goal' : 'Add Goal';
+  document.getElementById('goal-label').value                = g?.label || '';
+  document.getElementById('goal-category').value              = g?.category || 'performance';
+  document.getElementById('goal-source').value                = g?.source || 'manual';
+  document.getElementById('goal-direction').value              = g?.direction || 'up';
+  document.getElementById('goal-target').value                 = g?.target ?? '';
+  document.getElementById('goal-unit').value                   = g?.unit || '';
+  document.getElementById('goal-manual-current').value         = g?.manualCurrent ?? '';
+  goalOnSourceChange();
+  if (g?.source === 'lift') document.getElementById('goal-lift-select').value = g.sourceKey || '';
+  if (g?.source === 'lab')  document.getElementById('goal-lab-select').value  = g.sourceKey || '';
+  openModal('goal-modal');
+}
+
+function goalSave() {
+  const label     = document.getElementById('goal-label').value.trim();
+  const category  = document.getElementById('goal-category').value;
+  const source    = document.getElementById('goal-source').value;
+  const direction = document.getElementById('goal-direction').value;
+  const target    = parseFloat(document.getElementById('goal-target').value);
+  let unit        = document.getElementById('goal-unit').value.trim();
+  if (!label || isNaN(target)) { showToast('Enter a label and target value', 'info'); return; }
+
+  let sourceKey = null;
+  if (source === 'lift') sourceKey = document.getElementById('goal-lift-select').value;
+  if (source === 'lab')  { sourceKey = document.getElementById('goal-lab-select').value; if (!unit) unit = BW_MARKERS[sourceKey]?.unit || ''; }
+  if (source === 'weight'   && !unit) unit = 'lbs';
+  if (source === 'bodyfat'  && !unit) unit = '%';
+
+  const manualRaw = document.getElementById('goal-manual-current').value;
+  const manualCurrent = manualRaw !== '' ? parseFloat(manualRaw) : null;
+
+  const goals = goalsLoad();
+  if (_goalEditId) {
+    const g = goals.find(x => x.id === _goalEditId);
+    if (g) Object.assign(g, { label, category, source, sourceKey, direction, target, unit, manualCurrent });
+  } else {
+    const baseline = goalCurrentValue({ source, sourceKey, manualCurrent });
+    goals.push({
+      id: 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      label, category, source, sourceKey, direction, target, unit, manualCurrent,
+      baseline, createdAt: Date.now()
+    });
+  }
+  goalsSaveAll(goals);
+  closeModal('goal-modal');
+  renderGoalsWidget();
+  showToast('Goal saved');
+}
+
+function goalDelete(id) {
+  if (!confirm('Delete this goal?')) return;
+  goalsSaveAll(goalsLoad().filter(g => g.id !== id));
+  renderGoalsWidget();
+}
+
 function pbAddNote() {
   const week = parseInt(prompt('At which week?', pbCurrentCycleWeek(pbState.startDate)));
   if (!week || isNaN(week)) return;
@@ -9447,10 +9726,20 @@ function printProtocol(index) {
   th { background: #f5f5f5; padding: 6px 8px; text-align: left; font-weight: 600; border: 1px solid #ddd; white-space: nowrap; }
   td { padding: 5px 8px; border: 1px solid #ddd; vertical-align: top; }
   .grid-wrap { overflow-x: auto; }
-  @media print { body { padding: 16px; } }
+  .doc-actions { display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 20px; }
+  .doc-actions button {
+    font-family: Arial, sans-serif; font-size: 13px; padding: 7px 14px;
+    border-radius: 6px; cursor: pointer; border: 1px solid #ccc; background: #f7f7f7;
+  }
+  .doc-actions button.primary { background: #111; color: #fff; border-color: #111; }
+  @media print { body { padding: 16px; } .doc-actions { display: none; } }
 </style>
 </head>
 <body>
+  <div class="doc-actions">
+    <button onclick="window.print()">🖨 Print</button>
+    <button class="primary" onclick="window.close()">✕ Close</button>
+  </div>
   <h1>${escHtml(p.name)} <span style="display:inline-block;padding:2px 10px;border-radius:4px;font-size:12px;font-weight:600;background:${sc.bg};color:${sc.fg};">${statusLabel}</span></h1>
   <div class="meta">${escHtml(String(totalWeeks))} weeks · ${dateRange} · Generated ${generatedDate}</div>
 
@@ -9568,9 +9857,16 @@ function deleteProtocol(index) {
   const saved = lsGet('hrt_protocols', []);
   const p = saved[index];
   const active = localStorage.getItem('hrt_active_protocol');
+  const isActive = active === p?.saved_at;
+  const label = p?.name ? `"${p.name}"` : 'this protocol';
+  const warning = isActive
+    ? `Delete ${label}? This is your active protocol — deleting it also clears your dose schedule and cycle progress on the Dashboard. This cannot be undone.`
+    : `Delete ${label}? This cannot be undone.`;
+  if (!confirm(warning)) return;
+
   saved.splice(index, 1);
   localStorage.setItem('hrt_protocols', JSON.stringify(saved));
-  if (active === p?.saved_at) {
+  if (isActive) {
     localStorage.removeItem('hrt_active_protocol');
     localStorage.removeItem('hrt_active_protocol_data');
   }
@@ -10168,10 +10464,21 @@ async function submitCoachToken() {
     .select('*')
     .or(`coach_user_id.eq.${_supaUser.id},athlete_user_id.eq.${_supaUser.id}`);
   if (caRows) localStorage.setItem('hrt_coach_athletes', JSON.stringify(caRows));
+  updateCoachNavVisibility();
   if (currentPage === 'athletes') renderAthletesPage();
 }
 
 // ── Athletes / Roster Page ─────────────────────────────────────────────────────
+
+// Athletes nav item only makes sense for users actually coaching someone —
+// hidden by default, shown once hrt_coach_athletes confirms a coach_user_id match.
+function updateCoachNavVisibility() {
+  const el = document.getElementById('nav-item-athletes');
+  if (!el) return;
+  const rows = lsGet('hrt_coach_athletes', []);
+  const isCoach = !!_supaUser && rows.some(r => r.coach_user_id === _supaUser.id);
+  el.style.display = isCoach ? '' : 'none';
+}
 
 async function renderAthletesPage() {
   const el = document.getElementById('athletes-content');
