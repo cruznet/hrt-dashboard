@@ -140,8 +140,6 @@ async function handleIngest(request, env) {
   try {
     if (ct.includes('application/json')) {
       const body = await request.json();
-      const metricNames = (body?.data?.metrics ?? body?.metrics ?? []).map(m => m.name);
-      console.log('[healthkit] metric names received:', JSON.stringify(metricNames));
       rows = parseHAEJson(body);
     } else if (ct.includes('multipart/form-data')) {
       const fd = await request.formData();
@@ -283,7 +281,7 @@ const JSON_METRIC = {
   'oxygen_saturation':            d => ({ spo2_pct:           num(d.qty) }),
   'blood_oxygen_saturation':      d => ({ spo2_pct:           num(d.avg ?? d.qty) }),
   'sleep_analysis': d => ({
-    ...(d.qty          != null || d.totalSleepTime != null ? { sleep_total_hr: num(d.qty          ?? d.totalSleepTime) } : {}),
+    ...(d.qty != null || d.totalSleepTime != null || d.totalSleep != null ? { sleep_total_hr: num(d.qty ?? d.totalSleepTime ?? d.totalSleep) } : {}),
     ...(d.deep         != null || d.deepSleepTime  != null ? { sleep_deep_hr:  num(d.deep         ?? d.deepSleepTime)  } : {}),
     ...(d.rem          != null || d.remSleepTime   != null ? { sleep_rem_hr:   num(d.rem          ?? d.remSleepTime)   } : {}),
   }),
