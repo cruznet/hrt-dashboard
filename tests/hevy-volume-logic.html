@@ -76,9 +76,10 @@ function hevyVolKpis(workouts, cutoffMs) {
 }
 
 const now = Date.now();
-const w1 = { start_time: now - 1 * 86400000, exercises: [{ sets: [{ weight_kg: 100, reps: 5 }] }] };
-const w2 = { start_time: now - 3 * 86400000, exercises: [{ sets: [{ weight_kg: 50,  reps: 10 }] }] };
-const wOld = { start_time: now - 40 * 86400000, exercises: [{ sets: [{ weight_kg: 100, reps: 5 }] }] };
+const nowSec = Math.floor(now / 1000);
+const w1    = { start_time: nowSec - 1*86400,  exercises: [{ sets: [{ weight_kg: 100, reps: 5  }] }] };
+const w2    = { start_time: nowSec - 3*86400,  exercises: [{ sets: [{ weight_kg: 50,  reps: 10 }] }] };
+const wOld  = { start_time: nowSec - 40*86400, exercises: [{ sets: [{ weight_kg: 100, reps: 5  }] }] };
 const cutoff30 = now - 30 * 86400000;
 
 const kpis = hevyVolKpis([w1, w2, wOld], cutoff30);
@@ -165,14 +166,6 @@ function hevyVolByWeek(workouts, cutoffMs) {
     legs:  weeks.map(w => Math.round(byWeek[w].legs)),
     other: weeks.map(w => Math.round(byWeek[w].other)),
   };
-}
-
-// Monday of week containing a date
-function weekKey(ms) {
-  const d = new Date(ms);
-  const day = d.getDay(); // 0=Sun
-  const mon = new Date(ms - ((day === 0 ? 6 : day - 1) * 86400000));
-  return mon.toLocaleDateString('en-CA').slice(0, 10);
 }
 
 const nowSec = Math.floor(Date.now() / 1000);
