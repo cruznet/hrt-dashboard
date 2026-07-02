@@ -7958,6 +7958,13 @@ function hevyWorkoutTag(title) {
   return null;
 }
 
+function hevyVolKpis(workouts, cutoffMs) {
+  const inWindow = workouts.filter(w => hevyParseMs(w.start_time) >= cutoffMs);
+  const totalVol = inWindow.reduce((s, w) => s + hevyWorkoutVolume(w), 0);
+  const sessions = inWindow.length;
+  return { totalVol, sessions, avgSession: sessions ? totalVol / sessions : 0 };
+}
+
 function hevySetVolRange(days) {
   _hevyVolRange = days;
   document.querySelectorAll('.hevy-vol-pill').forEach(b => {
@@ -7971,7 +7978,34 @@ function hevySetVolRange(days) {
 function renderHevyVolume(workouts) {
   const content = document.getElementById('hevy-content');
   if (!content) return;
-  content.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:24px 0;">Loading volume...</div>';
+
+  const cutoffMs = Date.now() - _hevyVolRange * 86400000;
+  const { totalVol, sessions, avgSession } = hevyVolKpis(workouts, cutoffMs);
+
+  const pill = (days) => `<button class="hevy-vol-pill" data-days="${days}" onclick="hevySetVolRange(${days})"
+    style="padding:5px 14px;border-radius:99px;border:1.5px solid ${_hevyVolRange===days?'var(--primary-bright)':'var(--border)'};
+    background:${_hevyVolRange===days?'rgba(34,211,238,0.12)':'transparent'};
+    color:${_hevyVolRange===days?'var(--primary-bright)':'var(--text-muted)'};
+    font-size:13px;font-weight:600;cursor:pointer;">${days}d</button>`;
+
+  const kpiCard = (label, value, unit, color) => `<div class="card" style="padding:12px 14px;">
+    <div style="font-size:12px;color:var(--text-label);text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:6px;">${label}</div>
+    <div style="font-size:22px;font-family:var(--font-data);font-weight:600;color:${color};">${value}</div>
+    <div style="font-size:12px;color:var(--text-label);margin-top:1px;">${unit}</div>
+  </div>`;
+
+  content.innerHTML = `
+    <div style="display:flex;gap:4px;margin-bottom:16px;">
+      ${pill(7)}${pill(30)}${pill(90)}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;">
+      ${kpiCard('Total Volume', Math.round(totalVol).toLocaleString(), 'lbs', 'var(--primary-bright)')}
+      ${kpiCard('Sessions', sessions, 'workouts', 'var(--teal)')}
+      ${kpiCard('Avg Session', sessions ? Math.round(avgSession).toLocaleString() : '—', 'lbs', 'var(--text-primary)')}
+    </div>
+    <div id="hevy-vol-heatmap" style="margin-bottom:16px;"></div>
+    <div style="margin-bottom:16px;"><canvas id="hevy-chart-vol-muscle"></canvas></div>
+  `;
 }
 
 function renderWorkoutsPage() {

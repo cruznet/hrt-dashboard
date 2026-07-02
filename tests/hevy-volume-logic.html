@@ -48,6 +48,40 @@ assert('hevyMuscleTag Full → Push', hevyMuscleTag({title:'Full Body'}), 'Push'
 assert('hevyMuscleTag Cardio → Other', hevyMuscleTag({title:'Cardio Run'}), 'Other');
 assert('hevyMuscleTag null tag → Other', hevyMuscleTag({title:'Random'}), 'Other');
 
+</script>
+
+<script>
+// ── hevyVolKpis ──────────────────────────────────────────────────────────────
+function hevyParseMs(t) {
+  if (!t) return 0;
+  if (typeof t === 'number') return t * 1000;
+  const ms = new Date(t).getTime();
+  return isNaN(ms) ? 0 : ms;
+}
+function hevyWorkoutVolume(w) {
+  return (w.exercises||[]).reduce((total, e) =>
+    total + (e.sets||[]).reduce((s, set) =>
+      s + (set.weight_kg > 0 && set.reps > 0 ? set.weight_kg * 2.205 * set.reps : 0), 0), 0);
+}
+function hevyVolKpis(workouts, cutoffMs) {
+  // PLACEHOLDER
+  return { totalVol: 0, sessions: 0, avgSession: 0 };
+}
+
+const now = Date.now();
+const w1 = { start_time: now - 1 * 86400000, exercises: [{ sets: [{ weight_kg: 100, reps: 5 }] }] };
+const w2 = { start_time: now - 3 * 86400000, exercises: [{ sets: [{ weight_kg: 50,  reps: 10 }] }] };
+const wOld = { start_time: now - 40 * 86400000, exercises: [{ sets: [{ weight_kg: 100, reps: 5 }] }] };
+const cutoff30 = now - 30 * 86400000;
+
+const kpis = hevyVolKpis([w1, w2, wOld], cutoff30);
+assert('hevyVolKpis sessions counts only within window', kpis.sessions, 2);
+assert('hevyVolKpis totalVol sums lbs in window', Math.round(kpis.totalVol), Math.round(100*2.205*5 + 50*2.205*10));
+assert('hevyVolKpis avgSession = totalVol/sessions', Math.round(kpis.avgSession), Math.round(kpis.totalVol / 2));
+assert('hevyVolKpis empty window returns zeros', hevyVolKpis([], cutoff30), { totalVol: 0, sessions: 0, avgSession: 0 });
+</script>
+
+<script>
 results.innerHTML += `<h2>${passed} passed, ${failed} failed</h2>`;
 </script>
 </body>
