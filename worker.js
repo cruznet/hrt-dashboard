@@ -140,6 +140,8 @@ async function handleIngest(request, env) {
   try {
     if (ct.includes('application/json')) {
       const body = await request.json();
+      const metricNames = (body?.data?.metrics ?? body?.metrics ?? []).map(m => m.name);
+      console.log('[healthkit] metric names received:', JSON.stringify(metricNames));
       rows = parseHAEJson(body);
     } else if (ct.includes('multipart/form-data')) {
       const fd = await request.formData();
@@ -263,6 +265,7 @@ const JSON_METRIC = {
   'body_fat_percentage':          d => ({ body_fat_pct:       num(d.qty) }),
   'lean_body_mass':               d => ({ lean_mass_lbs:      num(d.qty) }),
   'heart_rate_variability_sdnn':  d => ({ hrv_ms:             num(d.avg ?? d.qty) }),
+  'heart_rate_variability':       d => ({ hrv_ms:             num(d.avg ?? d.qty) }),
   'resting_heart_rate':           d => ({ resting_hr:         int(d.avg ?? d.qty) }),
   'heart_rate': d => ({
     ...(d.min != null ? { hr_min: int(d.min) } : {}),
@@ -278,6 +281,7 @@ const JSON_METRIC = {
     ...(d.diastolic != null ? { bp_diastolic: int(d.diastolic) } : {}),
   }),
   'oxygen_saturation':            d => ({ spo2_pct:           num(d.qty) }),
+  'blood_oxygen_saturation':      d => ({ spo2_pct:           num(d.avg ?? d.qty) }),
   'sleep_analysis': d => ({
     ...(d.qty          != null || d.totalSleepTime != null ? { sleep_total_hr: num(d.qty          ?? d.totalSleepTime) } : {}),
     ...(d.deep         != null || d.deepSleepTime  != null ? { sleep_deep_hr:  num(d.deep         ?? d.deepSleepTime)  } : {}),
