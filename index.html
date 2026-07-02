@@ -8041,9 +8041,7 @@ function hevyVolByWeek(workouts, cutoffMs) {
 function hevySetVolRange(days) {
   _hevyVolRange = days;
   document.querySelectorAll('.hevy-vol-pill').forEach(b => {
-    b.style.borderColor = b.dataset.days == days ? 'var(--primary-bright)' : 'var(--border)';
-    b.style.color       = b.dataset.days == days ? 'var(--primary-bright)' : 'var(--text-muted)';
-    b.style.background  = b.dataset.days == days ? 'rgba(34,211,238,0.12)' : 'transparent';
+    b.classList.toggle('range-pill-active', b.dataset.days == days);
   });
   renderHevyVolume(hevyCache());
 }
@@ -8055,11 +8053,7 @@ function renderHevyVolume(workouts) {
   const cutoffMs = Date.now() - _hevyVolRange * 86400000;
   const { totalVol, sessions, avgSession } = hevyVolKpis(workouts, cutoffMs);
 
-  const pill = (days) => `<button class="hevy-vol-pill" data-days="${days}" onclick="hevySetVolRange(${days})"
-    style="padding:5px 14px;border-radius:99px;border:1.5px solid ${_hevyVolRange===days?'var(--primary-bright)':'var(--border)'};
-    background:${_hevyVolRange===days?'rgba(34,211,238,0.12)':'transparent'};
-    color:${_hevyVolRange===days?'var(--primary-bright)':'var(--text-muted)'};
-    font-size:13px;font-weight:600;cursor:pointer;">${days}d</button>`;
+  const pill = (days) => `<button class="hevy-vol-pill range-pill${_hevyVolRange===days?' range-pill-active':''}" data-days="${days}" onclick="hevySetVolRange(${days})">${days}d</button>`;
 
   const kpiCard = (label, value, unit, color) => `<div class="card" style="padding:12px 14px;">
     <div style="font-size:12px;color:var(--text-label);text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:6px;">${label}</div>
@@ -8092,6 +8086,7 @@ function renderHevyVolume(workouts) {
       { label: 'Other',data: other, backgroundColor: 'rgba(144,144,152,0.5)'  },
     ], {
       plugins: { legend: { labels: { color: lm ? '#1a1a2e' : '#E8E8ED', font:{ size:12 } } } },
+      datasets: { bar: { maxBarThickness: 60 } },
       scales: {
         x: { stacked: true, ticks:{ color: lm?'#374151':'#909098' }, grid:{ color: lm?'rgba(0,0,0,0.07)':'rgba(255,255,255,0.04)' } },
         y: { stacked: true, ticks:{ color: lm?'#374151':'#909098' }, grid:{ color: lm?'rgba(0,0,0,0.07)':'rgba(255,255,255,0.04)' } },
