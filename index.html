@@ -1552,7 +1552,7 @@ body {
       <span class="nav-icon"><i class="ti ti-barbell"></i></span>
       <span class="nav-text">Workouts</span>
     </div>
-    <div class="nav-item" onclick="nav('athletes')">
+    <div class="nav-item" id="nav-item-athletes" style="display:none;" onclick="nav('athletes')">
       <i class="ti ti-users"></i><span>Athletes</span>
     </div>
     <div class="nav-item" onclick="nav('report')">
@@ -1952,63 +1952,6 @@ body {
 
     </section>
 
-    <!-- ── LOG ENTRY PAGE ── -->
-    <section class="page" id="page-log">
-      <div style="max-width:600px;">
-        <div class="section-heading">Daily Log Entry</div>
-        <div class="card">
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">Date</label>
-              <input type="date" class="form-input" id="log-date">
-            </div>
-          </div>
-
-          <div class="card-title" style="margin-top:8px;">Vitals</div>
-          <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;display:flex;align-items:center;gap:6px;">
-            <i class="ti ti-brand-apple" style="font-size:13px;"></i>
-            Weight, HR, active energy, steps, and SpO₂ are imported automatically from Apple Health.
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">Blood Pressure</label>
-              <input type="text" class="form-input" id="log-bp" placeholder="134/82">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Glucose (mg/dL)</label>
-              <input type="number" class="form-input" id="log-glucose" placeholder="94">
-            </div>
-          </div>
-
-          <div class="divider"></div>
-          <div class="card-title">Wellbeing</div>
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">Mood (1–10)</label>
-              <input type="range" min="1" max="10" value="7" class="form-input" id="log-mood" style="padding:8px 0;">
-              <div style="font-size:11px;color:var(--primary-bright);font-family:var(--font-data);text-align:center;" id="log-mood-val">7</div>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Energy (1–10)</label>
-              <input type="range" min="1" max="10" value="7" class="form-input" id="log-energy" style="padding:8px 0;">
-              <div style="font-size:11px;color:var(--primary-bright);font-family:var(--font-data);text-align:center;" id="log-energy-val">7</div>
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Notes</label>
-            <textarea class="form-input" id="log-notes" rows="3" placeholder="Any observations, side effects, or notes..." style="resize:vertical;"></textarea>
-          </div>
-
-          <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:6px;">
-            <button class="btn-secondary" onclick="resetLogForm()">Clear</button>
-            <button class="btn-primary" onclick="submitLog()">Save Entry</button>
-          </div>
-          <div id="log-status" style="font-size:12px;color:var(--green);text-align:right;margin-top:8px;display:none;"></div>
-        </div>
-      </div>
-    </section>
-
-
     <!-- ── VITALS PAGE ── -->
     <section class="page" id="page-vitals">
       <div class="section-heading">Health Log</div>
@@ -2211,8 +2154,8 @@ body {
         </div>
       </div>
 
-      <!-- Weekly Check-In section — always visible -->
-      <div style="margin-top:14px;">
+      <!-- Weekly Check-In section — shown once an Active Competition is set, or once the user has actual check-in history -->
+      <div id="weekly-checkin-section" style="margin-top:14px;display:none;">
         <div class="card">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
             <div class="card-title" style="margin-bottom:0;">Weekly Check-Ins</div>
@@ -4007,6 +3950,7 @@ async function loadUserData() {
         .select('*')
         .or(`coach_user_id.eq.${uid},athlete_user_id.eq.${uid}`);
       if (caRows) localStorage.setItem('hrt_coach_athletes', JSON.stringify(caRows));
+      updateCoachNavVisibility();
     } catch(e) { console.warn('[loadUserData] coach_athletes:', e.message); }
 
     if (logsRes.data?.length) renderLastEntry(logsRes.data[0]);
@@ -4041,7 +3985,7 @@ async function loadUserData() {
     renderDoseSchedule();   // always call — reads localStorage directly, independent of cycle card
     updateTopbarBadge();
 
-    // Store for chart rendering and map to hrt_vitals_log (match field names submitLog() uses)
+    // Store for chart rendering and map to hrt_vitals_log field names
     window._weightHistory = metricsRes.data || [];
     if (window._weightHistory.length) {
       const vitals = window._weightHistory
@@ -4632,7 +4576,7 @@ function nav(page) {
   const pageEl = document.getElementById('page-' + page);
   if (pageEl) pageEl.classList.add('active');
   const titles = {
-    dashboard: 'Dashboard', log: 'Log Entry', vitals: 'Health Log', bloodwork: 'Bloodwork',
+    dashboard: 'Dashboard', vitals: 'Health Log', bloodwork: 'Bloodwork',
     physique: 'Physique', workouts: 'Workouts', report: 'Coach Report', compliance: 'Dose Compliance',
     protocols: 'My Protocols', builder: 'Protocol Builder', compounds: 'Compound Library',
     calculator: 'Dose Calculator', settings: 'Settings', wellness: 'Wellness', athletes: 'Athletes',
@@ -5104,11 +5048,8 @@ document.addEventListener('click', e => {
 
 // ── Log form ──
 const _today = localDate();
-document.getElementById('log-date').value = _today;
 const _labDateEl = document.getElementById('lab-date');
 if (_labDateEl) _labDateEl.value = _today;
-document.getElementById('log-mood').addEventListener('input', function() { document.getElementById('log-mood-val').textContent = this.value; });
-document.getElementById('log-energy').addEventListener('input', function() { document.getElementById('log-energy-val').textContent = this.value; });
 document.getElementById('modal-mood').addEventListener('input', function() { document.getElementById('modal-mood-val').textContent = this.value; });
 document.getElementById('modal-energy').addEventListener('input', function() { document.getElementById('modal-energy-val').textContent = this.value; });
 
@@ -5121,72 +5062,6 @@ function addCompoundRow() {
 function removeCompoundRow(btn) {
   const rows = document.querySelectorAll('.log-compound-row');
   if (rows.length > 1) btn.closest('.log-compound-row').remove();
-}
-
-async function submitLog() {
-  const status = document.getElementById('log-status');
-  const entry = {
-    date:    document.getElementById('log-date').value,
-    bp:      document.getElementById('log-bp').value,
-    glucose: document.getElementById('log-glucose').value,
-    mood:    document.getElementById('log-mood').value,
-    energy:  document.getElementById('log-energy').value,
-    notes:   document.getElementById('log-notes').value
-  };
-  if (!entry.date) { status.textContent = 'Please select a date.'; status.style.color = 'var(--red)'; status.style.display='block'; return; }
-
-  // Always persist locally so Vitals page can show it without Supabase
-  // One row per date — merge if same date, otherwise new row
-  const logs = lsGet('hrt_vitals_log', []);
-  const idx = logs.findIndex(l => l.date === entry.date);
-  const isUpdate = idx >= 0;
-  if (isUpdate) {
-    // Merge: only overwrite fields that were actually filled in this submission
-    const existing = logs[idx];
-    logs[idx] = {
-      ...existing,
-      ...(entry.bp      ? { bp:      entry.bp      } : {}),
-      ...(entry.glucose ? { glucose: entry.glucose } : {}),
-      ...(entry.mood    ? { mood:    entry.mood    } : {}),
-      ...(entry.energy  ? { energy:  entry.energy  } : {}),
-      ...(entry.notes   ? { notes:   entry.notes   } : {}),
-    };
-  } else {
-    logs.unshift(entry);
-  }
-  logs.sort((a,b) => b.date.localeCompare(a.date));
-  localStorage.setItem('hrt_vitals_log', JSON.stringify(logs));
-
-  // Also push to Supabase if connected
-  if (_supa && _supaUser) {
-    const metricsRow = {
-      user_id: _supaUser.id, date: entry.date,
-      mood:   entry.mood   ? parseInt(entry.mood)   : null,
-      energy: entry.energy ? parseInt(entry.energy) : null,
-      notes:  entry.notes  || null
-    };
-    const bpParts = entry.bp ? entry.bp.split('/') : [];
-    metricsRow.bp_systolic    = bpParts.length >= 1 && bpParts[0] ? parseInt(bpParts[0]) : null;
-    metricsRow.bp_diastolic   = bpParts.length === 2             ? parseInt(bpParts[1]) : null;
-    metricsRow.fasting_glucose = entry.glucose       ? parseFloat(entry.glucose)   : null;
-    const { error: metricsErr } = await _supa.from('daily_logs').upsert(metricsRow, { onConflict: 'user_id,date' });
-    if (metricsErr) console.error('[submitLog] daily_logs upsert failed:', metricsErr);
-  }
-
-  // Clear value fields, keep date set to today for next entry
-  ['log-bp','log-glucose','log-mood','log-energy','log-notes'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.value = '';
-  });
-  document.getElementById('log-date').value = localDate();
-
-  renderLastVitalsEntry();
-  renderVitalsToCards(); // refresh dashboard cards + deltas + sparklines
-  trackFirstLogIfNeeded('vitals');
-  status.textContent = isUpdate ? `✓ ${entry.date} updated.` : '✓ New entry saved.';
-  status.style.color = 'var(--green)';
-  status.style.display = 'block';
-  setTimeout(() => { status.style.display='none'; }, 3000);
 }
 
 // ── BLOODWORK ────────────────────────────────────────────────────────────────
@@ -6325,9 +6200,13 @@ async function submitWeeklyCheckin() {
 }
 
 function renderWeeklyCheckinSection() {
+  const section = document.getElementById('weekly-checkin-section');
   const el = document.getElementById('ci-history-list');
   if (!el) return;
   const all = lsGet('hrt_weekly_checkins', []);
+  // Prep-specific check-in fields (fullness/dryness/vascularity) are only relevant once
+  // the user has an Active Competition set (Settings), or they already have real history.
+  if (section) section.style.display = (getShow() || all.length) ? '' : 'none';
   if (!all.length) {
     el.innerHTML = `<div class="empty-state" style="padding:32px 20px;">
       <div class="empty-state-icon" style="width:52px;height:52px;background:rgba(34,211,238,0.08);border-color:rgba(34,211,238,0.15);">
@@ -6382,6 +6261,11 @@ function renderDashboardCheckinCard() {
   const today  = new Date(); today.setHours(0,0,0,0);
 
   if (!latest) {
+    // Prep-specific nudge only makes sense once an Active Competition is set (Settings) —
+    // otherwise this permanently-empty card just invites solo TRT/HRT users to track
+    // fullness/dryness/vascularity that don't apply to them.
+    if (!getShow()) { el.style.display = 'none'; el.innerHTML = ''; return; }
+    el.style.display = '';
     el.innerHTML = `<div class="card" style="border-color:rgba(168,139,250,0.3);">
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <div>
@@ -6407,6 +6291,7 @@ function renderDashboardCheckinCard() {
     latest.diet_adherence != null ? `Diet <b>${latest.diet_adherence}%</b>`                                          : null,
   ].filter(Boolean).join(' <span style="color:var(--border);">·</span> ');
 
+  el.style.display = '';
   if (isDue) {
     el.innerHTML = `<div class="card" style="border-color:rgba(251,146,60,0.4);background:rgba(251,146,60,0.04);">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
@@ -8541,12 +8426,6 @@ function renderVitalsCharts(logs) {
     }
   }
 }
-function resetLogForm() {
-  document.getElementById('log-bp').value = '';
-  document.getElementById('log-glucose').value = '';
-  document.getElementById('log-notes').value = '';
-}
-
 async function submitQuickLog() {
   const date    = document.getElementById('modal-date').value;
   const bp      = document.getElementById('modal-bp').value.trim();
@@ -8557,7 +8436,7 @@ async function submitQuickLog() {
 
   if (!date) { closeModal('log-modal'); return; }
 
-  // Merge into vitals log (same store as Log Entry page)
+  // Merge into vitals log
   const logs  = lsGet('hrt_vitals_log', []);
   const idx   = logs.findIndex(l => l.date === date);
   const entry = idx >= 0 ? { ...logs[idx] } : { date };
@@ -8607,6 +8486,7 @@ async function submitQuickLog() {
   document.getElementById('modal-energy').value = 7; document.getElementById('modal-energy-val').textContent = '7';
   document.getElementById('modal-notes').value  = '';
 
+  trackFirstLogIfNeeded('vitals');
   showToast('Entry saved', 'success');
   closeModal('log-modal');
 }
@@ -10284,10 +10164,21 @@ async function submitCoachToken() {
     .select('*')
     .or(`coach_user_id.eq.${_supaUser.id},athlete_user_id.eq.${_supaUser.id}`);
   if (caRows) localStorage.setItem('hrt_coach_athletes', JSON.stringify(caRows));
+  updateCoachNavVisibility();
   if (currentPage === 'athletes') renderAthletesPage();
 }
 
 // ── Athletes / Roster Page ─────────────────────────────────────────────────────
+
+// Athletes nav item only makes sense for users actually coaching someone —
+// hidden by default, shown once hrt_coach_athletes confirms a coach_user_id match.
+function updateCoachNavVisibility() {
+  const el = document.getElementById('nav-item-athletes');
+  if (!el) return;
+  const rows = lsGet('hrt_coach_athletes', []);
+  const isCoach = !!_supaUser && rows.some(r => r.coach_user_id === _supaUser.id);
+  el.style.display = isCoach ? '' : 'none';
+}
 
 async function renderAthletesPage() {
   const el = document.getElementById('athletes-content');

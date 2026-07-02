@@ -78,7 +78,6 @@ Cloudflare's bot force-pushes `cloudflare/workers-autoconfig` regularly. Always 
 | ID | Name | Notes |
 |---|---|---|
 | `page-dashboard` | Dashboard | Hero protocol card, vitals metric cards, dose schedule, adherence badge |
-| `page-log` | Health Log | Activity log — compound dose entries, notes |
 | `page-vitals` | Vitals | Log weight, BP, glucose, mood (1–10), energy (1–10), insulin |
 | `page-bloodwork` | Bloodwork | Panel log, KPI cards, trend charts, flag badges |
 | `page-physique` | Physique | Body composition measurements, progress tracking |
@@ -91,7 +90,7 @@ Cloudflare's bot force-pushes `cloudflare/workers-autoconfig` regularly. Always 
 | `page-builder` | Protocol Builder | Tabbed: Builder · Schedule (Gantt) · Log. Phased compound scheduling. |
 | `page-compounds` | Compounds | Reference table for 60+ compounds (AAS, SARMs, peptides, etc.) |
 | `page-calculator` | Calculators | Tabs: AAS/Injectable PK simulation · Peptide reconstitution (blend mode) |
-| `page-athletes` | Athletes | Coach-facing client roster (linked via share token) |
+| `page-athletes` | Athletes | Coach-facing client roster. Nav item (`#nav-item-athletes`) is hidden by default and only shown once `hrt_coach_athletes` confirms the signed-in user is an actual coach — see `updateCoachNavVisibility()` |
 | `page-settings` | Settings | Profile (sex + focus), mode preference |
 
 ---
@@ -109,6 +108,7 @@ Cloudflare's bot force-pushes `cloudflare/workers-autoconfig` regularly. Always 
 | `hrt_measurements` | Array of physique entries `{id, date, notes, weight, bf, waist, chest, arms, quads, calves}` — **not** `hrt_physique_measurements` despite older docs |
 | `hrt_weekly_checkins` | Array of weekly check-ins `{check_in_date, weeks_out, fullness, dryness, vascularity, diet_adherence, cardio_sessions, energy_score, sleep_score, mood_score, notes, coach_note}` |
 | `hrt_goals` | Array of goals `{id, label, category, source, sourceKey, direction, target, unit, manualCurrent, baseline, createdAt}`. **Local-only — not synced to Supabase** (`user_settings` has fixed columns; adding an unmigrated key would break sync for every other field). Single-device until a schema migration adds a `goals` column. |
+| `hrt_coach_athletes` | Cached rows from Supabase `coach_athletes` (`{coach_user_id, athlete_user_id, ...}`), refreshed in `loadUserData()` and after linking. Drives whether the Athletes nav item is shown — see `updateCoachNavVisibility()`. |
 | `hrt_hevy_key` | Hevy API key (set by user in Workouts settings) |
 | `hrt_hevy_data` | Cached Hevy workout array |
 | `hrt_last_active` | ISO timestamp of last user interaction — used for inactivity timeout |
@@ -160,7 +160,9 @@ Cloudflare's bot force-pushes `cloudflare/workers-autoconfig` regularly. Always 
 | `escHtml(s)` | XSS sanitization — use on all user-input before `innerHTML` |
 | `makeChart(id, type, labels, datasets, opts)` | Destroys existing chart before re-creating |
 | `track(eventName, props)` | Fire-and-forget funnel event to `POST /api/track`. Defined in both `landing.html` and `index.html`. Never throws; analytics must not break the page. |
-| `trackFirstLogIfNeeded(logType)` | Fires `first_log` event exactly once per browser (guarded by `hrt_first_log_tracked` localStorage flag). Called from `checkDose`, `submitLog`, and `submitWeeklyCheckin`. |
+| `trackFirstLogIfNeeded(logType)` | Fires `first_log` event exactly once per browser (guarded by `hrt_first_log_tracked` localStorage flag). Called from `checkDose`, `submitQuickLog`, and `submitWeeklyCheckin`. |
+| `getShow()` | Reads `hrt_show_date`/`hrt_show_name`/`hrt_show_federation`/`hrt_show_division` from Settings' Active Competition section; returns `null` if no competition is set. Canonical "is this user prepping" check — gates the Weekly Check-in nudge/section so prep-specific fields (fullness/dryness/vascularity) don't show to solo TRT/HRT users by default. |
+| `updateCoachNavVisibility()` | Shows/hides `#nav-item-athletes` based on whether `hrt_coach_athletes` contains a row where the signed-in user is the coach. Called from `loadUserData()` and `submitCoachToken()`. |
 | `setTheme(mode)` | Sets `data-theme` on `<html>`, persists to `hrt_theme`, and updates the topbar toggle icon. Mode is `"dark"` or `"light"`. |
 | `initTheme()` | Reads `hrt_theme` from localStorage and calls `setTheme()`. Called once in `DOMContentLoaded`. Anti-FOUC inline script in `<head>` also applies theme before CSS renders. |
 
