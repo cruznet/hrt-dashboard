@@ -3348,13 +3348,20 @@ body {
     </div>
     <div class="form-row">
       <div class="form-group">
+        <label class="form-label">Starting Value</label>
+        <input type="number" step="any" class="form-input" id="goal-baseline" placeholder="Where you started">
+      </div>
+      <div class="form-group">
         <label class="form-label">Target Value</label>
         <input type="number" step="any" class="form-input" id="goal-target" placeholder="315">
       </div>
+    </div>
+    <div class="form-row">
       <div class="form-group">
         <label class="form-label">Unit</label>
         <input type="text" class="form-input" id="goal-unit" placeholder="lbs">
       </div>
+      <div class="form-group"></div>
     </div>
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:6px;">
       <button class="btn-secondary" onclick="closeModal('goal-modal')">Cancel</button>
@@ -9378,7 +9385,9 @@ function goalCurrentValue(g) {
     const list = measLoad().slice().sort((a, b) => a.date.localeCompare(b.date));
     const latest = list[list.length - 1];
     if (!latest) return null;
-    const v = g.source === 'weight' ? latest.weight : latest.bf;
+    const v = g.source === 'weight'
+      ? (latest.measurements?.weight ?? latest.weight)
+      : (latest.measurements?.bf ?? latest.bf);
     return (v != null && v !== '') ? parseFloat(v) : null;
   }
   if (g.source === 'lift') {
@@ -9398,7 +9407,22 @@ function goalCurrentValue(g) {
 function goalProgressPct(g, current) {
   if (current == null || isNaN(current)) return null;
   const target = parseFloat(g.target);
-  const base = (g.baseline != null && !isNaN(parseFloat(g.baseline))) ? parseFloat(g.baseline) : current;
+  let base;
+  if (g.baseline != null && !isNaN(parseFloat(g.baseline))) {
+    base = parseFloat(g.baseline);
+  } else if (g.source === 'weight' || g.source === 'bodyfat') {
+    // baseline wasn't captured at creation — use earliest measurement
+    const list = measLoad().slice().sort((a, b) => a.date.localeCompare(b.date));
+    const earliest = list[0];
+    const v = earliest
+      ? (g.source === 'weight'
+          ? (earliest.measurements?.weight ?? earliest.weight)
+          : (earliest.measurements?.bf ?? earliest.bf))
+      : null;
+    base = (v != null && !isNaN(v)) ? parseFloat(v) : current;
+  } else {
+    base = current;
+  }
   if (target === base) return current === target ? 100 : 0;
   const pct = g.direction === 'down'
     ? (base - current) / (base - target) * 100
@@ -9485,6 +9509,7 @@ function goalOpenModal(id) {
   document.getElementById('goal-category').value              = g?.category || 'performance';
   document.getElementById('goal-source').value                = g?.source || 'manual';
   document.getElementById('goal-direction').value              = g?.direction || 'up';
+  document.getElementById('goal-baseline').value              = g?.baseline ?? '';
   document.getElementById('goal-target').value                 = g?.target ?? '';
   document.getElementById('goal-unit').value                   = g?.unit || '';
   document.getElementById('goal-manual-current').value         = g?.manualCurrent ?? '';
@@ -9511,13 +9536,18 @@ function goalSave() {
 
   const manualRaw = document.getElementById('goal-manual-current').value;
   const manualCurrent = manualRaw !== '' ? parseFloat(manualRaw) : null;
+  const baselineRaw = document.getElementById('goal-baseline').value;
+  const baselineInput = baselineRaw !== '' ? parseFloat(baselineRaw) : null;
 
   const goals = goalsLoad();
   if (_goalEditId) {
     const g = goals.find(x => x.id === _goalEditId);
-    if (g) Object.assign(g, { label, category, source, sourceKey, direction, target, unit, manualCurrent });
+    if (g) {
+      const baseline = baselineInput !== null ? baselineInput : g.baseline;
+      Object.assign(g, { label, category, source, sourceKey, direction, target, unit, manualCurrent, baseline });
+    }
   } else {
-    const baseline = goalCurrentValue({ source, sourceKey, manualCurrent });
+    const baseline = baselineInput !== null ? baselineInput : goalCurrentValue({ source, sourceKey, manualCurrent });
     goals.push({
       id: 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
       label, category, source, sourceKey, direction, target, unit, manualCurrent,
