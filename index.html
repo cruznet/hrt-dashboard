@@ -3996,6 +3996,12 @@ async function loadUserData() {
         localStorage.setItem('hrt_bloodwork', JSON.stringify(settings.bloodwork_panels));
       if (Array.isArray(settings.physique_measurements) && settings.physique_measurements.length)
         localStorage.setItem('hrt_measurements', JSON.stringify(settings.physique_measurements));
+      if (Array.isArray(settings.hevy_workouts_cache) && settings.hevy_workouts_cache.length)
+        localStorage.setItem(HEVY_DATA_LS, JSON.stringify(settings.hevy_workouts_cache));
+      if (Array.isArray(settings.hevy_measurements_raw_cache) && settings.hevy_measurements_raw_cache.length) {
+        const { list } = hevyMergeRawMeasurements(settings.hevy_measurements_raw_cache, measLoad());
+        localStorage.setItem('hrt_measurements', JSON.stringify(list));
+      }
       if (Array.isArray(settings.goals) && settings.goals.length)
         localStorage.setItem('hrt_goals', JSON.stringify(settings.goals));
       if (settings.user_profile)
