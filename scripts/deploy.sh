@@ -10,8 +10,8 @@ set -euo pipefail
 
 cd "$(git rev-parse --show-toplevel)"
 
-if [[ -n "$(git status --porcelain)" ]]; then
-  echo "Working tree not clean — commit or stash changes first." >&2
+if ! git diff --quiet || ! git diff --cached --quiet; then
+  echo "Tracked files have uncommitted changes — commit or stash them first." >&2
   exit 1
 fi
 
