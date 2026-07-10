@@ -63,13 +63,12 @@ A single-file Supabase-backed HRT tracking dashboard deployed on Cloudflare Work
 | `main` | Active development — all commits land here |
 | `cloudflare/workers-autoconfig` | Production — Cloudflare's bot manages this branch |
 
-**Deploy workflow — do this every time before pushing:**
+**Deploy workflow — run this from `main` every time before/after pushing:**
 ```bash
-git pull origin cloudflare/workers-autoconfig --rebase
-git push origin main
+scripts/deploy.sh
 ```
 
-Cloudflare's bot force-pushes `cloudflare/workers-autoconfig` regularly. Always rebase before pushing to avoid rejection. Keep both branches in sync on each deploy.
+This pushes `main`, then resets the local `cloudflare/workers-autoconfig` to whatever origin currently has (Cloudflare's bot force-pushes that branch regularly, so never trust a local copy), merges `main` into it, and pushes. Keeps both branches in sync in one step instead of the manual multi-command dance.
 
 ---
 
