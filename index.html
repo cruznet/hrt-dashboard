@@ -1714,6 +1714,18 @@ body {
         </div>
       </div>
 
+      <!-- Goals widget -->
+      <div class="card" id="goals-dash-card" style="margin-bottom:14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <i class="ti ti-target" style="font-size:14px;color:var(--primary-bright);"></i>
+            <div class="card-title" style="margin-bottom:0;">Goals</div>
+          </div>
+          <a href="#" onclick="goalOpenModal();return false;" style="font-size:11px;color:var(--primary-bright);text-decoration:none;">+ Add Goal</a>
+        </div>
+        <div id="goals-dash-list"></div>
+      </div>
+
       <!-- Upcoming Doses widget -->
       <div class="card" id="upcoming-doses-card" style="margin-bottom:14px;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
@@ -1936,18 +1948,6 @@ body {
           <a href="#" onclick="nav('timeline');return false;" style="font-size:11px;color:var(--primary-bright);text-decoration:none;">Full timeline →</a>
         </div>
         <div id="activity-dash-list"></div>
-      </div>
-
-      <!-- Goals widget -->
-      <div class="card" id="goals-dash-card" style="margin-bottom:14px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-          <div style="display:flex;align-items:center;gap:8px;">
-            <i class="ti ti-target" style="font-size:14px;color:var(--primary-bright);"></i>
-            <div class="card-title" style="margin-bottom:0;">Goals</div>
-          </div>
-          <a href="#" onclick="goalOpenModal();return false;" style="font-size:11px;color:var(--primary-bright);text-decoration:none;">+ Add Goal</a>
-        </div>
-        <div id="goals-dash-list"></div>
       </div>
 
     </section>
