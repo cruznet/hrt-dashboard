@@ -9318,7 +9318,7 @@ function buildActivityFeed(limit) {
   });
 
   try {
-    const workouts = lsGet('hrt_hevy_data', []);
+    const workouts = hevyCache();
     if (workouts.length) {
       hevyBuildPRMap(workouts).forEach((pr, exercise) => {
         if (pr.weightDate) {
@@ -9398,7 +9398,7 @@ function goalCurrentValue(g) {
   }
   if (g.source === 'lift') {
     try {
-      const pr = hevyBuildPRMap(lsGet('hrt_hevy_data', [])).get(g.sourceKey);
+      const pr = hevyBuildPRMap(hevyCache()).get(g.sourceKey);
       return (pr && pr.bestWeight > 0) ? Math.round(pr.bestWeight * 2.205) : null;
     } catch (e) { return null; }
   }
@@ -9473,7 +9473,7 @@ function goalOnSourceChange() {
 
 function goalPopulateLiftSelect() {
   const sel = document.getElementById('goal-lift-select');
-  const workouts = lsGet('hrt_hevy_data', []);
+  const workouts = hevyCache();
   let names = [];
   try { names = workouts.length ? [...hevyBuildPRMap(workouts).keys()].sort() : []; } catch (e) { names = []; }
   sel.innerHTML = names.length
