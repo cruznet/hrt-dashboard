@@ -3,6 +3,9 @@
   "name": "hrt-dashboard",
   "main": "worker.js",
   "compatibility_date": "2026-06-29",
+  "triggers": {
+    "crons": ["0 9 * * *"]
+  },
   "observability": {
     "enabled": true
   },

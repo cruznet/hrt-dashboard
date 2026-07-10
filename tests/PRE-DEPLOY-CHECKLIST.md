@@ -35,7 +35,8 @@ deploy. Open the browser console and keep an eye on it throughout.
     and no prior check-in history, confirm the Physique page's Weekly
     Check-Ins section and the Dashboard's check-in nudge card are both
     hidden. Set an Active Competition and confirm both appear.
-13. **Console check** — confirm no red errors logged during steps 2-12.
+13. **Hevy daily cron sync** (only after touching `worker.js`'s `scheduled()` handler or the Hevy sync functions) — run `npx wrangler dev --test-scheduled`, then `curl "http://localhost:8787/__scheduled?cron=0+9+*+*+*"`; confirm the terminal logs `[hevyCron] syncing N user(s)` with no failures for a test user with a valid Hevy key.
+14. **Console check** — confirm no red errors logged during steps 2-13.
 
 If anything fails, stop and fix before deploying — don't ship on top of a
 broken auth-gated path.
