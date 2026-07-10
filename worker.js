@@ -2,6 +2,7 @@
 // POST /api/healthkit — accepts JSON (Health Auto Export) or CSV data
 
 const SUPABASE_URL = 'https://lnxhksnvcewtpwkaghrh.supabase.co';
+const HEVY_BASE     = 'https://api.hevyapp.com/v1';
 
 export default {
   async fetch(request, env) {
@@ -27,7 +28,101 @@ export default {
 
     return env.ASSETS.fetch(request);
   },
+
+  // Cron Trigger — see wrangler.jsonc `triggers.crons`. Fires once daily so
+  // Hevy data refreshes even if the user never opens the app that day.
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(runHevyDailySync(env));
+  },
 };
+
+// ── Hevy daily background sync ──────────────────────────────────────────────
+// Caches RAW Hevy data only (no dedup/merge) — a Worker has no browser
+// timezone to bucket measurement dates by, and the client's existing
+// hevyMergeRawMeasurements() already does that correctly using the user's
+// local calendar date (see index.html). Doing the merge here would silently
+// reintroduce the local-date rollover bug fixed in commit efd4935.
+
+async function runHevyDailySync(env) {
+  if (!env.SUPABASE_SERVICE_KEY) { console.error('[hevyCron] SUPABASE_SERVICE_KEY not configured'); return; }
+
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/user_settings?select=user_id,hevy_api_key&hevy_api_key=not.is.null`,
+    { headers: { apikey: env.SUPABASE_SERVICE_KEY, Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}` } }
+  );
+  if (!res.ok) { console.error(`[hevyCron] failed to list users: ${res.status} ${await res.text()}`); return; }
+
+  const rows = await res.json();
+  console.log(`[hevyCron] syncing ${rows.length} user(s)`);
+
+  for (const row of rows) {
+    try {
+      await syncOneUserHevyData(env, row.user_id, row.hevy_api_key);
+    } catch (e) {
+      console.error(`[hevyCron] user ${row.user_id} failed:`, e.message);
+    }
+  }
+}
+
+async function syncOneUserHevyData(env, userId, hevyApiKey) {
+  const workouts     = await fetchHevyWorkouts(hevyApiKey);
+  const measurements = await fetchHevyBodyMeasurementsRaw(hevyApiKey);
+
+  // Only these 4 columns are sent, so this never touches protocols, goals,
+  // bloodwork, or any other field on the user's row (PostgREST upserts only
+  // set columns present in the payload).
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/user_settings?on_conflict=user_id`, {
+    method: 'POST',
+    headers: {
+      'Content-Type':  'application/json',
+      'apikey':        env.SUPABASE_SERVICE_KEY,
+      'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+      'Prefer':        'resolution=merge-duplicates',
+    },
+    body: JSON.stringify([{
+      user_id:                     userId,
+      hevy_workouts_cache:         workouts,
+      hevy_measurements_raw_cache: measurements,
+      hevy_cron_synced_at:         new Date().toISOString(),
+    }]),
+  });
+  if (!res.ok) throw new Error(`upsert failed: ${res.status} ${await res.text()}`);
+}
+
+async function fetchHevyWorkouts(apiKey) {
+  let allWorkouts = [];
+  let page = 1;
+  while (allWorkouts.length < 50) {
+    const res = await fetch(`${HEVY_BASE}/workouts?page=${page}&pageSize=10`, {
+      headers: { 'api-key': apiKey, 'Content-Type': 'application/json' }
+    });
+    if (!res.ok) throw new Error(`Hevy workouts API error ${res.status}`);
+    const data  = await res.json();
+    const batch = data.workouts || [];
+    allWorkouts = allWorkouts.concat(batch);
+    if (batch.length < 10 || page >= (data.page_count || 1)) break;
+    page++;
+  }
+  return allWorkouts;
+}
+
+async function fetchHevyBodyMeasurementsRaw(apiKey) {
+  let allEntries = [];
+  let page = 1;
+  let pageCount = 1;
+  do {
+    const res = await fetch(`${HEVY_BASE}/body_measurements?page=${page}&pageSize=10`, {
+      headers: { 'api-key': apiKey }
+    });
+    if (!res.ok) throw new Error(`Hevy body_measurements API error ${res.status}`);
+    const data  = await res.json();
+    const batch = data.body_measurements || [];
+    allEntries  = allEntries.concat(batch);
+    pageCount   = data.page_count || 1;
+    page++;
+  } while (page <= pageCount);
+  return allEntries;
+}
 
 // ── Funnel/retention analytics ingest ───────────────────────────────────────
 // POST /api/track — fire-and-forget event logging from landing.html + index.html.
