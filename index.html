@@ -7863,6 +7863,52 @@ async function hevySync() {
   }
 }
 
+// hevyMergeRawMeasurements is pure — no localStorage/DOM access — so both the
+// live-fetch sync (hevyMeasSync, below) and the daily-cron-cache restore path
+// (loadUserData) share one implementation instead of two. Dedup keeps the
+// Hevy entry with the most non-null fields per date; existing (manual)
+// measurement values always win over Hevy's for the same date+field.
+function hevyMergeRawMeasurements(rawEntries, existingList) {
+  if (!rawEntries || !rawEntries.length) return { list: existingList, added: 0, updated: 0 };
+
+  const dedupMap = {};
+  for (const h of rawEntries) {
+    const dateStr = (h.date || h.created_at || '').slice(0, 10);
+    if (!dateStr) continue;
+    const date = localDate(new Date(dateStr));
+    const prev = dedupMap[date];
+    const fields = (h.weight_kg != null ? 1 : 0) + (h.fat_percent != null ? 1 : 0);
+    const prevFields = prev ? (prev.weight_kg != null ? 1 : 0) + (prev.fat_percent != null ? 1 : 0) : -1;
+    if (!prev || fields >= prevFields) dedupMap[date] = h;
+  }
+
+  const list = existingList.slice();
+  const byDate = {};
+  list.forEach((e, i) => { byDate[e.date] = i; });
+
+  let added = 0, updated = 0;
+  for (const [date, h] of Object.entries(dedupMap)) {
+    const weightKg = h.weight_kg ?? null;
+    const hevyMeas = {};
+    if (weightKg != null)        hevyMeas.weight = +(weightKg * 2.20462).toFixed(1);
+    if (h.fat_percent != null)   hevyMeas.bf     = +h.fat_percent.toFixed(2);
+    if (!Object.keys(hevyMeas).length) continue;
+
+    if (byDate[date] !== undefined) {
+      const existing = list[byDate[date]];
+      const merged = { ...hevyMeas, ...(existing.measurements || {}) };
+      list[byDate[date]] = { ...existing, measurements: merged };
+      updated++;
+    } else {
+      list.push({ id: crypto.randomUUID(), date, notes: '', measurements: hevyMeas });
+      byDate[date] = list.length - 1;
+      added++;
+    }
+  }
+
+  return { list, added, updated };
+}
+
 function hevyMeasAutoSync() {
   if (!hevyKey()) return;
   const last = localStorage.getItem(HEVY_MEAS_SYN_LS);
@@ -7895,44 +7941,7 @@ async function hevyMeasSync() {
 
     if (!allEntries.length) { showToast('No body measurements found in Hevy.', 'info'); return; }
 
-    // Dedup by date — keep entry with most non-null fields (handles multiple weigh-ins per day)
-    const dedupMap = {};
-    for (const h of allEntries) {
-      const dateStr = (h.date || h.created_at || '').slice(0, 10);
-      if (!dateStr) continue;
-      const date = localDate(new Date(dateStr));
-      const prev = dedupMap[date];
-      const fields = (h.weight_kg != null ? 1 : 0) + (h.fat_percent != null ? 1 : 0);
-      const prevFields = prev ? (prev.weight_kg != null ? 1 : 0) + (prev.fat_percent != null ? 1 : 0) : -1;
-      if (!prev || fields >= prevFields) dedupMap[date] = h;
-    }
-
-    const list = measLoad();
-    // Build date index for O(1) lookup
-    const byDate = {};
-    list.forEach((e, i) => { byDate[e.date] = i; });
-
-    let added = 0, updated = 0;
-    for (const [date, h] of Object.entries(dedupMap)) {
-      const weightKg = h.weight_kg ?? null;
-      const hevyMeas = {};
-      if (weightKg != null)        hevyMeas.weight = +(weightKg * 2.20462).toFixed(1);
-      if (h.fat_percent != null)   hevyMeas.bf     = +h.fat_percent.toFixed(2);
-      if (!Object.keys(hevyMeas).length) continue;
-
-      if (byDate[date] !== undefined) {
-        // Merge: existing manual values always win — spread Hevy first, existing on top
-        const existing = list[byDate[date]];
-        const merged = { ...hevyMeas, ...(existing.measurements || {}) };
-        list[byDate[date]] = { ...existing, measurements: merged };
-        updated++;
-      } else {
-        list.push({ id: crypto.randomUUID(), date, notes: '', measurements: hevyMeas });
-        byDate[date] = list.length - 1;
-        added++;
-      }
-    }
-
+    const { list, added, updated } = hevyMergeRawMeasurements(allEntries, measLoad());
     measSaveAll(list);
     localStorage.setItem(HEVY_MEAS_SYN_LS, new Date().toISOString());
     renderPhysiquePage();

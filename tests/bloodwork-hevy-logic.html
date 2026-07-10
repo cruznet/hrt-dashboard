@@ -89,6 +89,55 @@ function hevyBuildPRMap(workouts) {
   });
   return map;
 }
+
+function localDate(d) {
+  if (!d) d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dd}`;
+}
+
+function hevyMergeRawMeasurements(rawEntries, existingList) {
+  if (!rawEntries || !rawEntries.length) return { list: existingList, added: 0, updated: 0 };
+
+  const dedupMap = {};
+  for (const h of rawEntries) {
+    const dateStr = (h.date || h.created_at || '').slice(0, 10);
+    if (!dateStr) continue;
+    const date = localDate(new Date(dateStr));
+    const prev = dedupMap[date];
+    const fields = (h.weight_kg != null ? 1 : 0) + (h.fat_percent != null ? 1 : 0);
+    const prevFields = prev ? (prev.weight_kg != null ? 1 : 0) + (prev.fat_percent != null ? 1 : 0) : -1;
+    if (!prev || fields >= prevFields) dedupMap[date] = h;
+  }
+
+  const list = existingList.slice();
+  const byDate = {};
+  list.forEach((e, i) => { byDate[e.date] = i; });
+
+  let added = 0, updated = 0;
+  for (const [date, h] of Object.entries(dedupMap)) {
+    const weightKg = h.weight_kg ?? null;
+    const hevyMeas = {};
+    if (weightKg != null)        hevyMeas.weight = +(weightKg * 2.20462).toFixed(1);
+    if (h.fat_percent != null)   hevyMeas.bf     = +h.fat_percent.toFixed(2);
+    if (!Object.keys(hevyMeas).length) continue;
+
+    if (byDate[date] !== undefined) {
+      const existing = list[byDate[date]];
+      const merged = { ...hevyMeas, ...(existing.measurements || {}) };
+      list[byDate[date]] = { ...existing, measurements: merged };
+      updated++;
+    } else {
+      list.push({ id: crypto.randomUUID(), date, notes: '', measurements: hevyMeas });
+      byDate[date] = list.length - 1;
+      added++;
+    }
+  }
+
+  return { list, added, updated };
+}
 </script>
 
 <!-- ── Tests ──────────────────────────────────────────────────────────────── -->
@@ -231,6 +280,53 @@ assert('Bodyweight sets not counted in PR sets', pu?.sets.length ?? 0, 0);
 // Empty workouts
 const emptyMap = hevyBuildPRMap([]);
 assert('Empty workouts → empty map', emptyMap.size, 0);
+
+// ── hevyMergeRawMeasurements (dedup + merge raw Hevy body measurements) ──────
+section('hevyMergeRawMeasurements');
+
+// New date, no existing entry — should add with lbs conversion
+{
+  const raw = [{ date: '2026-07-01', weight_kg: 90, fat_percent: 15.234 }];
+  const { list, added, updated } = hevyMergeRawMeasurements(raw, []);
+  assert('New entry added',                 added, 1);
+  assert('No entries updated',              updated, 0);
+  assert('Weight converted kg→lbs',         list[0].measurements.weight, +(90 * 2.20462).toFixed(1));
+  assert('Fat % rounded to 2 decimals',     list[0].measurements.bf, 15.23);
+}
+
+// Existing manual entry — Hevy fills missing field, never overwrites existing field
+{
+  const existing = [{ id: 'm1', date: '2026-07-02', notes: '', measurements: { weight: 201.5 } }];
+  const raw = [{ date: '2026-07-02', weight_kg: 91, fat_percent: 14 }];
+  const { list, added, updated } = hevyMergeRawMeasurements(raw, existing);
+  assert('Existing date updated, not added', [added, updated], [0, 1]);
+  assert('Manual weight value preserved',    list[0].measurements.weight, 201.5);
+  assert('Missing bf field filled from Hevy', list[0].measurements.bf, 14);
+}
+
+// Two Hevy entries same date — most non-null fields wins
+{
+  const raw = [
+    { date: '2026-07-03', weight_kg: 92 },
+    { date: '2026-07-03', weight_kg: 92.5, fat_percent: 13.8 },
+  ];
+  const { list } = hevyMergeRawMeasurements(raw, []);
+  assert('Dedup keeps entry with more fields', list[0].measurements.bf, 13.8);
+}
+
+// Entry with no usable fields (both null) — skipped entirely
+{
+  const raw = [{ date: '2026-07-04', weight_kg: null, fat_percent: null }];
+  const { list, added, updated } = hevyMergeRawMeasurements(raw, []);
+  assert('All-null entry skipped', [list.length, added, updated], [0, 0, 0]);
+}
+
+// Empty raw input — no-op, returns existing list unchanged
+{
+  const existing = [{ id: 'm1', date: '2026-07-01', notes: '', measurements: { weight: 200 } }];
+  const { list, added, updated } = hevyMergeRawMeasurements([], existing);
+  assert('Empty input is a no-op', [list === existing, added, updated], [true, 0, 0]);
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 document.getElementById('summary').innerHTML =
