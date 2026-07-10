@@ -10839,7 +10839,7 @@ function renderReadinessCard() {
       protocol.compounds.forEach(c => {
         if (isDueOnDate(c.freq, c.start || protocol.saved_at?.slice(0,10), ds)) {
           sched++;
-          if (taken.some(t => t.date === ds && t.name === c.name)) done++;
+          if (taken.some(t => t.date === ds && (t.label || t.name) === c.name)) done++;
         }
       });
     }
@@ -10932,7 +10932,7 @@ function computeDoseStreak() {
     const ds = localDate(d);
     const due = protocol.compounds.filter(c => isDueOnDate(c.freq, c.start || protocol.saved_at?.slice(0,10), ds));
     if (!due.length) continue; // no doses scheduled — don't break streak
-    const allTaken = due.every(c => taken.some(t => t.date === ds && t.name === c.name));
+    const allTaken = due.every(c => taken.some(t => t.date === ds && (t.label || t.name) === c.name));
     if (allTaken) { streak++; } else { if (i > 0) break; } // allow today to be pending
   }
   return streak;
@@ -11013,7 +11013,7 @@ function renderComplianceHeatmap() {
 
     let state = 'none'; // not scheduled
     if (due.length > 0) {
-      const takenCount = due.filter(c => taken.some(t => t.date === ds && t.name === c.name)).length;
+      const takenCount = due.filter(c => taken.some(t => t.date === ds && (t.label || t.name) === c.name)).length;
       if (!isFuture) {
         totalScheduled += due.length;
         totalTaken += takenCount;
