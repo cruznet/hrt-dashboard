@@ -7879,9 +7879,8 @@ function hevyMergeRawMeasurements(rawEntries, existingList) {
 
   const dedupMap = {};
   for (const h of rawEntries) {
-    const dateStr = (h.date || h.created_at || '').slice(0, 10);
-    if (!dateStr) continue;
-    const date = localDate(new Date(dateStr));
+    const date = (h.date || h.created_at || '').slice(0, 10);
+    if (!date) continue;
     const prev = dedupMap[date];
     const fields = (h.weight_kg != null ? 1 : 0) + (h.fat_percent != null ? 1 : 0);
     const prevFields = prev ? (prev.weight_kg != null ? 1 : 0) + (prev.fat_percent != null ? 1 : 0) : -1;
