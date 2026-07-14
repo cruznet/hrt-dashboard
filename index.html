@@ -4689,6 +4689,7 @@ function nav(page) {
   localStorage.setItem('hrt_active_page', page);
   if (page === 'compounds') renderCompoundsTable();
   if (page === 'protocols') renderProtocolsPage();
+  if (page === 'builder') pbPopulateCompoundSelect();
   if (page === 'vitals') renderVitalsPage();
   if (page === 'bloodwork') renderBloodworkPage();
   if (page === 'physique') { renderPhysiquePage(); renderWeeklyCheckinSection(); hevyMeasAutoSync(); }
@@ -9589,6 +9590,34 @@ function pbAddNote() {
   renderProtocolLog();
 }
 
+function pbPopulateCompoundSelect() {
+  const select = document.getElementById('pb-add-select');
+  if (!select) return;
+
+  // Group compounds by category
+  const grouped = {};
+  COMPOUNDS.forEach(c => {
+    if (!grouped[c.cat]) grouped[c.cat] = [];
+    grouped[c.cat].push(c.name);
+  });
+
+  // Clear existing options but keep the default
+  select.innerHTML = '<option value="">Select to add...</option>';
+
+  // Add optgroups for each category
+  Object.keys(grouped).sort().forEach(cat => {
+    const optgroup = document.createElement('optgroup');
+    optgroup.label = cat;
+    grouped[cat].forEach(name => {
+      const option = document.createElement('option');
+      option.value = name;
+      option.textContent = name;
+      optgroup.appendChild(option);
+    });
+    select.appendChild(optgroup);
+  });
+}
+
 function pbRender() {
   const list = document.getElementById('pb-compounds-list');
   if (!list) return;
@@ -10360,6 +10389,9 @@ const COMPOUNDS = [
   { name: 'Oregano Oil', cat: 'Support (Digestion)', hl: '~24 hrs', dose: '1/day', ai: 'No', dht: 'No' },
   { name: 'Apple Cider Vinegar (ACV)', cat: 'Support (Digestion)', hl: '~3–4 hrs', dose: '2/day', ai: 'No', dht: 'No' },
 ];
+
+// Populate protocol builder compound dropdown on page load
+document.addEventListener('DOMContentLoaded', pbPopulateCompoundSelect);
 
 function renderCompoundsTable(filter='') {
   const tbody = document.getElementById('compounds-tbody');
