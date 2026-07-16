@@ -9753,28 +9753,28 @@ function pbFormatSiteRotation(sites) {
   return sites.join(' → ');
 }
 
-  function pbPopulateProtocolSitesSelect() {
-    const select = document.getElementById('pb-protocol-sites-multiselect');
-    select.innerHTML = INJECTION_SITES.map(site => 
-      `<option value="${site}">${site}</option>`
-    ).join('');
-    
-    // Pre-select existing sites
-    if (pbState.injectionSites && pbState.injectionSites.length > 0) {
-      Array.from(select.options).forEach(option => {
-        option.selected = pbState.injectionSites.includes(option.value);
-      });
-    }
-    pbUpdateProtocolSitesDisplay();
-  }
+function pbPopulateProtocolSitesSelect() {
+  const select = document.getElementById('pb-protocol-sites-multiselect');
+  select.innerHTML = INJECTION_SITES.map(site =>
+    `<option value="${site}">${site}</option>`
+  ).join('');
 
-  function pbUpdateProtocolSitesDisplay() {
-    const select = document.getElementById('pb-protocol-sites-multiselect');
-    const selected = Array.from(select.selectedOptions).map(o => o.value);
-    pbState.injectionSites = selected;
-    const display = document.getElementById('pb-protocol-sites-display');
-    display.textContent = selected.length ? selected.join(' → ') : 'None selected';
+  // Pre-select existing sites
+  if (pbState.injectionSites && pbState.injectionSites.length > 0) {
+    Array.from(select.options).forEach(option => {
+      option.selected = pbState.injectionSites.includes(option.value);
+    });
   }
+  pbUpdateProtocolSitesDisplay();
+}
+
+function pbUpdateProtocolSitesDisplay() {
+  const select = document.getElementById('pb-protocol-sites-multiselect');
+  const selected = Array.from(select.selectedOptions).map(o => o.value);
+  pbState.injectionSites = selected;
+  const display = document.getElementById('pb-protocol-sites-display');
+  display.textContent = selected.length ? selected.join(' → ') : 'None selected';
+}
 
 
 
