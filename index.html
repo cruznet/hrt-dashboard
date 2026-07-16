@@ -2573,18 +2573,20 @@ body {
                 </div>
               </div>
               <!-- Injection Site Rotation -->
-              <div class="form-group" style="margin-top:14px;">
-                <label class="form-label">
-                  <input type="checkbox" id="pb-custom-sites-checkbox" onchange="pbToggleCustomSites()" style="margin-right:6px;">
-                  Custom injection site rotation
-                </label>
-              </div>
-              <div id="pb-custom-sites-select" style="display:none;margin-bottom:14px;">
-                <label class="form-label">Select injection sites (minimum 2)</label>
-                <select class="form-select" id="pb-custom-sites-multiselect" multiple size="8" style="height:auto;overflow-y:auto;" onchange="pbUpdateCustomSitesDisplay();">
-                  <!-- Options filled by JavaScript -->
-                </select>
-                <div style="font-size:11px;color:var(--text-muted);margin-top:6px;">Currently selected: <span id="pb-custom-sites-display">None</span></div>
+              <div id="pb-custom-sites-container" style="display:none;">
+                <div class="form-group" style="margin-top:14px;">
+                  <label class="form-label">
+                    <input type="checkbox" id="pb-custom-sites-checkbox" onchange="pbToggleCustomSites()" style="margin-right:6px;">
+                    Custom injection site rotation
+                  </label>
+                </div>
+                <div id="pb-custom-sites-select" style="display:none;margin-bottom:14px;">
+                  <label class="form-label">Select injection sites (minimum 2)</label>
+                  <select class="form-select" id="pb-custom-sites-multiselect" multiple size="8" style="height:auto;overflow-y:auto;" onchange="pbUpdateCustomSitesDisplay();">
+                    <!-- Options filled by JavaScript -->
+                  </select>
+                  <div style="font-size:11px;color:var(--text-muted);margin-top:6px;">Currently selected: <span id="pb-custom-sites-display">None</span></div>
+                </div>
               </div>
               <!-- Weekday picker — hidden unless "Specific days…" chosen -->
               <div id="pb-day-picker" style="display:none;margin-bottom:10px;">
@@ -9085,6 +9087,47 @@ function pbGetCurrentFreq() {
   return sel;
 }
 
+function isInjectableCompound(compound) {
+  const cat = compound.cat || '';
+
+  // Non-injectable: explicit oral, support, or other oral-only compounds
+  if (cat.includes("Oral") ||
+      cat.includes("Support") ||
+      cat.includes("SARM") ||
+      cat.includes("GH Secretagogue") ||
+      cat.includes("Fat Loss") ||
+      cat.includes("Thyroid") ||
+      cat.includes("Research") ||
+      cat.includes("AI") ||
+      cat.includes("Insulin Sensitizer")) {
+    return false;
+  }
+
+  // Non-injectable: SERM (enclomiphene) - but HCG is injectable
+  if (cat.includes("SERM") && cat !== "SERM/LH Analog") {
+    return false;
+  }
+
+  // Special case: Endurance category (only EPO is injectable)
+  if (cat.includes("Endurance")) {
+    return compound.name.includes("EPO");
+  }
+
+  // Injectable: recognized injectable categories
+  if (cat.includes("AAS") ||
+      cat.includes("Peptide") ||
+      cat.includes("Growth Factor") ||
+      cat.includes("Insulin") ||
+      cat.includes("GLP-1") ||
+      cat.includes("GIP") ||
+      cat.includes("SERM/LH Analog")) {
+    return true;
+  }
+
+  // Default: not injectable if we don't recognize it
+  return false;
+}
+
 function pbOnCompoundSelect() {
   const name = document.getElementById('pb-add-select').value;
   if (!name) return;
@@ -9096,6 +9139,9 @@ function pbOnCompoundSelect() {
     const unitGuess = match.dose.includes('IU') ? 'IU' : match.dose.includes('mcg') ? 'mcg' : 'mg';
     if ([...unitEl.options].some(o => o.value === unitGuess)) unitEl.value = unitGuess;
   }
+  // Show/hide custom injection sites container based on whether compound is injectable
+  const isInjectable = isInjectableCompound(match);
+  document.getElementById('pb-custom-sites-container').style.display = isInjectable ? 'block' : 'none';
   // Reset custom sites form for next compound
   document.getElementById('pb-custom-sites-checkbox').checked = false;
   document.getElementById('pb-custom-sites-select').style.display = 'none';
