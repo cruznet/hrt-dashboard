@@ -9274,7 +9274,7 @@ function renderProtocolTimeline() {
 
     // Build continuous block spans from phases
     let spans = '';
-    let inBlock = false, blockStart = 0, blockDose = '', blockSite = '';
+    let inBlock = false, blockStart = 0, blockDose = '', blockSite = '', blockDoseDate = null;
     for (let wi = 0; wi < r.cells.length; wi++) {
       const v = r.cells[wi];
       if (v !== null && !inBlock) {
@@ -9284,14 +9284,15 @@ function renderProtocolTimeline() {
         // Calculate site for the first week of this block
         const weekNum = wi + 1;
         const doseDate = getDateForWeek(weekNum);
-        blockSite = doseDate && sites.length > 0 ? getSiteForDose(doseDate, sites) : '';
+        blockDoseDate = doseDate;
+        blockSite = doseDate && sites.length > 0 ? getSiteForDoseWithOverride(doseDate, r.name, pbState, sites) : '';
       }
       if ((v === null || wi === r.cells.length - 1) && inBlock) {
         const endIdx = v !== null ? wi : wi - 1;
         const leftPct  = (blockStart / totalWeeks) * 100;
         const widthPct = ((endIdx - blockStart + 1) / totalWeeks) * 100;
         const displayText = blockSite ? `${escHtml(blockDose)}${escHtml(r.unit)} (${escHtml(blockSite)})` : `${escHtml(blockDose)}${escHtml(r.unit)}`;
-        spans += `<div style="position:absolute;left:${leftPct.toFixed(2)}%;width:${widthPct.toFixed(2)}%;height:100%;background:${color};border-radius:4px;opacity:0.85;display:flex;align-items:center;justify-content:center;overflow:hidden;">
+        spans += `<div style="position:absolute;left:${leftPct.toFixed(2)}%;width:${widthPct.toFixed(2)}%;height:100%;background:${color};border-radius:4px;opacity:0.85;display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;" onclick="blockDoseDate && pbOpenSiteOverrideModal(blockDoseDate.toISOString().slice(0, 10), r.name, blockSite)">
           <span style="font-size:10px;font-family:var(--font-data);color:#000;font-weight:700;white-space:nowrap;padding:0 4px;">${displayText}</span>
         </div>`;
         inBlock = false;
@@ -10479,13 +10480,6 @@ const INJECTION_SITES = [
   'Right Biceps (Front of Arm)',
 ];
 
-function getSiteForDose(doseDate, sites) {
-  if (!sites || sites.length === 0) return '';
-  const date = typeof doseDate === 'string' ? new Date(doseDate) : doseDate;
-  const dayOfWeek = date.getDay();
-  const index = dayOfWeek % sites.length;
-  return sites[index];
-}
 
 function getSiteForDoseWithOverride(doseDate, compoundName, protocol, sites) {
   const dateStr = typeof doseDate === 'string' ? doseDate : doseDate.toISOString().slice(0, 10);
@@ -10494,7 +10488,7 @@ function getSiteForDoseWithOverride(doseDate, compoundName, protocol, sites) {
       protocol.injectionSiteOverrides[dateStr][compoundName]) {
     return protocol.injectionSiteOverrides[dateStr][compoundName];
   }
-  return getSiteForDose(doseDate, sites);
+  return getSiteForDoseWithOverride(doseDate, r.name, pbState, sites);
 }
 
 const COMPOUNDS = [
