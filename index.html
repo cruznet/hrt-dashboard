@@ -5124,7 +5124,7 @@ function renderDoseSchedule() {
   const compounds = protocol.compounds.map(raw => {
     const c    = normalizeCompound(raw);
     const dose = Array.isArray(raw.phases) ? currentPhaseDose(raw.phases, startDate) : c.dose;
-    return { name: c.name, dose, unit: c.unit, freq: c.freq, dueToday: isDueOnDate(c.freq, startDate, today) };
+    return { name: c.name, dose, unit: c.unit, freq: c.freq, dueToday: isDueOnDate(c.freq, startDate, today), original: raw };
   });
 
   // TODAY section
@@ -10481,6 +10481,14 @@ const INJECTION_SITES = [
 ];
 
 
+function getSiteForDose(doseDate, sites) {
+  if (!sites || sites.length === 0) return '';
+  const date = typeof doseDate === 'string' ? new Date(doseDate) : doseDate;
+  const dayOfWeek = date.getDay();
+  const index = dayOfWeek % sites.length;
+  return sites[index];
+}
+
 function getSiteForDoseWithOverride(doseDate, compoundName, protocol, sites) {
   const dateStr = typeof doseDate === 'string' ? doseDate : doseDate.toISOString().slice(0, 10);
   if (protocol.injectionSiteOverrides && 
@@ -10488,7 +10496,7 @@ function getSiteForDoseWithOverride(doseDate, compoundName, protocol, sites) {
       protocol.injectionSiteOverrides[dateStr][compoundName]) {
     return protocol.injectionSiteOverrides[dateStr][compoundName];
   }
-  return getSiteForDoseWithOverride(doseDate, r.name, pbState, sites);
+  return getSiteForDose(doseDate, sites);
 }
 
 const COMPOUNDS = [
