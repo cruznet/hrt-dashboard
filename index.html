@@ -3993,8 +3993,13 @@ async function loadUserData() {
     // Restore all user settings from Supabase (Supabase wins on load)
     const settings = settingsRes.data;
     if (settings) {
-      if (Array.isArray(settings.protocols) && settings.protocols.length)
+      if (Array.isArray(settings.protocols) && settings.protocols.length) {
+        settings.protocols.forEach(p => {
+          if (!p.injectionSites) p.injectionSites = [];
+          if (!p.injectionSiteOverrides) p.injectionSiteOverrides = {};
+        });
         localStorage.setItem('hrt_protocols', JSON.stringify(settings.protocols));
+      }
       if (settings.active_protocol_key)
         localStorage.setItem('hrt_active_protocol', settings.active_protocol_key);
       if (settings.active_protocol_data)
@@ -9082,7 +9087,8 @@ function pbAddCompound() {
     cat: match?.cat || '',
     unit,
     freq,
-    phases: [{ startWeek, endWeek, dose }]
+    phases: [{ startWeek, endWeek, dose }],
+    customInjectionSites: null,
   });
   // Log addition if protocol is active
   if (pbState.status === 'active') {
@@ -10242,7 +10248,7 @@ function pbExportJson() {
 }
 
 function pbReset() {
-  pbState = { name:'', phase:'cruise', cycleLengthWeeks:16, startDate:'', status:'planning', exp:'intermediate', notes:'', compounds:[], modificationLog:[] };
+  pbState = { name:'', phase:'cruise', cycleLengthWeeks:16, startDate:'', status:'planning', exp:'intermediate', notes:'', compounds:[], modificationLog:[], injectionSites: [], injectionSiteOverrides: {} };
   pbEditIndex = -1;
   pbRender();
 }
