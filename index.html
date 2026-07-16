@@ -2448,9 +2448,9 @@ body {
               <div class="card-title">Injection Site Rotation</div>
               <div class="form-group">
                 <label class="form-label">Select injection sites (minimum 2)</label>
-                <select class="form-select" id="pb-protocol-sites-multiselect" multiple size="8" style="height:auto;overflow-y:auto;" onchange="pbUpdateProtocolSitesDisplay();">
-                  <!-- Options filled by JavaScript -->
-                </select>
+                <div id="pb-protocol-sites-checkboxes" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+                  <!-- Checkboxes filled by JavaScript -->
+                </div>
                 <div style="font-size:11px;color:var(--text-muted);margin-top:6px;">Rotation: <span id="pb-protocol-sites-display">None selected</span></div>
               </div>
             </div>
@@ -4738,7 +4738,7 @@ function nav(page) {
   localStorage.setItem('hrt_active_page', page);
   if (page === 'compounds') renderCompoundsTable();
   if (page === 'protocols') renderProtocolsPage();
-  if (page === 'builder') { pbPopulateCompoundSelect(); pbPopulateProtocolSitesSelect(); }
+  if (page === 'builder') { pbPopulateCompoundSelect(); pbPopulateProtocolSitesCheckboxes(); }
   if (page === 'vitals') renderVitalsPage();
   if (page === 'bloodwork') renderBloodworkPage();
   if (page === 'physique') { renderPhysiquePage(); renderWeeklyCheckinSection(); hevyMeasAutoSync(); }
@@ -9051,7 +9051,7 @@ function pbSwitchTab(tab) {
     document.getElementById(`pb-tab-${t}`).classList.toggle('pb-tab-active', t === tab);
   });
   if (tab === 'builder') {
-    setTimeout(pbPopulateProtocolSitesSelect, 50);
+    setTimeout(pbPopulateProtocolSitesCheckboxes, 50);
   }
   if (tab === 'timeline') renderProtocolTimeline();
   if (tab === 'log')      renderProtocolLog();
@@ -9753,24 +9753,30 @@ function pbFormatSiteRotation(sites) {
   return sites.join(' → ');
 }
 
-function pbPopulateProtocolSitesSelect() {
-  const select = document.getElementById('pb-protocol-sites-multiselect');
-  select.innerHTML = INJECTION_SITES.map(site =>
-    `<option value="${site}">${site}</option>`
+function pbPopulateProtocolSitesCheckboxes() {
+  const container = document.getElementById('pb-protocol-sites-checkboxes');
+  container.innerHTML = INJECTION_SITES.map((site, i) =>
+    `<div style="display:flex;align-items:center;">
+      <input type="checkbox" id="site-${i}" value="${site}" onchange="pbUpdateProtocolSitesDisplay();">
+      <label for="site-${i}" style="margin-left:6px;cursor:pointer;font-size:12px;">${site}</label>
+    </div>`
   ).join('');
 
   // Pre-select existing sites
   if (pbState.injectionSites && pbState.injectionSites.length > 0) {
-    Array.from(select.options).forEach(option => {
-      option.selected = pbState.injectionSites.includes(option.value);
+    INJECTION_SITES.forEach((site, i) => {
+      const checkbox = document.getElementById(`site-${i}`);
+      if (checkbox) {
+        checkbox.checked = pbState.injectionSites.includes(site);
+      }
     });
   }
   pbUpdateProtocolSitesDisplay();
 }
 
 function pbUpdateProtocolSitesDisplay() {
-  const select = document.getElementById('pb-protocol-sites-multiselect');
-  const selected = Array.from(select.selectedOptions).map(o => o.value);
+  const checkboxes = document.querySelectorAll('#pb-protocol-sites-checkboxes input[type="checkbox"]:checked');
+  const selected = Array.from(checkboxes).map(cb => cb.value);
   pbState.injectionSites = selected;
   const display = document.getElementById('pb-protocol-sites-display');
   display.textContent = selected.length ? selected.join(' → ') : 'None selected';
