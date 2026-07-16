@@ -129,6 +129,25 @@ function hevyMergeRawMeasurements(rawEntries, existingList) {
 
   return { list, added, updated };
 }
+
+// ── Injection site rotation helpers ──────────────────────────────────────────────
+function getSiteForDose(doseDate, sites) {
+  if (!sites || sites.length === 0) return '';
+  const date = typeof doseDate === 'string' ? new Date(doseDate) : doseDate;
+  const dayOfWeek = date.getDay();
+  const index = dayOfWeek % sites.length;
+  return sites[index];
+}
+
+function getSiteForDoseWithOverride(doseDate, compoundName, protocol, sites) {
+  const dateStr = typeof doseDate === 'string' ? doseDate : doseDate.toISOString().slice(0, 10);
+  if (protocol.injectionSiteOverrides &&
+      protocol.injectionSiteOverrides[dateStr] &&
+      protocol.injectionSiteOverrides[dateStr][compoundName]) {
+    return protocol.injectionSiteOverrides[dateStr][compoundName];
+  }
+  return getSiteForDose(doseDate, sites);
+}
 </script>
 
 <!-- ── Tests ──────────────────────────────────────────────────────────────── -->
@@ -361,6 +380,70 @@ section('getSiteForDoseWithOverride — falls back to rotation when no override'
 assert('No override for date → use getSiteForDose',
   getSiteForDoseWithOverride(new Date('2026-07-15'), 'TestCompound', protocol, ['Site A', 'Site B']),
   'Site A');
+
+// ─────────────────────────────────────────────────────────────────────────────
+section('Integration: Injection site rotation full protocol cycle');
+
+// Test E compound uses protocol rotation
+const testProtocol = {
+  name: 'Test Protocol',
+  cycleLengthWeeks: 8,
+  injectionSites: ['Left VG', 'Right VG', 'Left Glute', 'Right Glute'],
+  injectionSiteOverrides: {},
+  compounds: [
+    {
+      name: 'Test E',
+      freq: 'E3.5D',
+      unit: 'mg',
+      customInjectionSites: null // uses protocol sites
+    },
+    {
+      name: 'TNE',
+      freq: 'ED',
+      unit: 'mg',
+      customInjectionSites: ['Left Deltoid', 'Right Deltoid'] // custom
+    }
+  ]
+};
+
+// Test E uses protocol rotation
+const testESites = testProtocol.injectionSites;
+const sun = new Date('2026-07-13'); // Sunday
+const mon = new Date('2026-07-14'); // Monday
+const tue = new Date('2026-07-15'); // Tuesday
+const wed = new Date('2026-07-16'); // Wednesday
+
+assert('Test E on Sunday (day 0): Left VG',
+  getSiteForDose(sun, testESites), 'Left VG');
+assert('Test E on Monday (day 1): Right VG',
+  getSiteForDose(mon, testESites), 'Right VG');
+assert('Test E on Tuesday (day 2): Left Glute',
+  getSiteForDose(tue, testESites), 'Left Glute');
+assert('Test E on Wednesday (day 3): Right Glute',
+  getSiteForDose(wed, testESites), 'Right Glute');
+
+// TNE uses custom rotation (2 sites)
+const tneSites = testProtocol.compounds[1].customInjectionSites;
+assert('TNE on Sunday (day 0): Left Deltoid',
+  getSiteForDose(sun, tneSites), 'Left Deltoid');
+assert('TNE on Monday (day 1): Right Deltoid',
+  getSiteForDose(mon, tneSites), 'Right Deltoid');
+
+// Test override on Test E
+testProtocol.injectionSiteOverrides['2026-07-14'] = {
+  'Test E': 'Right Glute' // override Monday from Right VG → Right Glute
+};
+
+assert('Test E with override on Monday: Right Glute (not Right VG)',
+  getSiteForDoseWithOverride(mon, 'Test E', testProtocol, testESites), 'Right Glute');
+
+// TNE should not have override on that date
+assert('TNE on Monday without override: Right Deltoid (normal rotation)',
+  getSiteForDoseWithOverride(mon, 'TNE', testProtocol, tneSites), 'Right Deltoid');
+
+// Different date without override should use normal rotation
+assert('Test E on Tuesday without override: Left Glute (normal rotation)',
+  getSiteForDoseWithOverride(tue, 'Test E', testProtocol, testESites), 'Left Glute');
 
 // ─────────────────────────────────────────────────────────────────────────────
 document.getElementById('summary').innerHTML =

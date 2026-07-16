@@ -36,7 +36,14 @@ deploy. Open the browser console and keep an eye on it throughout.
     Check-Ins section and the Dashboard's check-in nudge card are both
     hidden. Set an Active Competition and confirm both appear.
 13. **Hevy daily cron sync** (only after touching `worker.js`'s `scheduled()` handler or the Hevy sync functions) — run `npx wrangler dev --test-scheduled`, then `curl "http://localhost:8787/__scheduled?cron=0+9+*+*+*"`; confirm the terminal logs `[hevyCron] syncing N user(s)` with no failures for a test user with a valid Hevy key.
-14. **Console check** — confirm no red errors logged during steps 2-13.
+14. **Injection site rotation** — In Protocol Builder, create a protocol with 4+ sites. Add a compound and verify:
+    - Protocol sites display in Compounds card (e.g., "Sites: Left VG → Right VG → Left Glute → Right Glute")
+    - Timeline tab shows different sites for different days (day-of-week rotation)
+    - Dashboard dose log shows site next to today's doses (e.g., "Test E 500mg (Left VG)")
+    - Click a dose to open override modal; select different site; save; verify it shows the override
+    - Reload page; override persists
+    - Add a second compound with custom sites; verify it rotates independently
+15. **Console check** — confirm no red errors logged during steps 2-14.
 
 If anything fails, stop and fix before deploying — don't ship on top of a
 broken auth-gated path.

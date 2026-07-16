@@ -2683,6 +2683,24 @@ body {
         </div>
       </div>
     </section>
+      <!-- ── Site Override Modal ── -->
+      <div id="pb-site-override-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center;">
+        <div class="card" style="width:360px;max-width:90vw;">
+          <div class="card-title">Override Injection Site</div>
+          <p id="pb-site-override-info" style="font-size:13px;color:var(--text-secondary);margin-bottom:14px;"></p>
+          <div class="form-group">
+            <label class="form-label">Select different site for this dose only</label>
+            <select class="form-select" id="pb-site-override-select">
+              <!-- Options populated by JavaScript -->
+            </select>
+          </div>
+          <div style="display:flex;gap:10px;">
+            <button class="btn-secondary" onclick="document.getElementById('pb-site-override-modal').style.display='none';" style="flex:1;">Cancel</button>
+            <button class="btn-primary" onclick="pbSaveSiteOverride();" style="flex:1;">Save Override</button>
+          </div>
+        </div>
+      </div>
+
 
     <!-- ── COMPOUNDS PAGE ── -->
     <section class="page" id="page-compounds">
@@ -4720,7 +4738,7 @@ function nav(page) {
   localStorage.setItem('hrt_active_page', page);
   if (page === 'compounds') renderCompoundsTable();
   if (page === 'protocols') renderProtocolsPage();
-  if (page === 'builder') pbPopulateCompoundSelect();
+  if (page === 'builder') { pbPopulateCompoundSelect(); pbPopulateProtocolSitesSelect(); }
   if (page === 'vitals') renderVitalsPage();
   if (page === 'bloodwork') renderBloodworkPage();
   if (page === 'physique') { renderPhysiquePage(); renderWeeklyCheckinSection(); hevyMeasAutoSync(); }
@@ -9754,6 +9772,61 @@ function pbFormatSiteRotation(sites) {
     display.textContent = selected.length ? selected.join(' → ') : 'None selected';
   }
 
+
+
+let _siteOverrideContext = null; // { doseDate, compoundName, currentSite }
+
+function pbOpenSiteOverrideModal(doseDate, compoundName, currentSite) {
+  _siteOverrideContext = { doseDate, compoundName, currentSite };
+  
+  const compound = pbState.compounds.find(c => c.name === compoundName);
+  if (!compound) return;
+  
+  const sitesForCompound = pbGetCompoundSites(compound);
+  
+  // Format the date for display
+  let dateDisplay = doseDate;
+  if (doseDate instanceof Date) {
+    dateDisplay = doseDate.toISOString().slice(0, 10);
+  }
+  
+  document.getElementById('pb-site-override-info').textContent = 
+    `${compoundName} on ${dateDisplay} — currently: ${currentSite || '(not yet determined)'}`;
+  
+  const select = document.getElementById('pb-site-override-select');
+  select.innerHTML = INJECTION_SITES.map(site => 
+    `<option value="${site}" ${site === currentSite ? 'selected' : ''}>${site}</option>`
+  ).join('');
+  
+  document.getElementById('pb-site-override-modal').style.display = 'flex';
+}
+
+function pbSaveSiteOverride() {
+  if (!_siteOverrideContext) return;
+  
+  const select = document.getElementById('pb-site-override-select');
+  const newSite = select.value;
+  
+  if (!pbState.injectionSiteOverrides) {
+    pbState.injectionSiteOverrides = {};
+  }
+  
+  // Format the date as YYYY-MM-DD
+  let dateKey = _siteOverrideContext.doseDate;
+  if (dateKey instanceof Date) {
+    dateKey = dateKey.toISOString().slice(0, 10);
+  }
+  
+  if (!pbState.injectionSiteOverrides[dateKey]) {
+    pbState.injectionSiteOverrides[dateKey] = {};
+  }
+  
+  pbState.injectionSiteOverrides[dateKey][_siteOverrideContext.compoundName] = newSite;
+  
+  document.getElementById('pb-site-override-modal').style.display = 'none';
+  pbRender();
+  syncProtocolsToSupabase();
+}
 
 function pbRender() {
   const list = document.getElementById('pb-compounds-list');
