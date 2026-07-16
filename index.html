@@ -5143,9 +5143,14 @@ function renderDoseSchedule() {
       const rowStyle  = isChecked ? 'text-decoration:line-through;opacity:0.6;' : '';
       const safeName  = c.name.replace(/'/g, "\\'");
       const safeUnit  = (c.unit || '').replace(/'/g, "\\'");
-      const sitesForCompound = pbGetCompoundSites(c.original);
-      const site = getSiteForDoseWithOverride(todayStr, c.name, protocol, sitesForCompound);
-      const siteLabel = site ? ` (${site})` : '';
+      const match = COMPOUNDS.find(comp => comp.name === c.name);
+      const isInjectable = match ? isInjectableCompound(match) : false;
+      let siteLabel = '';
+      if (isInjectable) {
+        const sitesForCompound = pbGetCompoundSites(c.original);
+        const site = getSiteForDoseWithOverride(todayStr, c.name, protocol, sitesForCompound);
+        siteLabel = site ? ` (${site})` : '';
+      }
       html += `<label class="dose-row${isChecked ? ' dose-done' : ''}"><input type="checkbox" class="dose-cb-styled" ${isChecked ? 'checked' : ''} onchange="const _l=this.closest('label');_l.classList.toggle('dose-done',this.checked);_l.classList.add('dose-pulse');setTimeout(()=>_l.classList.remove('dose-pulse'),300);this.checked?checkDose('${safeName}',${c.dose ?? 0},'${safeUnit}','${todayStr}'):uncheckDose('${safeName}','${todayStr}')"><span class="dose-name" style="flex:1;font-size:13px;">${escHtml(trunc(c.name))}</span><span style="color:var(--text-muted);font-family:var(--font-data);font-size:12px;white-space:nowrap;">${escHtml(String(c.dose ?? ''))}${escHtml(c.unit)}${escHtml(siteLabel)}</span></label>`;
     }
   }
@@ -9320,7 +9325,9 @@ function renderProtocolTimeline() {
   const ganttRows = rows.map((r, i) => {
     const color = COLORS[i % COLORS.length];
     const freqLabel = Array.isArray(r.freq) ? r.freq.join(', ') : r.freq;
-    const sites = pbGetCompoundSites(r.compound);
+    const match = COMPOUNDS.find(comp => comp.name === r.name);
+    const isInjectable = match ? isInjectableCompound(match) : false;
+    const sites = isInjectable ? pbGetCompoundSites(r.compound) : [];
 
     // Build continuous block spans from phases
     let spans = '';
@@ -9335,7 +9342,7 @@ function renderProtocolTimeline() {
         const weekNum = wi + 1;
         const doseDate = getDateForWeek(weekNum);
         blockDoseDate = doseDate;
-        blockSite = doseDate && sites.length > 0 ? getSiteForDoseWithOverride(doseDate, r.name, pbState, sites) : '';
+        blockSite = isInjectable && doseDate && sites.length > 0 ? getSiteForDoseWithOverride(doseDate, r.name, pbState, sites) : '';
       }
       if ((v === null || wi === r.cells.length - 1) && inBlock) {
         const endIdx = v !== null ? wi : wi - 1;
@@ -9907,8 +9914,10 @@ function pbRender() {
         ${c.phases.length > 1 ? `<button onclick="pbRemovePhase(${ci},${pi})" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;padding:0;">×</button>` : ''}
       </div>`;
     }).join('');
-    const sitesDisplay = pbGetCompoundSites(c);
-    const siteRotation = sitesDisplay.length > 0 ? `Sites: ${pbFormatSiteRotation(sitesDisplay)}` : '';
+    const match = COMPOUNDS.find(comp => comp.name === c.name);
+    const isInjectable = match ? isInjectableCompound(match) : false;
+    const sitesDisplay = isInjectable ? pbGetCompoundSites(c) : [];
+    const siteRotation = isInjectable && sitesDisplay.length > 0 ? `Sites: ${pbFormatSiteRotation(sitesDisplay)}` : '';
     return `<div style="border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:10px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
         <div>
