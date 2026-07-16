@@ -2704,46 +2704,6 @@ body {
       </div>
 
       <!-- ── Quick Edit Protocol Modal ── -->
-      <div id="pb-edit-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center;overflow-y:auto;padding:16px;">
-        <div class="card" style="width:500px;max-width:90vw;margin:auto;">
-          <div class="card-title">Edit Protocol</div>
-
-          <!-- Protocol Name -->
-          <div class="form-group">
-            <label class="form-label">Protocol Name</label>
-            <input type="text" class="form-input" id="pb-edit-name" placeholder="e.g. Summer Lean Bulk 2026">
-          </div>
-
-          <!-- Notes -->
-          <div class="form-group">
-            <label class="form-label">Notes</label>
-            <textarea class="form-input" id="pb-edit-notes" rows="3" placeholder="Protocol notes and observations..." style="resize:vertical;"></textarea>
-          </div>
-
-          <!-- Injection Sites -->
-          <div class="form-group">
-            <label class="form-label">Injection Site Rotation</label>
-            <div id="pb-edit-sites-checkboxes" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;max-height:200px;overflow-y:auto;padding:8px;border:1px solid var(--border);border-radius:6px;">
-              <!-- Checkboxes filled by JavaScript -->
-            </div>
-            <div style="font-size:11px;color:var(--text-muted);margin-top:6px;">Rotation: <span id="pb-edit-sites-display">None selected</span></div>
-          </div>
-
-          <!-- Current Compounds (read-only) -->
-          <div class="form-group">
-            <label class="form-label">Compounds in Protocol</label>
-            <div id="pb-edit-compounds-list" style="max-height:150px;overflow-y:auto;border:1px solid var(--border);border-radius:6px;padding:8px;background:rgba(255,255,255,0.02);">
-              <!-- List filled by JavaScript -->
-            </div>
-          </div>
-
-          <!-- Buttons -->
-          <div style="display:flex;gap:8px;margin-top:16px;">
-            <button class="btn-primary" style="flex:1;" onclick="pbSaveQuickEdit()">Save Changes</button>
-            <button class="btn-secondary" style="flex:1;" onclick="pbCloseEditModal()">Cancel</button>
-          </div>
-        </div>
-      </div>
 
     <!-- ── COMPOUNDS PAGE ── -->
     <section class="page" id="page-compounds">
@@ -10400,118 +10360,58 @@ function deleteProtocol(index) {
 // Index of protocol being edited (-1 = new)
 let pbEditIndex = -1;
 
-// Index of protocol being quick-edited via modal (-1 = none)
-let pbEditQuickIndex = -1;
-
 function editProtocol(index) {
   const saved = lsGet('hrt_protocols', []).map(normalizeProtocol);
   const p = saved[index];
   if (!p) return;
 
-  // Open the quick edit modal instead of navigating to the full builder
-  pbOpenEditModal(index, p);
+  // Load protocol into builder for full editing experience
+  pbLoadProtocolToEdit(index, p);
 }
 
-function pbOpenEditModal(index, protocol) {
-  pbEditQuickIndex = index;
+// Load an existing protocol into the Protocol Builder for full editing
+function pbLoadProtocolToEdit(index, protocol) {
+  pbEditIndex = index;
 
-  // Populate name and notes
-  document.getElementById('pb-edit-name').value = protocol.name || '';
-  document.getElementById('pb-edit-notes').value = protocol.notes || '';
+  // Load protocol data into pbState
+  pbState = {
+    name: protocol.name || '',
+    phase: protocol.phase || 'cruise',
+    cycleLengthWeeks: protocol.cycleLengthWeeks || 16,
+    startDate: protocol.startDate || '',
+    status: protocol.status || 'planning',
+    exp: protocol.exp || 'intermediate',
+    notes: protocol.notes || '',
+    compounds: (protocol.compounds || []).map(c => ({
+      name: c.name,
+      unit: c.unit || 'mg',
+      freq: c.freq || 'Weekly',
+      phases: c.phases || [],
+      customInjectionSites: c.customInjectionSites || false,
+      injectionSiteOverride: c.injectionSiteOverride || []
+    })),
+    modificationLog: protocol.modificationLog || [],
+    injectionSites: protocol.injectionSites || [],
+    injectionSiteOverrides: protocol.injectionSiteOverrides || {}
+  };
 
-  // Populate compounds list (read-only)
-  const compoundsList = document.getElementById('pb-edit-compounds-list');
-  if (protocol.compounds && protocol.compounds.length > 0) {
-    compoundsList.innerHTML = protocol.compounds.map(c => {
-      const freq = Array.isArray(c.freq) ? c.freq.join(', ') : c.freq;
-      return `<div style="font-size:12px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
-        <span style="font-weight:500;">${escHtml(c.name)}</span>
-        <span style="color:var(--text-muted);margin-left:8px;">${escHtml(String(c.dose))}${escHtml(c.unit)} ${escHtml(freq)}</span>
-      </div>`;
-    }).join('');
-  } else {
-    compoundsList.innerHTML = '<div style="font-size:12px;color:var(--text-muted);">No compounds added</div>';
-  }
+  // Populate form fields with protocol data
+  document.getElementById('pb-name').value = pbState.name;
+  document.getElementById('pb-phase').value = pbState.phase;
+  document.getElementById('pb-cycle-weeks').value = pbState.cycleLengthWeeks;
+  document.getElementById('pb-cycle-start-date').value = pbState.startDate;
+  document.getElementById('pb-cycle-status').value = pbState.status;
+  document.getElementById('pb-exp').value = pbState.exp;
+  document.getElementById('pb-notes').value = pbState.notes;
 
-  // Populate injection sites checkboxes
-  pbPopulateEditSitesCheckboxes(protocol.injectionSites || []);
+  // Re-render the compounds list with full builder UI
+  pbRender();
 
-  // Show the modal
-  document.getElementById('pb-edit-modal').style.display = 'flex';
-}
+  // Navigate to builder page
+  nav('builder');
 
-function pbPopulateEditSitesCheckboxes(selectedSites) {
-  const container = document.getElementById('pb-edit-sites-checkboxes');
-  container.innerHTML = INJECTION_SITES.map((site, i) =>
-    `<div style="display:flex;align-items:center;">
-      <input type="checkbox" id="pb-edit-site-${i}" value="${site}" onchange="pbUpdateEditSitesDisplay();">
-      <label for="pb-edit-site-${i}" style="margin-left:6px;cursor:pointer;font-size:12px;">${site}</label>
-    </div>`
-  ).join('');
-
-  // Pre-select existing sites
-  if (selectedSites && selectedSites.length > 0) {
-    INJECTION_SITES.forEach((site, i) => {
-      const checkbox = document.getElementById(`pb-edit-site-${i}`);
-      if (checkbox) {
-        checkbox.checked = selectedSites.includes(site);
-      }
-    });
-  }
-  pbUpdateEditSitesDisplay();
-}
-
-function pbUpdateEditSitesDisplay() {
-  const checkboxes = document.querySelectorAll('#pb-edit-sites-checkboxes input[type="checkbox"]:checked');
-  const selected = Array.from(checkboxes).map(cb => cb.value);
-  const display = document.getElementById('pb-edit-sites-display');
-  display.textContent = selected.length ? selected.join(' → ') : 'None selected';
-}
-
-function pbSaveQuickEdit() {
-  if (pbEditQuickIndex < 0) return;
-
-  const saved = lsGet('hrt_protocols', []);
-  if (pbEditQuickIndex >= saved.length) {
-    showToast('Protocol not found', 'error');
-    pbCloseEditModal();
-    return;
-  }
-
-  const protocol = normalizeProtocol(saved[pbEditQuickIndex]);
-
-  // Update only the editable fields
-  protocol.name = document.getElementById('pb-edit-name').value || protocol.name || 'Untitled Protocol';
-  protocol.notes = document.getElementById('pb-edit-notes').value || '';
-
-  // Get selected injection sites
-  const checkboxes = document.querySelectorAll('#pb-edit-sites-checkboxes input[type="checkbox"]:checked');
-  protocol.injectionSites = Array.from(checkboxes).map(cb => cb.value);
-
-  // Preserve all other fields (compounds, phases, doses, start date, status, etc.)
-  // They are already in the protocol object from normalizeProtocol
-
-  // Update the protocol in localStorage
-  saved[pbEditQuickIndex] = protocol;
-  localStorage.setItem('hrt_protocols', JSON.stringify(saved));
-
-  // Refresh active protocol data if this one is active
-  const active = localStorage.getItem('hrt_active_protocol');
-  if (active === protocol.saved_at) {
-    localStorage.setItem('hrt_active_protocol_data', JSON.stringify(protocol));
-    renderUpcoming();
-  }
-
-  syncProtocolsToSupabase();
-  renderProtocolsPage();
-
-  showToast(`Protocol "${protocol.name}" updated successfully`, 'success');
-  pbCloseEditModal();
-}
-
-function pbCloseEditModal() {
-  document.getElementById('pb-edit-modal').style.display = 'none';
-  pbEditQuickIndex = -1;
+  // Show confirmation toast
+  showToast(`Editing protocol "${protocol.name}" — make changes and save`, 'info');
 }
 
 function _pbDoSave() {
