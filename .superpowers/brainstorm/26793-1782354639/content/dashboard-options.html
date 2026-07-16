@@ -1,0 +1,154 @@
+<h2>Dashboard Redesign Options</h2>
+<p class="subtitle">All focused on "what do I need to do today" + protocol/cycle status. Pick the layout that feels right.</p>
+
+<div class="cards">
+
+  <!-- Option A -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="font-family:monospace;font-size:11px;line-height:1.6;color:#94a3b8;background:#0f1117;padding:12px;border-radius:6px;">
+        <div style="color:#6366f1;font-weight:700;margin-bottom:6px;">── TODAY ─────────────────────</div>
+        <div style="display:flex;gap:8px;margin-bottom:8px;">
+          <div style="flex:1;background:#1e2130;padding:8px;border-radius:4px;border-left:3px solid #10b981;">
+            <div style="color:#10b981;font-size:10px;font-weight:700;">DUE TODAY</div>
+            <div style="color:#f1f5f9;margin-top:2px;">Test E · 250mg</div>
+            <div style="color:#f1f5f9;">Primo · 200mg</div>
+          </div>
+          <div style="flex:1;background:#1e2130;padding:8px;border-radius:4px;border-left:3px solid #fbbf24;">
+            <div style="color:#fbbf24;font-size:10px;font-weight:700;">UPCOMING</div>
+            <div style="color:#94a3b8;margin-top:2px;">Anavar starts Wk 9</div>
+            <div style="color:#94a3b8;">Taper begins Wk 12</div>
+          </div>
+        </div>
+        <div style="color:#6366f1;font-weight:700;margin-bottom:6px;">── CYCLE ─────────────────────</div>
+        <div style="background:#1e2130;padding:8px;border-radius:4px;">
+          <div style="display:flex;justify-content:space-between;color:#f1f5f9;font-size:11px;margin-bottom:4px;">
+            <span>Summer Cut 12wk</span><span style="color:#6366f1;">Week 7 of 12 · 58%</span>
+          </div>
+          <div style="height:4px;background:#2d3148;border-radius:2px;">
+            <div style="width:58%;height:4px;background:#6366f1;border-radius:2px;"></div>
+          </div>
+          <div style="color:#14b8a6;font-size:10px;margin-top:4px;">Steady state 82%</div>
+        </div>
+        <div style="margin-top:6px;display:flex;gap:6px;">
+          <div style="flex:1;background:#1e2130;padding:6px;border-radius:4px;text-align:center;">
+            <div style="font-size:10px;color:#94a3b8;">WEIGHT</div>
+            <div style="color:#f1f5f9;">194 lbs</div>
+          </div>
+          <div style="flex:1;background:#1e2130;padding:6px;border-radius:4px;text-align:center;">
+            <div style="font-size:10px;color:#94a3b8;">BP</div>
+            <div style="color:#f1f5f9;">118/76</div>
+          </div>
+          <div style="flex:1;background:#1e2130;padding:6px;border-radius:4px;text-align:center;">
+            <div style="font-size:10px;color:#94a3b8;">GLUCOSE</div>
+            <div style="color:#f1f5f9;">94 mg/dL</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Today First</h3>
+      <p>A dedicated "Today" banner at the top shows injections due now and upcoming changes. Cycle progress and vitals sit below. The daily action is the hero.</p>
+    </div>
+  </div>
+
+  <!-- Option B -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="font-family:monospace;font-size:11px;line-height:1.6;color:#94a3b8;background:#0f1117;padding:12px;border-radius:6px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px;">
+          <div style="background:#1e2130;padding:8px;border-radius:4px;border:1px solid #10b981;">
+            <div style="color:#6366f1;font-size:10px;font-weight:700;">CYCLE · WK 7 OF 12</div>
+            <div style="height:3px;background:#2d3148;border-radius:2px;margin:4px 0;">
+              <div style="width:58%;height:3px;background:#6366f1;border-radius:2px;"></div>
+            </div>
+            <div style="color:#10b981;font-size:10px;margin-top:4px;">● Test E due today</div>
+            <div style="color:#10b981;font-size:10px;">● Primo due today</div>
+            <div style="color:#94a3b8;font-size:10px;">Next: HGH tomorrow</div>
+          </div>
+          <div style="background:#1e2130;padding:8px;border-radius:4px;">
+            <div style="color:#6366f1;font-size:10px;font-weight:700;">VITALS</div>
+            <div style="display:flex;justify-content:space-between;margin-top:4px;">
+              <span style="color:#94a3b8;font-size:10px;">Weight</span><span style="color:#f1f5f9;font-size:10px;">194 lbs ↓1.2</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;">
+              <span style="color:#94a3b8;font-size:10px;">BP</span><span style="color:#f1f5f9;font-size:10px;">118/76</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;">
+              <span style="color:#94a3b8;font-size:10px;">Glucose</span><span style="color:#f1f5f9;font-size:10px;">94 mg/dL</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;">
+              <span style="color:#94a3b8;font-size:10px;">Mood</span><span style="color:#f1f5f9;font-size:10px;">7/10 ↑</span>
+            </div>
+          </div>
+        </div>
+        <div style="background:#1e2130;padding:8px;border-radius:4px;">
+          <div style="color:#6366f1;font-size:10px;font-weight:700;margin-bottom:4px;">LOG STREAK · 12 DAYS &nbsp;🔥&nbsp; MOOD/ENERGY</div>
+          <div style="display:flex;gap:2px;align-items:flex-end;height:18px;">
+            <div style="width:8px;height:14px;background:#6366f1;border-radius:2px;opacity:.5;"></div>
+            <div style="width:8px;height:10px;background:#6366f1;border-radius:2px;opacity:.6;"></div>
+            <div style="width:8px;height:16px;background:#6366f1;border-radius:2px;opacity:.7;"></div>
+            <div style="width:8px;height:12px;background:#6366f1;border-radius:2px;opacity:.8;"></div>
+            <div style="width:8px;height:18px;background:#6366f1;border-radius:2px;opacity:1;"></div>
+            <div style="width:8px;height:14px;background:#10b981;border-radius:2px;opacity:.7;"></div>
+            <div style="width:8px;height:18px;background:#10b981;border-radius:2px;opacity:1;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — Two Panels, Equal Weight</h3>
+      <p>Cycle status and vitals side-by-side at the top. Due-today injections live inside the cycle panel. A compact log streak + mood bar anchors the bottom.</p>
+    </div>
+  </div>
+
+  <!-- Option C -->
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="font-family:monospace;font-size:11px;line-height:1.6;color:#94a3b8;background:#0f1117;padding:12px;border-radius:6px;">
+        <div style="background:#1e2130;padding:10px;border-radius:4px;border-left:4px solid #6366f1;margin-bottom:6px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="color:#f1f5f9;font-weight:700;">Summer Cut 12wk</span>
+            <span style="color:#6366f1;font-size:10px;">WK 7 / 12</span>
+          </div>
+          <div style="height:6px;background:#2d3148;border-radius:3px;margin:6px 0;">
+            <div style="width:58%;height:6px;background:linear-gradient(90deg,#6366f1,#14b8a6);border-radius:3px;"></div>
+          </div>
+          <div style="display:flex;gap:12px;font-size:10px;margin-top:2px;">
+            <span>Wk 1 ●————————●————●— Wk 12</span>
+          </div>
+          <div style="margin-top:6px;padding-top:6px;border-top:1px solid #2d3148;">
+            <div style="color:#10b981;font-weight:700;font-size:10px;">TODAY'S INJECTIONS</div>
+            <div style="color:#f1f5f9;margin-top:2px;">Test E 250mg &nbsp;·&nbsp; Primo 200mg &nbsp;·&nbsp; HGH 4IU (tomorrow)</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <div style="flex:1;background:#1e2130;padding:6px;border-radius:4px;text-align:center;">
+            <div style="font-size:9px;color:#94a3b8;">WEIGHT</div>
+            <div style="color:#fbbf24;font-weight:700;">194</div>
+            <div style="font-size:9px;color:#94a3b8;">↓ 1.2 lbs</div>
+          </div>
+          <div style="flex:1;background:#1e2130;padding:6px;border-radius:4px;text-align:center;">
+            <div style="font-size:9px;color:#94a3b8;">BP</div>
+            <div style="color:#ef4444;font-weight:700;">118/76</div>
+          </div>
+          <div style="flex:1;background:#1e2130;padding:6px;border-radius:4px;text-align:center;">
+            <div style="font-size:9px;color:#94a3b8;">GLUCOSE</div>
+            <div style="color:#a855f7;font-weight:700;">94</div>
+          </div>
+          <div style="flex:1;background:#1e2130;padding:6px;border-radius:4px;text-align:center;">
+            <div style="font-size:9px;color:#94a3b8;">MOOD</div>
+            <div style="color:#6366f1;font-weight:700;">7/10</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C — Cycle as Hero</h3>
+      <p>One large protocol card dominates the top — progress bar, timeline marker, and today's injections all together. Vitals (including mood) shrink to a compact 4-card row below.</p>
+    </div>
+  </div>
+
+</div>
+
+<p class="subtitle" style="margin-top:16px;">Click to select, or tell me in the chat what appeals to you.</p>

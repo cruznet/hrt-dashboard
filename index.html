@@ -10248,6 +10248,42 @@ function pbReset() {
 }
 
 // ── Compounds library ──
+// ── Injection Sites ──
+const INJECTION_SITES = [
+  'Left Ventrogluteal (Hip)',
+  'Right Ventrogluteal (Hip)',
+  'Left Dorsogluteal (Upper Outer Glute)',
+  'Right Dorsogluteal (Upper Outer Glute)',
+  'Left Vastus Lateralis (Outer Thigh)',
+  'Right Vastus Lateralis (Outer Thigh)',
+  'Left Deltoid (Shoulder)',
+  'Right Deltoid (Shoulder)',
+  'Left Pectoral (Chest)',
+  'Right Pectoral (Chest)',
+  'Left Triceps (Back of Arm)',
+  'Right Triceps (Back of Arm)',
+  'Left Biceps (Front of Arm)',
+  'Right Biceps (Front of Arm)',
+];
+
+function getSiteForDose(doseDate, sites) {
+  if (!sites || sites.length === 0) return '';
+  const date = typeof doseDate === 'string' ? new Date(doseDate) : doseDate;
+  const dayOfWeek = date.getDay();
+  const index = dayOfWeek % sites.length;
+  return sites[index];
+}
+
+function getSiteForDoseWithOverride(doseDate, compoundName, protocol, sites) {
+  const dateStr = typeof doseDate === 'string' ? doseDate : doseDate.toISOString().slice(0, 10);
+  if (protocol.injectionSiteOverrides && 
+      protocol.injectionSiteOverrides[dateStr] && 
+      protocol.injectionSiteOverrides[dateStr][compoundName]) {
+    return protocol.injectionSiteOverrides[dateStr][compoundName];
+  }
+  return getSiteForDose(doseDate, sites);
+}
+
 const COMPOUNDS = [
   // ── Testosterone Esters ──
   { name: 'Testosterone Suspension', cat: 'AAS (Testosterone)', hl: '4–24 hrs', dose: '50–100mg/day', ai: 'Yes', dht: 'Yes' },

@@ -320,6 +320,49 @@ section('hevyMergeRawMeasurements');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+section('getSiteForDose — day-of-week indexing (4-site array)');
+assert('Sunday (day 0), 4 sites → site[0]',
+  getSiteForDose(new Date('2026-07-13'), ['Site A', 'Site B', 'Site C', 'Site D']), 'Site A');
+assert('Monday (day 1), 4 sites → site[1]',
+  getSiteForDose(new Date('2026-07-14'), ['Site A', 'Site B', 'Site C', 'Site D']), 'Site B');
+assert('Wednesday (day 3), 4 sites → site[3]',
+  getSiteForDose(new Date('2026-07-16'), ['Site A', 'Site B', 'Site C', 'Site D']), 'Site D');
+assert('Friday (day 5), 4 sites → site[1]',
+  getSiteForDose(new Date('2026-07-18'), ['Site A', 'Site B', 'Site C', 'Site D']), 'Site B');
+
+// ─────────────────────────────────────────────────────────────────────────────
+section('getSiteForDose — 2-site rotation');
+assert('Sunday (day 0), 2 sites → site[0]',
+  getSiteForDose(new Date('2026-07-13'), ['Left', 'Right']), 'Left');
+assert('Monday (day 1), 2 sites → site[1]',
+  getSiteForDose(new Date('2026-07-14'), ['Left', 'Right']), 'Right');
+assert('Next Sunday (day 0), 2 sites → site[0]',
+  getSiteForDose(new Date('2026-07-20'), ['Left', 'Right']), 'Left');
+
+// ─────────────────────────────────────────────────────────────────────────────
+section('getSiteForDoseWithOverride — uses override when present');
+const protocol = {
+  injectionSiteOverrides: {
+    '2026-07-14': { 'TestCompound': 'Override Site' }
+  }
+};
+assert('Override exists → use override',
+  getSiteForDoseWithOverride(new Date('2026-07-14'), 'TestCompound', protocol, ['Site A', 'Site B']),
+  'Override Site');
+assert('Different compound, no override → fall back to rotation',
+  getSiteForDoseWithOverride(new Date('2026-07-14'), 'OtherCompound', protocol, ['Site A', 'Site B']),
+  'Site B');
+
+// ─────────────────────────────────────────────────────────────────────────────
+section('getSiteForDoseWithOverride — falls back to rotation when no override');
+assert('No override for date → use getSiteForDose',
+  getSiteForDoseWithOverride(new Date('2026-07-15'), 'TestCompound', protocol, ['Site A', 'Site B']),
+  'Site A');
+
+// ─────────────────────────────────────────────────────────────────────────────
 document.getElementById('summary').innerHTML =
   `<span style="color:${failed===0?'#10B981':'#EF4444'}">${passed} passed, ${failed} failed</span>`;
 </script>
