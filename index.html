@@ -9681,6 +9681,19 @@ function pbUpdateCustomSitesDisplay() {
   display.textContent = selected.length ? selected.join(' → ') : 'None';
 }
 
+
+function pbGetCompoundSites(compound) {
+  if (compound.customInjectionSites && compound.customInjectionSites.length > 0) {
+    return compound.customInjectionSites;
+  }
+  return pbState.injectionSites || [];
+}
+
+function pbFormatSiteRotation(sites) {
+  if (!sites || sites.length === 0) return '(no sites selected)';
+  return sites.join(' → ');
+}
+
 function pbRender() {
   const list = document.getElementById('pb-compounds-list');
   if (!list) return;
@@ -9703,11 +9716,14 @@ function pbRender() {
         ${c.phases.length > 1 ? `<button onclick="pbRemovePhase(${ci},${pi})" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;padding:0;">×</button>` : ''}
       </div>`;
     }).join('');
+    const sitesDisplay = pbGetCompoundSites(c);
+    const siteRotation = sitesDisplay.length > 0 ? `Sites: ${pbFormatSiteRotation(sitesDisplay)}` : '';
     return `<div style="border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:10px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
         <div>
           <span style="font-size:13px;font-weight:600;color:var(--text-primary);">${c.name}</span>
           <span style="margin-left:8px;font-size:11px;color:var(--text-muted);">${freqLabel}</span>
+          ${siteRotation ? `<span style="margin-left:12px;font-size:10px;color:var(--text-muted);">${siteRotation}${c.customInjectionSites ? ' (custom)' : ''}</span>` : ''}
         </div>
         <div style="display:flex;gap:6px;">
           <button class="btn-secondary" style="font-size:11px;padding:3px 10px;" onclick="pbAddPhase(${ci})">+ Phase</button>
