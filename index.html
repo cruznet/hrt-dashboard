@@ -5149,7 +5149,8 @@ function renderDoseSchedule() {
       if (isInjectable) {
         const sitesForCompound = pbGetCompoundSites(c.original);
         const site = getSiteForDoseWithOverride(todayStr, c.name, protocol, sitesForCompound);
-        siteLabel = site ? ` (${site})` : '';
+        const route = match ? getCompoundInjectionRoute(match) : '';
+        siteLabel = site ? ` (${site}, ${route})` : '';
       }
       html += `<label class="dose-row${isChecked ? ' dose-done' : ''}"><input type="checkbox" class="dose-cb-styled" ${isChecked ? 'checked' : ''} onchange="const _l=this.closest('label');_l.classList.toggle('dose-done',this.checked);_l.classList.add('dose-pulse');setTimeout(()=>_l.classList.remove('dose-pulse'),300);this.checked?checkDose('${safeName}',${c.dose ?? 0},'${safeUnit}','${todayStr}'):uncheckDose('${safeName}','${todayStr}')"><span class="dose-name" style="flex:1;font-size:13px;">${escHtml(trunc(c.name))}</span><span style="color:var(--text-muted);font-family:var(--font-data);font-size:12px;white-space:nowrap;">${escHtml(String(c.dose ?? ''))}${escHtml(c.unit)}${escHtml(siteLabel)}</span></label>`;
     }
@@ -9328,6 +9329,7 @@ function renderProtocolTimeline() {
     const match = COMPOUNDS.find(comp => comp.name === r.name);
     const isInjectable = match ? isInjectableCompound(match) : false;
     const sites = isInjectable ? pbGetCompoundSites(r.compound) : [];
+    const route = isInjectable && match ? getCompoundInjectionRoute(match) : '';
 
     // Build continuous block spans from phases
     let spans = '';
@@ -9348,7 +9350,7 @@ function renderProtocolTimeline() {
         const endIdx = v !== null ? wi : wi - 1;
         const leftPct  = (blockStart / totalWeeks) * 100;
         const widthPct = ((endIdx - blockStart + 1) / totalWeeks) * 100;
-        const displayText = blockSite ? `${escHtml(blockDose)}${escHtml(r.unit)} (${escHtml(blockSite)})` : `${escHtml(blockDose)}${escHtml(r.unit)}`;
+        const displayText = blockSite ? `${escHtml(blockDose)}${escHtml(r.unit)} (${escHtml(blockSite)}, ${escHtml(route)})` : `${escHtml(blockDose)}${escHtml(r.unit)}`;
         spans += `<div style="position:absolute;left:${leftPct.toFixed(2)}%;width:${widthPct.toFixed(2)}%;height:100%;background:${color};border-radius:4px;opacity:0.85;display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;" onclick="blockDoseDate && pbOpenSiteOverrideModal(blockDoseDate.toISOString().slice(0, 10), r.name, blockSite)">
           <span style="font-size:10px;font-family:var(--font-data);color:#000;font-weight:700;white-space:nowrap;padding:0 4px;">${displayText}</span>
         </div>`;
@@ -9917,7 +9919,8 @@ function pbRender() {
     const match = COMPOUNDS.find(comp => comp.name === c.name);
     const isInjectable = match ? isInjectableCompound(match) : false;
     const sitesDisplay = isInjectable ? pbGetCompoundSites(c) : [];
-    const siteRotation = isInjectable && sitesDisplay.length > 0 ? `Sites: ${pbFormatSiteRotation(sitesDisplay)}` : '';
+    const route = isInjectable && match ? getCompoundInjectionRoute(match) : '';
+    const siteRotation = isInjectable && sitesDisplay.length > 0 ? `Sites: ${pbFormatSiteRotation(sitesDisplay)} (${route})` : '';
     return `<div style="border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:10px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
         <div>
@@ -10583,12 +10586,28 @@ function getSiteForDose(doseDate, sites) {
 
 function getSiteForDoseWithOverride(doseDate, compoundName, protocol, sites) {
   const dateStr = typeof doseDate === 'string' ? doseDate : doseDate.toISOString().slice(0, 10);
-  if (protocol.injectionSiteOverrides && 
-      protocol.injectionSiteOverrides[dateStr] && 
+  if (protocol.injectionSiteOverrides &&
+      protocol.injectionSiteOverrides[dateStr] &&
       protocol.injectionSiteOverrides[dateStr][compoundName]) {
     return protocol.injectionSiteOverrides[dateStr][compoundName];
   }
   return getSiteForDose(doseDate, sites);
+}
+
+function getDefaultInjectionRoute(compound) {
+  if (!compound) return 'IM';
+  const cat = compound.cat || '';
+  if (cat.includes('AAS')) return 'IM';
+  if (cat.includes('Peptide') || cat.includes('GHRH') || cat.includes('GHRP')) return 'SubQ';
+  if (cat.includes('Growth Factor')) return 'SubQ';
+  if (cat.includes('GLP-1') || cat.includes('GIP')) return 'SubQ';
+  if (cat.includes('Insulin')) return 'SubQ';
+  return 'IM';
+}
+
+function getCompoundInjectionRoute(compound) {
+  if (compound.injectionRoute) return compound.injectionRoute;
+  return getDefaultInjectionRoute(compound);
 }
 
 const COMPOUNDS = [
