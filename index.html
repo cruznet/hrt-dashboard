@@ -5140,7 +5140,10 @@ function renderDoseSchedule() {
       const rowStyle  = isChecked ? 'text-decoration:line-through;opacity:0.6;' : '';
       const safeName  = c.name.replace(/'/g, "\\'");
       const safeUnit  = (c.unit || '').replace(/'/g, "\\'");
-      html += `<label class="dose-row${isChecked ? ' dose-done' : ''}"><input type="checkbox" class="dose-cb-styled" ${isChecked ? 'checked' : ''} onchange="const _l=this.closest('label');_l.classList.toggle('dose-done',this.checked);_l.classList.add('dose-pulse');setTimeout(()=>_l.classList.remove('dose-pulse'),300);this.checked?checkDose('${safeName}',${c.dose ?? 0},'${safeUnit}','${todayStr}'):uncheckDose('${safeName}','${todayStr}')"><span class="dose-name" style="flex:1;font-size:13px;">${escHtml(trunc(c.name))}</span><span style="color:var(--text-muted);font-family:var(--font-data);font-size:12px;white-space:nowrap;">${escHtml(String(c.dose ?? ''))}${escHtml(c.unit)}</span></label>`;
+      const sitesForCompound = pbGetCompoundSites(c.original);
+      const site = getSiteForDoseWithOverride(todayStr, c.name, protocol, sitesForCompound);
+      const siteLabel = site ? ` (${site})` : '';
+      html += `<label class="dose-row${isChecked ? ' dose-done' : ''}"><input type="checkbox" class="dose-cb-styled" ${isChecked ? 'checked' : ''} onchange="const _l=this.closest('label');_l.classList.toggle('dose-done',this.checked);_l.classList.add('dose-pulse');setTimeout(()=>_l.classList.remove('dose-pulse'),300);this.checked?checkDose('${safeName}',${c.dose ?? 0},'${safeUnit}','${todayStr}'):uncheckDose('${safeName}','${todayStr}')"><span class="dose-name" style="flex:1;font-size:13px;">${escHtml(trunc(c.name))}</span><span style="color:var(--text-muted);font-family:var(--font-data);font-size:12px;white-space:nowrap;">${escHtml(String(c.dose ?? ''))}${escHtml(c.unit)}${escHtml(siteLabel)}</span></label>`;
     }
   }
 
