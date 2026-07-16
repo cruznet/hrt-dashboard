@@ -2442,6 +2442,18 @@ body {
               </div>
             </div>
 
+
+            <!-- Injection Site Rotation (Protocol Level) -->
+            <div class="card" style="margin-bottom:14px;">
+              <div class="card-title">Injection Site Rotation</div>
+              <div class="form-group">
+                <label class="form-label">Select injection sites (minimum 2)</label>
+                <select class="form-select" id="pb-protocol-sites-multiselect" multiple size="8" style="height:auto;overflow-y:auto;" onchange="pbUpdateProtocolSitesDisplay();">
+                  <!-- Options filled by JavaScript -->
+                </select>
+                <div style="font-size:11px;color:var(--text-muted);margin-top:6px;">Rotation: <span id="pb-protocol-sites-display">None selected</span></div>
+              </div>
+            </div>
             <div class="card">
               <div class="card-title">Add Compound</div>
               <div class="form-group">
@@ -5094,7 +5106,7 @@ function renderDoseSchedule() {
   const compounds = protocol.compounds.map(raw => {
     const c    = normalizeCompound(raw);
     const dose = Array.isArray(raw.phases) ? currentPhaseDose(raw.phases, startDate) : c.dose;
-    return { name: c.name, dose, unit: c.unit, freq: c.freq, dueToday: isDueOnDate(c.freq, startDate, today), original: raw };
+    return { name: c.name, dose, unit: c.unit, freq: c.freq, dueToday: isDueOnDate(c.freq, startDate, today) };
   });
 
   // TODAY section
@@ -5110,10 +5122,7 @@ function renderDoseSchedule() {
       const rowStyle  = isChecked ? 'text-decoration:line-through;opacity:0.6;' : '';
       const safeName  = c.name.replace(/'/g, "\\'");
       const safeUnit  = (c.unit || '').replace(/'/g, "\\'");
-      const sitesForCompound = pbGetCompoundSites(c.original);
-      const siteForToday = getSiteForDoseWithOverride(todayStr, c.name, protocol, sitesForCompound);
-      const siteDisplay = siteForToday ? ` (${siteForToday})` : '';
-      html += `<label class="dose-row${isChecked ? ' dose-done' : ''}"><input type="checkbox" class="dose-cb-styled" ${isChecked ? 'checked' : ''} onchange="const _l=this.closest('label');_l.classList.toggle('dose-done',this.checked);_l.classList.add('dose-pulse');setTimeout(()=>_l.classList.remove('dose-pulse'),300);this.checked?checkDose('${safeName}',${c.dose ?? 0},'${safeUnit}','${todayStr}'):uncheckDose('${safeName}','${todayStr}')"><span class="dose-name" style="flex:1;font-size:13px;">${escHtml(trunc(c.name))}</span><span style="color:var(--text-muted);font-family:var(--font-data);font-size:12px;white-space:nowrap;">${escHtml(String(c.dose ?? ''))}${escHtml(c.unit)}${escHtml(siteDisplay)}</span></label>`;
+      html += `<label class="dose-row${isChecked ? ' dose-done' : ''}"><input type="checkbox" class="dose-cb-styled" ${isChecked ? 'checked' : ''} onchange="const _l=this.closest('label');_l.classList.toggle('dose-done',this.checked);_l.classList.add('dose-pulse');setTimeout(()=>_l.classList.remove('dose-pulse'),300);this.checked?checkDose('${safeName}',${c.dose ?? 0},'${safeUnit}','${todayStr}'):uncheckDose('${safeName}','${todayStr}')"><span class="dose-name" style="flex:1;font-size:13px;">${escHtml(trunc(c.name))}</span><span style="color:var(--text-muted);font-family:var(--font-data);font-size:12px;white-space:nowrap;">${escHtml(String(c.dose ?? ''))}${escHtml(c.unit)}</span></label>`;
     }
   }
 
@@ -8979,7 +8988,7 @@ async function submitQuickLog() {
 let pbState = {
   name: '', phase: 'cruise', cycleLengthWeeks: 16,
   startDate: '', status: 'planning', exp: 'intermediate',
-  notes: '', compounds: [], modificationLog: []
+  notes: '', compounds: [], modificationLog: [], injectionSites: []
 };
 let _pbRemoveTargetIndex = -1;
 let _pbPendingSwitch = null;   // { newIndex } while close-out modal is open
@@ -9020,6 +9029,9 @@ function pbSwitchTab(tab) {
     document.getElementById(`pb-panel-${t}`).style.display = t === tab ? '' : 'none';
     document.getElementById(`pb-tab-${t}`).classList.toggle('pb-tab-active', t === tab);
   });
+  if (tab === 'builder') {
+    setTimeout(pbPopulateProtocolSitesSelect, 50);
+  }
   if (tab === 'timeline') renderProtocolTimeline();
   if (tab === 'log')      renderProtocolLog();
 }
@@ -9203,6 +9215,7 @@ function buildWeekGrid(compounds, totalWeeks) {
     name: c.name,
     unit: c.unit,
     freq: c.freq,
+    compound: c,
     cells: weeks.map(w => {
       const ph = (c.phases || []).find(p => w >= p.startWeek && w <= p.endWeek);
       return ph ? String(ph.dose) : null;
@@ -9224,23 +9237,44 @@ function renderProtocolTimeline() {
 
   const COLORS = ['#F5C518','#22D3EE','#C084FC','#4ADE80','#FB923C','#F472B6','#60A5FA','#A78BFA'];
 
+  // Helper: calculate date for a given week
+  const getDateForWeek = (weekNum) => {
+    if (!pbState.startDate) return null;
+    const [sy, sm, sd] = pbState.startDate.split('-').map(Number);
+    const startDate = new Date(sy, sm - 1, sd);
+    const daysToAdd = (weekNum - 1) * 7;
+    const date = new Date(startDate);
+    date.setDate(date.getDate() + daysToAdd);
+    return date;
+  };
+
   // Gantt bars: one row per compound
   const ganttRows = rows.map((r, i) => {
     const color = COLORS[i % COLORS.length];
     const freqLabel = Array.isArray(r.freq) ? r.freq.join(', ') : r.freq;
+    const sites = pbGetCompoundSites(r.compound);
 
     // Build continuous block spans from phases
     let spans = '';
-    let inBlock = false, blockStart = 0, blockDose = '';
+    let inBlock = false, blockStart = 0, blockDose = '', blockSite = '';
     for (let wi = 0; wi < r.cells.length; wi++) {
       const v = r.cells[wi];
-      if (v !== null && !inBlock) { inBlock = true; blockStart = wi; blockDose = v; }
+      if (v !== null && !inBlock) {
+        inBlock = true;
+        blockStart = wi;
+        blockDose = v;
+        // Calculate site for the first week of this block
+        const weekNum = wi + 1;
+        const doseDate = getDateForWeek(weekNum);
+        blockSite = doseDate && sites.length > 0 ? getSiteForDose(doseDate, sites) : '';
+      }
       if ((v === null || wi === r.cells.length - 1) && inBlock) {
         const endIdx = v !== null ? wi : wi - 1;
         const leftPct  = (blockStart / totalWeeks) * 100;
         const widthPct = ((endIdx - blockStart + 1) / totalWeeks) * 100;
+        const displayText = blockSite ? `${escHtml(blockDose)}${escHtml(r.unit)} (${escHtml(blockSite)})` : `${escHtml(blockDose)}${escHtml(r.unit)}`;
         spans += `<div style="position:absolute;left:${leftPct.toFixed(2)}%;width:${widthPct.toFixed(2)}%;height:100%;background:${color};border-radius:4px;opacity:0.85;display:flex;align-items:center;justify-content:center;overflow:hidden;">
-          <span style="font-size:10px;font-family:var(--font-data);color:#000;font-weight:700;white-space:nowrap;padding:0 4px;">${escHtml(blockDose)}${escHtml(r.unit)}</span>
+          <span style="font-size:10px;font-family:var(--font-data);color:#000;font-weight:700;white-space:nowrap;padding:0 4px;">${displayText}</span>
         </div>`;
         inBlock = false;
       }
@@ -9696,6 +9730,30 @@ function pbFormatSiteRotation(sites) {
   if (!sites || sites.length === 0) return '(no sites selected)';
   return sites.join(' → ');
 }
+
+  function pbPopulateProtocolSitesSelect() {
+    const select = document.getElementById('pb-protocol-sites-multiselect');
+    select.innerHTML = INJECTION_SITES.map(site => 
+      `<option value="${site}">${site}</option>`
+    ).join('');
+    
+    // Pre-select existing sites
+    if (pbState.injectionSites && pbState.injectionSites.length > 0) {
+      Array.from(select.options).forEach(option => {
+        option.selected = pbState.injectionSites.includes(option.value);
+      });
+    }
+    pbUpdateProtocolSitesDisplay();
+  }
+
+  function pbUpdateProtocolSitesDisplay() {
+    const select = document.getElementById('pb-protocol-sites-multiselect');
+    const selected = Array.from(select.selectedOptions).map(o => o.value);
+    pbState.injectionSites = selected;
+    const display = document.getElementById('pb-protocol-sites-display');
+    display.textContent = selected.length ? selected.join(' → ') : 'None selected';
+  }
+
 
 function pbRender() {
   const list = document.getElementById('pb-compounds-list');
