@@ -2582,9 +2582,9 @@ body {
                 </div>
                 <div id="pb-custom-sites-select" style="display:none;margin-bottom:14px;">
                   <label class="form-label">Select injection sites (minimum 2)</label>
-                  <select class="form-select" id="pb-custom-sites-multiselect" multiple size="8" style="height:auto;overflow-y:auto;" onchange="pbUpdateCustomSitesDisplay();">
-                    <!-- Options filled by JavaScript -->
-                  </select>
+                  <div id="pb-custom-sites-checkboxes" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+                    <!-- Checkboxes filled by JavaScript -->
+                  </div>
                   <div style="font-size:11px;color:var(--text-muted);margin-top:6px;">Currently selected: <span id="pb-custom-sites-display">None</span></div>
                 </div>
               </div>
@@ -9201,8 +9201,8 @@ function pbAddCompound() {
   // Set custom injection sites if user checked the box
   const checkbox = document.getElementById('pb-custom-sites-checkbox');
   if (checkbox.checked) {
-    const select = document.getElementById('pb-custom-sites-multiselect');
-    const selected = Array.from(select.selectedOptions).map(o => o.value);
+    const checkboxes = document.querySelectorAll('.pb-custom-site-cb:checked');
+    const selected = Array.from(checkboxes).map(cb => cb.value);
     if (selected.length >= 2) {
       newCompound.customInjectionSites = selected;
     } else {
@@ -9772,9 +9772,12 @@ function pbPopulateCompoundSelect() {
 }
 
 function pbPopulateCustomSitesSelect() {
-  const select = document.getElementById('pb-custom-sites-multiselect');
-  select.innerHTML = INJECTION_SITES.map(site =>
-    `<option value="${site}">${site}</option>`
+  const container = document.getElementById('pb-custom-sites-checkboxes');
+  container.innerHTML = INJECTION_SITES.map((site, idx) =>
+    `<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;">
+      <input type="checkbox" value="${site}" class="pb-custom-site-cb" onchange="pbUpdateCustomSitesDisplay()" style="cursor:pointer;">
+      ${site}
+    </label>`
   ).join('');
 }
 
@@ -9790,8 +9793,8 @@ function pbToggleCustomSites() {
 }
 
 function pbUpdateCustomSitesDisplay() {
-  const select = document.getElementById('pb-custom-sites-multiselect');
-  const selected = Array.from(select.selectedOptions).map(o => o.value);
+  const checkboxes = document.querySelectorAll('.pb-custom-site-cb:checked');
+  const selected = Array.from(checkboxes).map(cb => cb.value);
   const display = document.getElementById('pb-custom-sites-display');
   display.textContent = selected.length ? selected.join(' → ') : 'None';
 }
