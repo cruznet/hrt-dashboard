@@ -9969,6 +9969,12 @@ function pbPopulateCompoundsRotationList() {
         const c = pbState.compounds.find(x => x.name === '${c.name.replace(/'/g, "\\'")}');
         if (this.checked) {
           c.customInjectionSites = null;
+        } else {
+          if (!c.customInjectionSites || c.customInjectionSites.length === 0) {
+            alert('Define custom sites for this compound in the compound form first');
+            this.checked = true;
+            return;
+          }
         }
         pbPopulateCompoundsRotationList();
       }).call(this)" style="cursor:pointer;">
