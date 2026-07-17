@@ -1,6 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script>
+// Version detection: auto-refresh on deploy
+(function() {
+  const versionKey = 'hrt_app_version';
+  const storedVersion = localStorage.getItem(versionKey);
+  const currentVersion = document.currentScript.getAttribute('data-version') || 'unknown';
+
+  fetch(location.href, { method: 'HEAD' }).then(r => {
+    const headerVersion = r.headers.get('X-App-Version');
+    if (headerVersion && storedVersion && headerVersion !== storedVersion) {
+      console.log('[HRT] New version detected, refreshing...');
+      localStorage.setItem(versionKey, headerVersion);
+      location.reload();
+    } else if (headerVersion) {
+      localStorage.setItem(versionKey, headerVersion);
+    }
+  }).catch(() => {});
+})();
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="mobile-web-app-capable" content="yes">

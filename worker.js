@@ -3,6 +3,8 @@
 
 const SUPABASE_URL = 'https://lnxhksnvcewtpwkaghrh.supabase.co';
 const HEVY_BASE     = 'https://api.hevyapp.com/v1';
+// Version identifier changes on each deploy (used for cache busting)
+const APP_VERSION = new Date().toISOString().slice(0, 10) + '-' + Math.random().toString(36).slice(2, 8);
 
 export default {
   async fetch(request, env) {
@@ -24,6 +26,14 @@ export default {
       if (request.method === 'DELETE')  return handleDeleteAccount(request, env);
       if (request.method === 'OPTIONS') return new Response(null, { status: 204 });
       return new Response('Method Not Allowed', { status: 405 });
+    }
+
+    // Check if requesting index.html - add version header for cache busting
+    if (url.pathname === '/' || url.pathname === '/index.html') {
+      const response = await env.ASSETS.fetch(request);
+      const newResponse = new Response(response.body, response);
+      newResponse.headers.set('X-App-Version', APP_VERSION);
+      return newResponse;
     }
 
     return env.ASSETS.fetch(request);
