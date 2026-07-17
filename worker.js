@@ -31,7 +31,11 @@ export default {
     // Check if requesting index.html - force fresh content, add version header
     if (url.pathname === '/' || url.pathname === '/index.html') {
       const response = await env.ASSETS.fetch(request);
-      const newResponse = new Response(response.body, response);
+      const newResponse = new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: new Headers(response.headers)
+      });
       newResponse.headers.set('X-App-Version', APP_VERSION);
       newResponse.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
       newResponse.headers.set('Pragma', 'no-cache');
