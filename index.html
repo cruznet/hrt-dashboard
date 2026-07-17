@@ -9854,7 +9854,14 @@ function pbFormatSiteRotation(sites) {
 }
 
 function pbUpdateSiteDropdowns() {
-  const count = parseInt(document.getElementById('pb-sites-count').value) || 2;
+  // If we have existing sites, use their count; otherwise use dropdown value
+  let count = pbState.injectionSites && pbState.injectionSites.length > 0
+    ? pbState.injectionSites.length
+    : parseInt(document.getElementById('pb-sites-count').value) || 2;
+
+  // Update the dropdown to match
+  document.getElementById('pb-sites-count').value = count;
+
   const container = document.getElementById('pb-site-dropdowns');
 
   let html = '';
@@ -9922,9 +9929,10 @@ function pbPopulateCompoundsRotationList() {
   }
 
   container.innerHTML = injectables.map((c, idx) =>
-    `<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;">
-      <input type="checkbox" class="pb-compound-rotation-cb" data-compound-idx="${idx}" ${!c.customInjectionSites ? 'checked' : ''} style="cursor:pointer;">
-      ${c.name}
+    `<label style="display:flex;align-items:center;gap:8px;font-size:12px;">
+      <input type="checkbox" disabled ${!c.customInjectionSites ? 'checked' : ''} style="cursor:default;">
+      <span>${c.name}</span>
+      <span style="font-size:11px;color:var(--text-muted);margin-left:auto;">${c.customInjectionSites ? '(custom)' : '(protocol)'}</span>
     </label>`
   ).join('');
 }
