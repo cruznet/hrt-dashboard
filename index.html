@@ -5185,7 +5185,7 @@ function renderDoseSchedule() {
       let siteLabel = '';
       if (isInjectable) {
         const sitesForCompound = pbGetCompoundSites(c.original, protocol.injectionSites);
-        const site = getSiteForDoseWithOverride(todayStr, c.name, protocol, sitesForCompound);
+        const site = getSiteForDoseWithOverride(todayStr, c.name, protocol, sitesForCompound, c.freq);
         siteLabel = site ? ` (${site})` : '';
       }
       html += `<label class="dose-row${isChecked ? ' dose-done' : ''}"><input type="checkbox" class="dose-cb-styled" ${isChecked ? 'checked' : ''} onchange="const _l=this.closest('label');_l.classList.toggle('dose-done',this.checked);_l.classList.add('dose-pulse');setTimeout(()=>_l.classList.remove('dose-pulse'),300);this.checked?checkDose('${safeName}',${c.dose ?? 0},'${safeUnit}','${todayStr}'):uncheckDose('${safeName}','${todayStr}')"><span class="dose-name" style="flex:1;font-size:13px;">${escHtml(trunc(c.name))}</span><span style="color:var(--text-muted);font-family:var(--font-data);font-size:12px;white-space:nowrap;">${escHtml(String(c.dose ?? ''))}${escHtml(c.unit)}${escHtml(siteLabel)}</span></label>`;
@@ -9385,7 +9385,7 @@ function renderProtocolTimeline() {
         const weekNum = wi + 1;
         const doseDate = getDateForWeek(weekNum);
         blockDoseDate = doseDate;
-        blockSite = isInjectable && doseDate && sites.length > 0 ? getSiteForDoseWithOverride(doseDate, r.name, pbState, sites) : '';
+        blockSite = isInjectable && doseDate && sites.length > 0 ? getSiteForDoseWithOverride(doseDate, r.name, pbState, sites, r.freq) : '';
       }
       if ((v === null || wi === r.cells.length - 1) && inBlock) {
         const endIdx = v !== null ? wi : wi - 1;
@@ -9902,6 +9902,12 @@ function pbUpdateSitesPreview() {
   }
 
   pbState.injectionSites = selected;
+
+  // Set rotation start date to today if sites are first being configured
+  if (selected.length >= 2 && !pbState.injectionRotationStartDate) {
+    const today = new Date();
+    pbState.injectionRotationStartDate = today.toISOString().split('T')[0];
+  }
 
   const preview = document.getElementById('pb-sites-preview');
   if (selected.length >= 2) {
@@ -10633,6 +10639,7 @@ function _pbDoSave() {
     modificationLog: modLog,
     injectionSites: pbState.injectionSites || [],
     injectionSiteOverrides: pbState.injectionSiteOverrides || {},
+    injectionRotationStartDate: pbState.injectionRotationStartDate || '',
     saved_at: savedAt
   };
 
@@ -10713,7 +10720,7 @@ function pbExportJson() {
 }
 
 function pbReset() {
-  pbState = { name:'', phase:'cruise', cycleLengthWeeks:16, startDate:'', status:'planning', exp:'intermediate', notes:'', compounds:[], modificationLog:[], injectionSites: [], injectionSiteOverrides: {} };
+  pbState = { name:'', phase:'cruise', cycleLengthWeeks:16, startDate:'', status:'planning', exp:'intermediate', notes:'', compounds:[], modificationLog:[], injectionSites: [], injectionSiteOverrides: {}, injectionRotationStartDate: '' };
   pbEditIndex = -1;
   pbRender();
 }
@@ -10738,22 +10745,54 @@ const INJECTION_SITES = [
 ];
 
 
-function getSiteForDose(doseDate, sites) {
+function getFrequencyDays(freq) {
+  const f = (freq || '').toUpperCase().trim();
+  if (f === 'ED') return 1;
+  if (f === 'EOD') return 2;
+  if (f === 'E3D') return 3;
+  if (f === 'E3.5D') return 3.5;
+  if (f === 'E4D') return 4;
+  if (f === 'E5D') return 5;
+  if (f === 'WEEKLY' || f === 'WEEK') return 7;
+  if (f === 'BI-WKLY' || f === 'BIWEEKLY') return 14;
+  if (f === 'MONTHLY') return 30;
+  if (f === 'PWO') return 3.5;
+  return 3.5; // default
+}
+
+function getDoseNumberFromStart(doseDate, startDate, frequency) {
+  const start = new Date(startDate);
+  const dose = typeof doseDate === 'string' ? new Date(doseDate) : doseDate;
+  const freqDays = getFrequencyDays(frequency);
+  const daysElapsed = (dose - start) / (1000 * 60 * 60 * 24);
+  return Math.round(daysElapsed / freqDays);
+}
+
+function getSiteForDose(doseDate, sites, startDate, frequency) {
   if (!sites || sites.length === 0) return '';
+
+  // Use start-date based rotation if available
+  if (startDate && frequency) {
+    const doseNumber = getDoseNumberFromStart(doseDate, startDate, frequency);
+    const index = Math.max(0, doseNumber % sites.length);
+    return sites[index];
+  }
+
+  // Fallback to day-of-week rotation
   const date = typeof doseDate === 'string' ? new Date(doseDate) : doseDate;
   const dayOfWeek = date.getDay();
   const index = dayOfWeek % sites.length;
   return sites[index];
 }
 
-function getSiteForDoseWithOverride(doseDate, compoundName, protocol, sites) {
+function getSiteForDoseWithOverride(doseDate, compoundName, protocol, sites, frequency) {
   const dateStr = typeof doseDate === 'string' ? doseDate : doseDate.toISOString().slice(0, 10);
   if (protocol.injectionSiteOverrides &&
       protocol.injectionSiteOverrides[dateStr] &&
       protocol.injectionSiteOverrides[dateStr][compoundName]) {
     return protocol.injectionSiteOverrides[dateStr][compoundName];
   }
-  return getSiteForDose(doseDate, sites);
+  return getSiteForDose(doseDate, sites, protocol.injectionRotationStartDate, frequency);
 }
 
 function getDefaultInjectionRoute(compound) {
