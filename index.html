@@ -9917,24 +9917,35 @@ function pbPopulateCompoundsRotationList() {
   const container = document.getElementById('pb-compounds-rotation-list');
   if (!container) return;
 
-  // Get injectables only
-  const injectables = pbState.compounds.filter(c => {
+  // Get IM injectables only (exclude SubQ: peptides, GH, insulin, GLP-1)
+  const imInjectables = pbState.compounds.filter(c => {
     const match = COMPOUNDS.find(comp => comp.name === c.name);
-    return match && isInjectableCompound(match);
+    if (!match || !isInjectableCompound(match)) return false;
+
+    // Exclude SubQ injectables
+    const route = getDefaultInjectionRoute(match);
+    return route === 'IM';
   });
 
-  if (!injectables.length) {
-    container.innerHTML = '<div style="font-size:12px;color:var(--text-muted);">Add injectable compounds to see them here</div>';
+  if (!imInjectables.length) {
+    container.innerHTML = '<div style="font-size:12px;color:var(--text-muted);">Add IM injectable compounds to see them here</div>';
     return;
   }
 
-  container.innerHTML = injectables.map((c, idx) =>
-    `<label style="display:flex;align-items:center;gap:8px;font-size:12px;">
-      <input type="checkbox" disabled ${!c.customInjectionSites ? 'checked' : ''} style="cursor:default;">
+  container.innerHTML = imInjectables.map((c, idx) => {
+    const isUsing = !c.customInjectionSites;
+    return `<label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;">
+      <input type="checkbox" ${isUsing ? 'checked' : ''} onchange="(function() {
+        const c = pbState.compounds.find(x => x.name === '${c.name.replace(/'/g, "\\'")}');
+        if (this.checked) {
+          c.customInjectionSites = null;
+        }
+        pbPopulateCompoundsRotationList();
+      }).call(this)" style="cursor:pointer;">
       <span>${c.name}</span>
       <span style="font-size:11px;color:var(--text-muted);margin-left:auto;">${c.customInjectionSites ? '(custom)' : '(protocol)'}</span>
-    </label>`
-  ).join('');
+    </label>`;
+  }).join('');
 }
 
 function pbToggleCompoundRotationMode() {
