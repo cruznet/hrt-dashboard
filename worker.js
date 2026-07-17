@@ -28,11 +28,14 @@ export default {
       return new Response('Method Not Allowed', { status: 405 });
     }
 
-    // Check if requesting index.html - add version header for cache busting
+    // Check if requesting index.html - force fresh content, add version header
     if (url.pathname === '/' || url.pathname === '/index.html') {
       const response = await env.ASSETS.fetch(request);
       const newResponse = new Response(response.body, response);
       newResponse.headers.set('X-App-Version', APP_VERSION);
+      newResponse.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+      newResponse.headers.set('Pragma', 'no-cache');
+      newResponse.headers.set('Expires', '0');
       return newResponse;
     }
 
