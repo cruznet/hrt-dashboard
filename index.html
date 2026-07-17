@@ -5184,9 +5184,9 @@ function renderDoseSchedule() {
       const safeName  = c.name.replace(/'/g, "\\'");
       const safeUnit  = (c.unit || '').replace(/'/g, "\\'");
       const match = COMPOUNDS.find(comp => comp.name === c.name);
-      const isInjectable = match ? isInjectableCompound(match) : false;
+      const isIMInjectable = match ? isIMInjectableCompound(match) : false;
       let siteLabel = '';
-      if (isInjectable) {
+      if (isIMInjectable) {
         const sitesForCompound = pbGetCompoundSites(c.original, protocol.injectionSites);
         const site = getSiteForDoseWithOverride(todayStr, c.name, protocol, sitesForCompound, c.freq);
         siteLabel = site ? ` (${site})` : '';
@@ -9174,6 +9174,20 @@ function isInjectableCompound(compound) {
   return false;
 }
 
+function isIMInjectableCompound(compound) {
+  // Only show sites for IM injectables; exclude SubQ (peptides, growth factors, insulin, GLP-1)
+  if (!compound) return false;
+  const cat = compound.cat || '';
+  // SubQ injectables
+  if (cat.includes('Peptide') || cat.includes('GHRH') || cat.includes('GHRP') ||
+      cat.includes('Growth Factor') || cat.includes('GLP-1') || cat.includes('GIP') ||
+      cat.includes('Insulin')) {
+    return false;
+  }
+  // IM injectables: AAS and others
+  return isInjectableCompound(compound);
+}
+
 function pbOnCompoundSelect() {
   const name = document.getElementById('pb-add-select').value;
   if (!name) return;
@@ -9185,10 +9199,10 @@ function pbOnCompoundSelect() {
     const unitGuess = match.dose.includes('IU') ? 'IU' : match.dose.includes('mcg') ? 'mcg' : 'mg';
     if ([...unitEl.options].some(o => o.value === unitGuess)) unitEl.value = unitGuess;
   }
-  // Show/hide injection rotation container based on whether compound is injectable
-  const isInjectable = isInjectableCompound(match);
+  // Show/hide injection rotation container based on whether compound is IM injectable
+  const isIMInjectable = isIMInjectableCompound(match);
   const rotationContainer = document.getElementById('pb-compound-rotation-container');
-  rotationContainer.style.display = isInjectable ? 'block' : 'none';
+  rotationContainer.style.display = isIMInjectable ? 'block' : 'none';
 
   // Reset rotation mode to protocol (default)
   document.querySelector('input[name="pb-rotation-mode"][value="protocol"]').checked = true;
@@ -9372,8 +9386,8 @@ function renderProtocolTimeline() {
     const color = COLORS[i % COLORS.length];
     const freqLabel = Array.isArray(r.freq) ? r.freq.join(', ') : r.freq;
     const match = COMPOUNDS.find(comp => comp.name === r.name);
-    const isInjectable = match ? isInjectableCompound(match) : false;
-    const sites = isInjectable ? pbGetCompoundSites(r.compound, pbState.injectionSites) : [];
+    const isIMInjectable = match ? isIMInjectableCompound(match) : false;
+    const sites = isIMInjectable ? pbGetCompoundSites(r.compound, pbState.injectionSites) : [];
 
     // Build continuous block spans from phases
     let spans = '';
@@ -10093,9 +10107,9 @@ function pbRender() {
       </div>`;
     }).join('');
     const match = COMPOUNDS.find(comp => comp.name === c.name);
-    const isInjectable = match ? isInjectableCompound(match) : false;
-    const sitesDisplay = isInjectable ? pbGetCompoundSites(c, pbState.injectionSites) : [];
-    const siteRotation = isInjectable && sitesDisplay.length > 0 ? `Sites: ${pbFormatSiteRotation(sitesDisplay)}` : '';
+    const isIMInjectable = match ? isIMInjectableCompound(match) : false;
+    const sitesDisplay = isIMInjectable ? pbGetCompoundSites(c, pbState.injectionSites) : [];
+    const siteRotation = isIMInjectable && sitesDisplay.length > 0 ? `Sites: ${pbFormatSiteRotation(sitesDisplay)}` : '';
     return `<div style="border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:10px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
         <div>
