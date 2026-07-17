@@ -10822,7 +10822,8 @@ function getSiteForDoseWithOverride(doseDate, compoundName, protocol, sites, fre
       protocol.injectionSiteOverrides[dateStr][compoundName]) {
     return protocol.injectionSiteOverrides[dateStr][compoundName];
   }
-  return getSiteForDose(doseDate, sites, protocol.injectionRotationStartDate, frequency);
+  // For dashboard display, use day-of-week rotation (ignore startDate)
+  return getSiteForDose(doseDate, sites, null, null);
 }
 
 function getDefaultInjectionRoute(compound) {
