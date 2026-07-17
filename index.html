@@ -10828,8 +10828,14 @@ function getSiteForDose(doseDate, sites, startDate, frequency) {
     return sites[index];
   }
 
-  // Fallback to day-of-week rotation
-  const date = typeof doseDate === 'string' ? new Date(doseDate) : doseDate;
+  // Fallback to day-of-week rotation (parse as local timezone, not UTC)
+  let date;
+  if (typeof doseDate === 'string') {
+    const [year, month, day] = doseDate.split('-');
+    date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+  } else {
+    date = doseDate;
+  }
   const dayOfWeek = date.getDay();
   const index = dayOfWeek % sites.length;
   return sites[index];
