@@ -2447,11 +2447,29 @@ body {
             <div class="card" style="margin-bottom:14px;">
               <div class="card-title">Injection Site Rotation</div>
               <div class="form-group">
-                <label class="form-label">Select injection sites (minimum 2)</label>
-                <div id="pb-protocol-sites-checkboxes" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
-                  <!-- Checkboxes filled by JavaScript -->
+                <label class="form-label">How many sites?</label>
+                <select class="form-select" id="pb-sites-count" style="width:120px;" onchange="pbUpdateSiteDropdowns()">
+                  <option value="2">2 sites</option>
+                  <option value="3">3 sites</option>
+                  <option value="4">4 sites</option>
+                  <option value="5">5 sites</option>
+                  <option value="6">6 sites</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Select rotation sites in order</label>
+                <div id="pb-site-dropdowns" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;">
+                  <!-- Site dropdowns filled by JavaScript -->
                 </div>
-                <div style="font-size:11px;color:var(--text-muted);margin-top:6px;">Rotation: <span id="pb-protocol-sites-display">None selected</span></div>
+              </div>
+              <div style="font-size:12px;margin-bottom:14px;">
+                Rotation: <span id="pb-sites-preview" style="color:var(--text-primary);font-weight:600;">Not configured</span>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Compounds using this rotation</label>
+                <div id="pb-compounds-rotation-list" style="display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto;">
+                  <!-- Compound checkboxes filled by JavaScript -->
+                </div>
               </div>
             </div>
             <div class="card">
@@ -9812,33 +9830,80 @@ function pbFormatSiteRotation(sites) {
   return sites.join(' → ');
 }
 
-function pbPopulateProtocolSitesCheckboxes() {
-  const container = document.getElementById('pb-protocol-sites-checkboxes');
-  container.innerHTML = INJECTION_SITES.map((site, i) =>
-    `<div style="display:flex;align-items:center;">
-      <input type="checkbox" id="site-${i}" value="${site}" onchange="pbUpdateProtocolSitesDisplay();">
-      <label for="site-${i}" style="margin-left:6px;cursor:pointer;font-size:12px;">${site}</label>
-    </div>`
-  ).join('');
+function pbUpdateSiteDropdowns() {
+  const count = parseInt(document.getElementById('pb-sites-count').value) || 2;
+  const container = document.getElementById('pb-site-dropdowns');
 
-  // Pre-select existing sites
+  let html = '';
+  for (let i = 0; i < count; i++) {
+    html += `
+      <div style="display:flex;align-items:center;gap:8px;">
+        <label style="font-size:12px;min-width:60px;">Site ${i + 1}:</label>
+        <select class="form-select" id="pb-site-${i}" style="flex:1;" onchange="pbUpdateSitesPreview()">
+          <option value="">-- Select --</option>
+          ${INJECTION_SITES.map(site => `<option value="${site}">${site}</option>`).join('')}
+        </select>
+      </div>
+    `;
+  }
+  container.innerHTML = html;
+
+  // Pre-populate from pbState if exists
   if (pbState.injectionSites && pbState.injectionSites.length > 0) {
-    INJECTION_SITES.forEach((site, i) => {
-      const checkbox = document.getElementById(`site-${i}`);
-      if (checkbox) {
-        checkbox.checked = pbState.injectionSites.includes(site);
-      }
+    pbState.injectionSites.forEach((site, i) => {
+      const select = document.getElementById(`pb-site-${i}`);
+      if (select) select.value = site;
     });
   }
-  pbUpdateProtocolSitesDisplay();
+
+  pbUpdateSitesPreview();
+  pbPopulateCompoundsRotationList();
 }
 
-function pbUpdateProtocolSitesDisplay() {
-  const checkboxes = document.querySelectorAll('#pb-protocol-sites-checkboxes input[type="checkbox"]:checked');
-  const selected = Array.from(checkboxes).map(cb => cb.value);
+function pbUpdateSitesPreview() {
+  const count = parseInt(document.getElementById('pb-sites-count').value) || 2;
+  const selected = [];
+
+  for (let i = 0; i < count; i++) {
+    const select = document.getElementById(`pb-site-${i}`);
+    if (select && select.value) {
+      selected.push(select.value);
+    }
+  }
+
   pbState.injectionSites = selected;
-  const display = document.getElementById('pb-protocol-sites-display');
-  display.textContent = selected.length ? selected.join(' → ') : 'None selected';
+
+  const preview = document.getElementById('pb-sites-preview');
+  if (selected.length >= 2) {
+    preview.textContent = selected.join(' → ');
+  } else {
+    preview.textContent = 'Not configured';
+  }
+
+  pbPopulateCompoundsRotationList();
+}
+
+function pbPopulateCompoundsRotationList() {
+  const container = document.getElementById('pb-compounds-rotation-list');
+  if (!container) return;
+
+  // Get injectables only
+  const injectables = pbState.compounds.filter(c => {
+    const match = COMPOUNDS.find(comp => comp.name === c.name);
+    return match && isInjectableCompound(match);
+  });
+
+  if (!injectables.length) {
+    container.innerHTML = '<div style="font-size:12px;color:var(--text-muted);">Add injectable compounds to see them here</div>';
+    return;
+  }
+
+  container.innerHTML = injectables.map((c, idx) =>
+    `<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;">
+      <input type="checkbox" class="pb-compound-rotation-cb" data-compound-idx="${idx}" ${!c.customInjectionSites ? 'checked' : ''} style="cursor:pointer;">
+      ${c.name}
+    </label>`
+  ).join('');
 }
 
 
@@ -9939,6 +10004,9 @@ function pbRender() {
       ${phasesHtml}
     </div>`;
   }).join('');
+
+  // Update injection sites UI
+  pbUpdateSiteDropdowns();
 }
 
 // ── My Protocols page ──
