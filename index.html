@@ -5147,7 +5147,7 @@ function renderDoseSchedule() {
       const isInjectable = match ? isInjectableCompound(match) : false;
       let siteLabel = '';
       if (isInjectable) {
-        const sitesForCompound = pbGetCompoundSites(c.original);
+        const sitesForCompound = pbGetCompoundSites(c.original, protocol.injectionSites);
         const site = getSiteForDoseWithOverride(todayStr, c.name, protocol, sitesForCompound);
         const route = match ? getCompoundInjectionRoute(match) : '';
         siteLabel = site ? ` (${site}, ${route})` : '';
@@ -9328,7 +9328,7 @@ function renderProtocolTimeline() {
     const freqLabel = Array.isArray(r.freq) ? r.freq.join(', ') : r.freq;
     const match = COMPOUNDS.find(comp => comp.name === r.name);
     const isInjectable = match ? isInjectableCompound(match) : false;
-    const sites = isInjectable ? pbGetCompoundSites(r.compound) : [];
+    const sites = isInjectable ? pbGetCompoundSites(r.compound, pbState.injectionSites) : [];
     const route = isInjectable && match ? getCompoundInjectionRoute(match) : '';
 
     // Build continuous block spans from phases
@@ -9800,11 +9800,11 @@ function pbUpdateCustomSitesDisplay() {
 }
 
 
-function pbGetCompoundSites(compound) {
+function pbGetCompoundSites(compound, protocolSites) {
   if (compound.customInjectionSites && compound.customInjectionSites.length > 0) {
     return compound.customInjectionSites;
   }
-  return pbState.injectionSites || [];
+  return protocolSites || [];
 }
 
 function pbFormatSiteRotation(sites) {
@@ -9850,8 +9850,8 @@ function pbOpenSiteOverrideModal(doseDate, compoundName, currentSite) {
   
   const compound = pbState.compounds.find(c => c.name === compoundName);
   if (!compound) return;
-  
-  const sitesForCompound = pbGetCompoundSites(compound);
+
+  const sitesForCompound = pbGetCompoundSites(compound, pbState.injectionSites);
   
   // Format the date for display
   let dateDisplay = doseDate;
@@ -9921,7 +9921,7 @@ function pbRender() {
     }).join('');
     const match = COMPOUNDS.find(comp => comp.name === c.name);
     const isInjectable = match ? isInjectableCompound(match) : false;
-    const sitesDisplay = isInjectable ? pbGetCompoundSites(c) : [];
+    const sitesDisplay = isInjectable ? pbGetCompoundSites(c, pbState.injectionSites) : [];
     const route = isInjectable && match ? getCompoundInjectionRoute(match) : '';
     const siteRotation = isInjectable && sitesDisplay.length > 0 ? `Sites: ${pbFormatSiteRotation(sitesDisplay)} (${route})` : '';
     return `<div style="border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:10px;">
