@@ -2471,6 +2471,9 @@ body {
                   <!-- Compound checkboxes filled by JavaScript -->
                 </div>
               </div>
+              <div style="display:flex;gap:8px;margin-top:14px;">
+                <button type="button" class="btn-secondary" style="flex:1;" onclick="pbResetInjectionSites()">Reset Sites</button>
+              </div>
             </div>
             <div class="card">
               <div class="card-title">Add Compound</div>
@@ -9917,6 +9920,13 @@ function pbUpdateSitesPreview() {
   }
 
   pbPopulateCompoundsRotationList();
+}
+
+function pbResetInjectionSites() {
+  pbState.injectionSites = [];
+  pbState.injectionRotationStartDate = '';
+  document.getElementById('pb-sites-count').value = '2';
+  pbUpdateSiteDropdowns();
 }
 
 function pbPopulateCompoundsRotationList() {
