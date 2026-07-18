@@ -931,6 +931,10 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
   .topbar-badge { display: none; }
   .grid-2, .grid-3, .grid-2-1, .grid-1-2, .grid-dash-main { grid-template-columns: 1fr; }
   .dash-row-2 { grid-template-columns: 1fr; }
+  .card { padding: 14px 12px; }
+  table { font-size: 12px; }
+  table td, table th { padding: 3px 0; }
+}
   #content { padding: 12px; }
   .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; }
   #bw-kpi-row   { grid-template-columns: 1fr 1fr 1fr; }
@@ -5211,7 +5215,7 @@ function renderDoseSchedule() {
         const site = getSiteForDoseWithOverride(todayStr, c.name, protocol, sitesForCompound, c.freq);
         siteLabel = site ? ` (${site})` : '';
       }
-      html += `<label class="dose-row${isChecked ? ' dose-done' : ''}"><input type="checkbox" class="dose-cb-styled" ${isChecked ? 'checked' : ''} onchange="const _l=this.closest('label');_l.classList.toggle('dose-done',this.checked);_l.classList.add('dose-pulse');setTimeout(()=>_l.classList.remove('dose-pulse'),300);this.checked?checkDose('${safeName}',${c.dose ?? 0},'${safeUnit}','${todayStr}'):uncheckDose('${safeName}','${todayStr}')"><span class="dose-name" style="flex:1;font-size:13px;">${escHtml(trunc(c.name))}</span><span style="color:var(--text-muted);font-family:var(--font-data);font-size:12px;white-space:nowrap;">${escHtml(String(c.dose ?? ''))}${escHtml(c.unit)}${escHtml(siteLabel)}</span></label>`;
+      html += `<label class="dose-row${isChecked ? ' dose-done' : ''}"><input type="checkbox" class="dose-cb-styled" ${isChecked ? 'checked' : ''} onchange="const _l=this.closest('label');_l.classList.toggle('dose-done',this.checked);_l.classList.add('dose-pulse');setTimeout(()=>_l.classList.remove('dose-pulse'),300);this.checked?checkDose('${safeName}',${c.dose ?? 0},'${safeUnit}','${todayStr}'):uncheckDose('${safeName}','${todayStr}')"><span class="dose-name" style="flex:1;font-size:13px;">${escHtml(trunc(c.name))}</span><span style="color:var(--text-muted);font-family:var(--font-data);font-size:12px;word-wrap:break-word;flex-shrink:1;">${escHtml(String(c.dose ?? ''))}${escHtml(c.unit)}${escHtml(siteLabel)}</span></label>`;
     }
   }
 
