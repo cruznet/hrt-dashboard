@@ -4834,7 +4834,9 @@ function nav(page) {
 
 function pbCurrentCycleWeek(startDate) {
   if (!startDate) return 1;
-  const days = Math.max(0, (Date.now() - Date.parse(startDate)) / 86400000);
+  const [year, month, day] = startDate.split('-').map(Number);
+  const start = new Date(year, month - 1, day);
+  const days = Math.max(0, (Date.now() - start) / 86400000);
   return Math.floor(days / 7) + 1;
 }
 
