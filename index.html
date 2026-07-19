@@ -1720,6 +1720,7 @@ body {
               </svg>
               <div style="flex:1;min-width:0;">
                 <div style="font-size:14px;font-weight:600;color:var(--text-primary);" id="cycle-label">—</div>
+                <div style="font-size:11px;color:var(--text-muted);margin-top:2px;margin-bottom:8px;" id="cycle-start-date">—</div>
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;margin-bottom:5px;">
                   <span style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;">Steady State</span>
                   <span style="font-size:12px;font-family:var(--font-data);color:var(--primary);" id="ss-label">—</span>
@@ -5029,6 +5030,8 @@ function renderCycleProgress(rawProtocol) {
   if (protocol.status !== 'active' || !protocol.startDate) {
     if (cycleCard) cycleCard.innerHTML = '';
     if (label) { label.textContent = '—'; }
+    const startDateEl = document.getElementById('cycle-start-date');
+    if (startDateEl) { startDateEl.textContent = '—'; }
     if (pct) { pct.textContent = '—'; }
     if (bar) { bar.style.width = '0%'; }
     if (ssBar) { ssBar.style.width = '0%'; }
@@ -5048,6 +5051,8 @@ function renderCycleProgress(rawProtocol) {
   const progressPct  = totalWeeks > 0 ? Math.min(100, Math.round((currentWeek / totalWeeks) * 100)) : 0;
 
   label.textContent = totalWeeks > 0 ? `Week ${currentWeek} of ${totalWeeks}` : `Week ${currentWeek}`;
+  const startDateEl = document.getElementById('cycle-start-date');
+  if (startDateEl) startDateEl.textContent = startDate ? `Started ${startDate}` : '—';
   pct.textContent   = totalWeeks > 0 ? `${progressPct}%` : '—';
   if (bar) bar.style.width = `${progressPct}%`;
   const ringArc = document.getElementById('cycle-ring-arc');
