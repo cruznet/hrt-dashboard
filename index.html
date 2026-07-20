@@ -10721,6 +10721,7 @@ function _pbDoSave() {
   const active = localStorage.getItem('hrt_active_protocol');
   if (active === protocol.saved_at) {
     localStorage.setItem('hrt_active_protocol_data', JSON.stringify(protocol));
+    renderCycleProgress(protocol);
     renderUpcoming();
   }
 
