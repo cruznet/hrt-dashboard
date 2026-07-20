@@ -10822,8 +10822,17 @@ function getFrequencyDays(freq) {
 }
 
 function getDoseNumberFromStart(doseDate, startDate, frequency) {
-  const start = new Date(startDate);
-  const dose = typeof doseDate === 'string' ? new Date(doseDate) : doseDate;
+  let start;
+  if (typeof startDate === 'string') {
+    const [year, month, day] = startDate.split('-').map(Number);
+    start = new Date(year, month - 1, day);
+  } else {
+    start = startDate;
+  }
+  const dose = typeof doseDate === 'string' ? (() => {
+    const [year, month, day] = doseDate.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  })() : doseDate;
   const freqDays = getFrequencyDays(frequency);
   const daysElapsed = (dose - start) / (1000 * 60 * 60 * 24);
   return Math.round(daysElapsed / freqDays);
