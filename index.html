@@ -10673,9 +10673,8 @@ function _pbDoSave() {
   const cycleLengthWeeks = parseInt(document.getElementById('pb-cycle-weeks').value) || 16;
   const startDate        = document.getElementById('pb-cycle-start-date').value || '';
   const status           = document.getElementById('pb-cycle-status').value || 'planning';
-  const savedAt          = pbEditIndex >= 0
-    ? (lsGet('hrt_protocols', []).map(normalizeProtocol)[pbEditIndex]?.saved_at || new Date().toISOString())
-    : new Date().toISOString();
+  const existing = pbEditIndex >= 0 ? lsGet('hrt_protocols', [])[pbEditIndex] : null;
+  const savedAt = existing?.saved_at || new Date().toISOString();
 
   // Detect dose changes on active protocols
   let modLog = [...pbState.modificationLog];
