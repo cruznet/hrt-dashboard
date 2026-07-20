@@ -1,0 +1,10 @@
+node_modules
+.git
+.github
+.wrangler
+.DS_Store
+*.log
+.gitignore
+build.sh
+package.json
+wrangler.jsonc
