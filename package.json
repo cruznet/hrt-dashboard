@@ -1,0 +1,11 @@
+{
+  "name": "hrt-dashboard",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "./build.sh",
+    "deploy": "./build.sh && npx wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4.112.0"
+  }
+}
