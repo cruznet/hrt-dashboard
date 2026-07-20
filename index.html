@@ -4223,7 +4223,11 @@ async function loadUserData() {
 }
 
 async function syncProtocolsToSupabase() {
-  if (!_supa || !_supaUser) return;
+  console.log('[syncProtocols] Called. _supa:', !!_supa, '_supaUser:', !!_supaUser);
+  if (!_supa || !_supaUser) {
+    console.log('[syncProtocols] Returning early - missing supa or user');
+    return;
+  }
   const protocols = lsGet('hrt_protocols', []);
   console.log('[syncProtocols] Sending to Supabase:', { user_id: _supaUser.id, protocols });
   const { error } = await _supa.from('user_settings').upsert({
