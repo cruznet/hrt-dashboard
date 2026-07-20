@@ -11,8 +11,7 @@
   },
   "assets": {
     "directory": ".",
-    "binding": "ASSETS",
-    "exclude": [".git", ".wrangler", "node_modules", ".github", ".gitignore", ".DS_Store"]
+    "binding": "ASSETS"
   },
   "compatibility_flags": [
     "nodejs_compat"
