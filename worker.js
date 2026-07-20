@@ -3,8 +3,6 @@
 
 const SUPABASE_URL = 'https://lnxhksnvcewtpwkaghrh.supabase.co';
 const HEVY_BASE     = 'https://api.hevyapp.com/v1';
-// Version identifier changes on each deploy (used for cache busting)
-const APP_VERSION = new Date().toISOString().slice(0, 10) + '-' + Math.random().toString(36).slice(2, 8);
 
 export default {
   async fetch(request, env) {
@@ -36,7 +34,8 @@ export default {
         statusText: response.statusText,
         headers: new Headers(response.headers)
       });
-      newResponse.headers.set('X-App-Version', APP_VERSION);
+      const appVersion = new Date().toISOString();
+      newResponse.headers.set('X-App-Version', appVersion);
       newResponse.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
       newResponse.headers.set('Pragma', 'no-cache');
       newResponse.headers.set('Expires', '0');
