@@ -10835,7 +10835,7 @@ function getDoseNumberFromStart(doseDate, startDate, frequency) {
   })() : doseDate;
   const freqDays = getFrequencyDays(frequency);
   const daysElapsed = (dose - start) / (1000 * 60 * 60 * 24);
-  return Math.round(daysElapsed / freqDays);
+  return Math.round(daysElapsed / freqDays) + 1;
 }
 
 function getSiteForDose(doseDate, sites, startDate, frequency) {
@@ -10844,7 +10844,7 @@ function getSiteForDose(doseDate, sites, startDate, frequency) {
   // Use start-date based rotation if available
   if (startDate && frequency) {
     const doseNumber = getDoseNumberFromStart(doseDate, startDate, frequency);
-    const index = Math.max(0, doseNumber % sites.length);
+    const index = Math.max(0, (doseNumber - 1) % sites.length);
     return sites[index];
   }
 
