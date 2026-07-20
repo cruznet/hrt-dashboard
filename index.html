@@ -10841,8 +10841,8 @@ function getDoseNumberFromStart(doseDate, startDate, frequency) {
 function getSiteForDose(doseDate, sites, startDate, frequency) {
   if (!sites || sites.length === 0) return '';
 
-  // Use start-date based rotation if available (only for string frequencies, not day-of-week arrays)
-  if (startDate && frequency && typeof frequency === 'string') {
+  // Use start-date based rotation if available
+  if (startDate && frequency && !Array.isArray(frequency)) {
     const doseNumber = getDoseNumberFromStart(doseDate, startDate, frequency);
     const index = Math.max(0, (doseNumber - 1) % sites.length);
     return sites[index];
