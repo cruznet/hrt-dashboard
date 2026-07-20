@@ -10730,9 +10730,9 @@ function _pbDoSave() {
   }
   localStorage.setItem('hrt_protocols', JSON.stringify(saved));
 
-  // Refresh active protocol if this one is active
-  const active = localStorage.getItem('hrt_active_protocol');
-  if (active === protocol.saved_at) {
+  // Refresh active protocol if this one is active (check by status, not saved_at)
+  if (protocol.status === 'active') {
+    localStorage.setItem('hrt_active_protocol', protocol.saved_at);
     localStorage.setItem('hrt_active_protocol_data', JSON.stringify(protocol));
     renderCycleProgress(protocol);
     renderUpcoming();
