@@ -9870,6 +9870,10 @@ function pbPopulateCustomSitesSelect() {
   ).join('');
 }
 
+function pbPopulateProtocolSitesCheckboxes() {
+  pbUpdateSiteDropdowns();
+}
+
 function pbToggleCustomSites() {
   const checkbox = document.getElementById('pb-custom-sites-checkbox');
   const selectDiv = document.getElementById('pb-custom-sites-select');
