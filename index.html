@@ -4224,9 +4224,11 @@ async function loadUserData() {
 
 async function syncProtocolsToSupabase() {
   if (!_supa || !_supaUser) return;
+  const protocols = lsGet('hrt_protocols', []);
+  console.log('[syncProtocols] Sending to Supabase:', { user_id: _supaUser.id, protocols });
   const { error } = await _supa.from('user_settings').upsert({
     user_id:               _supaUser.id,
-    protocols:             lsGet('hrt_protocols', []),
+    protocols:             protocols,
     active_protocol_key:   localStorage.getItem('hrt_active_protocol') || null,
     active_protocol_data:  lsGet('hrt_active_protocol_data', null),
     bloodwork_panels:      lsGet('hrt_bloodwork', []),
@@ -4243,7 +4245,11 @@ async function syncProtocolsToSupabase() {
     onboarded:             localStorage.getItem('hrt_onboarded') ? true : null,
     updated_at:            new Date().toISOString()
   }, { onConflict: 'user_id' });
-  if (error) console.warn('[syncProtocols]', error.message);
+  if (error) {
+    console.error('[syncProtocols] Error:', error.message, error);
+  } else {
+    console.log('[syncProtocols] Success');
+  }
 }
 
 function updateUserUI(user) {
