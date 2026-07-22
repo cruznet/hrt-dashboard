@@ -3423,9 +3423,8 @@ body {
         <label class="form-label">Tracked From</label>
         <select class="form-select" id="goal-source" onchange="goalOnSourceChange()">
           <option value="manual">Manual entry</option>
-          <option value="weight">Bodyweight (Physique log)</option>
-          <option value="bodyfat">Body Fat % (Physique log)</option>
-          <option value="lift">Lift PR (Hevy)</option>
+          <option value="weight">Bodyweight (Wellness)</option>
+          <option value="bodyfat">Body Fat % (Wellness)</option>
           <option value="lab">Lab Marker (Bloodwork)</option>
         </select>
       </div>
@@ -9677,12 +9676,6 @@ function goalCurrentValue(g) {
       : (latest.measurements?.bf ?? latest.bf);
     return (v != null && v !== '') ? parseFloat(v) : null;
   }
-  if (g.source === 'lift') {
-    try {
-      const pr = hevyBuildPRMap(hevyCache()).get(g.sourceKey);
-      return (pr && pr.bestWeight > 0) ? Math.round(pr.bestWeight * 2.205) : null;
-    } catch (e) { return null; }
-  }
   if (g.source === 'lab') {
     const panels = bwLoad().slice().sort((a, b) => b.date.localeCompare(a.date));
     const latest = panels.find(p => p.markers && p.markers[g.sourceKey] != null);
@@ -9760,10 +9753,8 @@ let _goalEditId = null;
 
 function goalOnSourceChange() {
   const src = document.getElementById('goal-source').value;
-  document.getElementById('goal-lift-row').style.display   = src === 'lift'   ? '' : 'none';
   document.getElementById('goal-lab-row').style.display     = src === 'lab'    ? '' : 'none';
   document.getElementById('goal-manual-row').style.display  = src === 'manual' ? '' : 'none';
-  if (src === 'lift') goalPopulateLiftSelect();
   if (src === 'lab')  goalPopulateLabSelect();
 }
 
@@ -9801,7 +9792,6 @@ function goalOpenModal(id) {
   document.getElementById('goal-unit').value                   = g?.unit || '';
   document.getElementById('goal-manual-current').value         = g?.manualCurrent ?? '';
   goalOnSourceChange();
-  if (g?.source === 'lift') document.getElementById('goal-lift-select').value = g.sourceKey || '';
   if (g?.source === 'lab')  document.getElementById('goal-lab-select').value  = g.sourceKey || '';
   openModal('goal-modal');
 }
@@ -9816,7 +9806,6 @@ function goalSave() {
   if (!label || isNaN(target)) { showToast('Enter a label and target value', 'info'); return; }
 
   let sourceKey = null;
-  if (source === 'lift') sourceKey = document.getElementById('goal-lift-select').value;
   if (source === 'lab')  { sourceKey = document.getElementById('goal-lab-select').value; if (!unit) unit = BW_MARKERS[sourceKey]?.unit || ''; }
   if (source === 'weight'   && !unit) unit = 'lbs';
   if (source === 'bodyfat'  && !unit) unit = '%';
