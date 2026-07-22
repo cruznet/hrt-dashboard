@@ -5227,7 +5227,7 @@ function renderDoseSchedule() {
         cat = dbMatch ? (dbMatch.cat || '') : '';
       }
       if (cat.includes('AAS')) return 'AAS';
-      if (cat.includes('Peptide') || cat.includes('GHRH') || cat.includes('GHRP') || cat.includes('Growth Factor') || cat.includes('GLP-1') || cat.includes('GIP')) return 'Peptides';
+      if (cat.includes('Peptide') || cat.includes('GHRH') || cat.includes('GHRP') || cat.includes('Growth Factor') || cat.includes('GLP-1') || cat.includes('GIP') || cat.includes('Insulin')) return 'Peptides';
       if (cat.includes('Oral')) return 'Orals';
       return 'Supplements';
     };
